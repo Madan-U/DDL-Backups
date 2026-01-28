@@ -1,7 +1,7 @@
 -- DDL Export
 -- Server: 192.168.31.174
 -- Database: DWConfiguration
--- Exported: 2026-01-28T19:04:24.825186
+-- Exported: 2026-01-28T19:06:39.611355
 
 USE DWConfiguration;
 GO
