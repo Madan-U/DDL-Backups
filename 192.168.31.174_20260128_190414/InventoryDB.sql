@@ -1,7 +1,7 @@
 -- DDL Export
 -- Server: 192.168.31.174
 -- Database: InventoryDB
--- Exported: 2026-01-28T18:07:15.547479
+-- Exported: 2026-01-28T19:04:29.678715
 
 USE InventoryDB;
 GO
