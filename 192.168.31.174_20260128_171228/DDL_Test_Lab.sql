@@ -1,7 +1,7 @@
 -- DDL Export
 -- Server: 192.168.31.174
 -- Database: DDL_Test_Lab
--- Exported: 2026-01-28T16:24:52.019705
+-- Exported: 2026-01-28T17:12:35.264513
 
 USE DDL_Test_Lab;
 GO

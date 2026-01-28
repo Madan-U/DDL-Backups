@@ -1,7 +1,7 @@
 -- DDL Export
 -- Server: 192.168.31.174
 -- Database: DWQueue
--- Exported: 2026-01-28T16:24:57.337278
+-- Exported: 2026-01-28T17:12:40.216273
 
 USE DWQueue;
 GO
