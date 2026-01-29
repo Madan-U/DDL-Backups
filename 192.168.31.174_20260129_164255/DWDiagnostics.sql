@@ -1,7 +1,7 @@
 -- DDL Export
 -- Server: 192.168.31.174
 -- Database: DWDiagnostics
--- Exported: 2026-01-29T16:37:01.574074
+-- Exported: 2026-01-29T16:43:05.315560
 
 USE DWDiagnostics;
 GO
