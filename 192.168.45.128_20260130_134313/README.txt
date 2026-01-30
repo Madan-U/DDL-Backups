@@ -1,9 +1,9 @@
 DDL Extraction README
 Server: 192.168.45.128
-Output folder: C:\SQL_Monitoring\ddl_exports\192.168.45.128_20260129_170344
-Started: 2026-01-29T17:03:44.466895
-Finished: 2026-01-29T17:04:15.783435
-Elapsed seconds: 31.32
+Output folder: C:\SQL_Monitoring\ddl_exports\192.168.45.128_20260130_134313
+Started: 2026-01-30T13:43:13.042235
+Finished: 2026-01-30T13:43:44.229022
+Elapsed seconds: 31.19
 
 Databases processed: 0 (successful: 0, failures: 1)
 

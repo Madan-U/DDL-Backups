@@ -1,9 +1,9 @@
 DDL Extraction README
 Server: 192.168.31.174
-Output folder: C:\SQL_Monitoring\ddl_exports\192.168.31.174_20260129_170328
-Started: 2026-01-29T17:03:28.458766
-Finished: 2026-01-29T17:03:44.465610
-Elapsed seconds: 16.01
+Output folder: C:\SQL_Monitoring\ddl_exports\192.168.31.174_20260130_134301
+Started: 2026-01-30T13:43:01.059263
+Finished: 2026-01-30T13:43:13.041141
+Elapsed seconds: 11.98
 
 Databases processed: 7 (successful: 7, failures: 0)
 
@@ -12,9 +12,9 @@ Per-database details:
 - DBA_Admin:
     status: OK
     objects_written: 8
-    elapsed_seconds: 3.18
-    start_time: 2026-01-29T17:03:29.051640
-    end_time: 2026-01-29T17:03:32.235686
+    elapsed_seconds: 2.52
+    start_time: 2026-01-30T13:43:01.589166
+    end_time: 2026-01-30T13:43:04.111544
     by_type:
         PK_UNIQUE: 3
         TABLE: 3
@@ -23,9 +23,9 @@ Per-database details:
 - DBA_Inventory:
     status: OK
     objects_written: 2
-    elapsed_seconds: 2.64
-    start_time: 2026-01-29T17:03:32.235710
-    end_time: 2026-01-29T17:03:34.877607
+    elapsed_seconds: 1.9
+    start_time: 2026-01-30T13:43:04.111560
+    end_time: 2026-01-30T13:43:06.011047
     by_type:
         PROCEDURE: 1
         TABLE: 1
@@ -33,9 +33,9 @@ Per-database details:
 - DDL_Test_Lab:
     status: OK
     objects_written: 23
-    elapsed_seconds: 2.88
-    start_time: 2026-01-29T17:03:34.877619
-    end_time: 2026-01-29T17:03:37.753383
+    elapsed_seconds: 2.05
+    start_time: 2026-01-30T13:43:06.011063
+    end_time: 2026-01-30T13:43:08.061217
     by_type:
         PK_UNIQUE: 6
         TABLE: 5
@@ -49,9 +49,9 @@ Per-database details:
 - DWConfiguration:
     status: OK
     objects_written: 19
-    elapsed_seconds: 1.97
-    start_time: 2026-01-29T17:03:37.753403
-    end_time: 2026-01-29T17:03:39.729061
+    elapsed_seconds: 1.46
+    start_time: 2026-01-30T13:43:08.061232
+    end_time: 2026-01-30T13:43:09.526437
     by_type:
         PK_UNIQUE: 8
         TABLE: 8
@@ -60,9 +60,9 @@ Per-database details:
 - DWDiagnostics:
     status: OK
     objects_written: 44
-    elapsed_seconds: 1.45
-    start_time: 2026-01-29T17:03:39.729074
-    end_time: 2026-01-29T17:03:41.182900
+    elapsed_seconds: 1.38
+    start_time: 2026-01-30T13:43:09.526446
+    end_time: 2026-01-30T13:43:10.911594
     by_type:
         TABLE: 12
         PK_UNIQUE: 10
@@ -73,9 +73,9 @@ Per-database details:
 - DWQueue:
     status: OK
     objects_written: 21
-    elapsed_seconds: 1.61
-    start_time: 2026-01-29T17:03:41.182920
-    end_time: 2026-01-29T17:03:42.789401
+    elapsed_seconds: 1.06
+    start_time: 2026-01-30T13:43:10.911608
+    end_time: 2026-01-30T13:43:11.969330
     by_type:
         PROCEDURE: 13
         INDEX: 5
@@ -85,9 +85,9 @@ Per-database details:
 - InventoryDB:
     status: OK
     objects_written: 9
-    elapsed_seconds: 1.68
-    start_time: 2026-01-29T17:03:42.789421
-    end_time: 2026-01-29T17:03:44.464944
+    elapsed_seconds: 1.07
+    start_time: 2026-01-30T13:43:11.969338
+    end_time: 2026-01-30T13:43:13.040668
     by_type:
         INDEX: 5
         CHECK: 2
