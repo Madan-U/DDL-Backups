@@ -1,0 +1,17 @@
+-- Object: TABLE dbo.SYNERGY_LEDGER_NXT
+-- Server: 10.253.33.231 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[SYNERGY_LEDGER_NXT]
+(
+    [ld_clientcd] VARCHAR(20) NULL,
+    [LD_DT] DATETIME NULL,
+    [LD_PARTICULAR] VARCHAR(250) NULL,
+    [LD_DOCUMENTTYPE] VARCHAR(1) NOT NULL,
+    [LD_DOCUMENTNO] NUMERIC(10, 0) NULL,
+    [DEBIT] DECIMAL(18, 2) NULL,
+    [CREDIT] DECIMAL(18, 2) NULL,
+    [BALANCE] DECIMAL(18, 2) NULL
+);
+
+GO

@@ -1,0 +1,19 @@
+-- Object: TABLE citrus_usr.client_list_bk22102019
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[client_list_bk22102019]
+(
+    [CLIM_CRN_NO] NUMERIC(10, 0) NOT NULL,
+    [CLIM_INS_UPD_DEL] VARCHAR(1) NOT NULL,
+    [CLIM_TAB] VARCHAR(50) NOT NULL,
+    [CLIM_CREATED_BY] VARCHAR(25) NULL,
+    [CLIM_CREATED_DT] DATETIME NULL,
+    [CLIM_LST_UPD_BY] VARCHAR(25) NULL,
+    [CLIM_LST_UPD_DT] DATETIME NULL,
+    [CLIM_DELETED_IND] SMALLINT NULL,
+    [clisba_no] VARCHAR(20) NULL,
+    [clim_status] INT NOT NULL
+);
+
+GO

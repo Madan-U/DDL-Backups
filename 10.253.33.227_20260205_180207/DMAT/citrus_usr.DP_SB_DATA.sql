@@ -1,0 +1,33 @@
+-- Object: PROCEDURE citrus_usr.DP_SB_DATA
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+
+   
+-- DP_SB_DATA 'SOIL,GDS'  
+  
+  
+CREATE PROCEDURE [citrus_usr].[DP_SB_DATA]  
+  
+(  
+  
+@SUB_BROKER VARCHAR(15)  
+  
+  
+  
+)  
+  
+AS BEGIN   
+  
+SELECT CL_cODE,sub_broker,CLIENT_CODE,FIRST_HOLD_NAME,B.STATUS,ACTIVE_DATE,CLOSURE_DATE,TEMPLATE_CODE  
+INTO #TEMP  
+ FROM [AngelNseCM].MSAJAG.DBO.CLIENT_DETAILS A,TBL_CLIENT_MASTER  B WHERE A.CL_CODE=B.NISE_PARTY_CODE  
+  
+AND SUB_BROKER =@SUB_BROKER  
+
+SELECT * FROM #TEMP
+  
+ 
+END
+
+GO

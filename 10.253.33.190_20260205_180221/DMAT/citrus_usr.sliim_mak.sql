@@ -1,0 +1,26 @@
+-- Object: TABLE citrus_usr.sliim_mak
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[sliim_mak]
+(
+    [SLIIM_ID] NUMERIC(10, 0) NULL,
+    [SLIIM_TRATM_ID] NUMERIC(10, 0) NULL,
+    [SLIIM_SERIES_TYPE] VARCHAR(20) NULL,
+    [sliim_dpm_id] NUMERIC(10, 0) NULL,
+    [sliim_no_used] NUMERIC(10, 0) NULL,
+    [sliim_all_used] NUMERIC(10, 0) NULL,
+    [SLIIM_ENTM_ID] NUMERIC(10, 0) NULL,
+    [SLIIM_DPAM_ACCT_NO] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_FR] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_TO] VARCHAR(20) NULL,
+    [SLIIM_LOOSE_Y_N] SMALLINT NULL,
+    [SLIIM_CREATED_BY] VARCHAR(20) NULL,
+    [SLIIM_CREATED_DT] DATETIME NULL,
+    [SLIIM_LST_UPD_BY] VARCHAR(20) NULL,
+    [SLIIM_LST_UPD_DT] DATETIME NULL,
+    [SLIIM_DELETED_IND] SMALLINT NULL,
+    [sliim_dt] DATETIME NULL
+);
+
+GO

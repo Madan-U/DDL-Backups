@@ -1,0 +1,20 @@
+-- Object: TABLE dbo.tmpled_FINAL
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[tmpled_FINAL]
+(
+    [ACC_CODE] VARCHAR(50) NULL,
+    [CLIENT_CODE] VARCHAR(50) NULL,
+    [VOUCHER_DATE] VARCHAR(50) NULL,
+    [VOUCHER_TYPE] VARCHAR(50) NULL,
+    [VOUCHER_NO] VARCHAR(50) NULL,
+    [AMOUNT] VARCHAR(50) NULL,
+    [DEBITFLAG] VARCHAR(50) NULL,
+    [CHQ_NO] VARCHAR(50) NULL,
+    [CHQ_DATE] VARCHAR(50) NULL,
+    [CHQ_TYPE] VARCHAR(50) NULL,
+    [NARRATION] VARCHAR(500) NULL
+);
+
+GO

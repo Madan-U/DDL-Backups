@@ -1,0 +1,123 @@
+-- Object: VIEW dbo.Client_Master
+-- Server: 10.253.33.227 | DB: inhouse
+--------------------------------------------------
+
+
+
+
+CREATE View [dbo].[Client_Master]      
+As      
+Select      
+CM_CD = Isnull(CM_CD, ''),      
+CM_NAME = ltrim(rtrim(Isnull(CM_NAME, '')))+ ' ' + ltrim(rtrim(Isnull(CM_MIDDLENAME, ''))) + ' '+ ltrim(rtrim(Isnull(CM_LASTNAME, ''))),      
+/*
+CM_MIDDLENAME = Isnull(CM_MIDDLENAME, ''),      
+CM_LASTNAME = Isnull(CM_LASTNAME, ''),      
+*/
+CM_MIDDLENAME = '',      
+CM_LASTNAME = '',      
+CM_TITLE = Isnull(CM_TITLE, ''),      
+CM_SUFFIX = Isnull(CM_SUFFIX, ''),      
+CM_ADD1 = left(ltrim(rtrim(Isnull(CM_ADD1, ''))),36),      
+CM_ADD2 = Isnull(CM_ADD2, ''),      
+CM_ADD3 = Isnull(CM_ADD3, ''),      
+CM_CITY = left(ltrim(rtrim(Isnull(CM_CITY, ''))),25),      
+CM_STATE = Isnull(CM_STATE, ''),      
+CM_COUNTRY = Isnull(CM_COUNTRY, ''),      
+CM_PIN = left(ltrim(rtrim(Isnull(CM_PIN, ''))),10),      
+CM_PHONEINDICATOR = left(ltrim(rtrim(Isnull(CM_PHONEINDICATOR, ''))),1),      
+CM_TELE1 = Isnull(CM_TELE1, ''),      
+CM_PHONEINDICATOR2 = left(ltrim(rtrim(Isnull(CM_PHONEINDICATOR2, ''))),1),      
+CM_TELE2 = Isnull(CM_TELE2, ''),      
+CM_TELE3 = Isnull(CM_TELE3, ''),      
+CM_FAX = Isnull(CM_FAX, ''),      
+CM_MOBILE = Isnull(CM_MOBILE, ''),      
+CM_ITCIRCLE = Isnull(CM_ITCIRCLE, ''),      
+CM_EMAIL = Isnull(CM_EMAIL, ''),      
+--CM_SECH_NAME = Isnull(CM_SECH_NAME, ''),      
+CM_SECH_NAME = Isnull(T.SECOND_HOLD_NAME, ''),      
+--CM_THIH_NAME = Isnull(CM_THIH_NAME, ''),      
+CM_THIH_NAME = Isnull(T.THIRD_HOLD_NAME, ''),      
+CM_DATEOFMATURITY = Isnull(CM_DATEOFMATURITY, ''),      
+CM_DPINTREFNO = Isnull(CM_DPINTREFNO, ''),      
+CM_DATEOFBIRTH = Isnull(CM_DATEOFBIRTH, ''),      
+CM_OCCUPATION = Isnull(CM_OCCUPATION, ''),      
+CM_ACCTYPE = Isnull(CM_ACCTYPE, ''),      
+--CM_ACCTYPE = Isnull([TYPE], ''),      
+CM_ACTIVE = Isnull(CM_ACTIVE, ''),      
+CM_CLIENTTYPE = Isnull(CM_CLIENTTYPE, ''),      
+CM_CONFIRMATIONWAIVED = Isnull(CM_CONFIRMATIONWAIVED, ''),      
+--CM_SECURITYCODE=convert(numeric,CM_SECURITYCODE),      
+CM_SECURITYCODE=0, 
+CM_RBIREFNO = Isnull(CM_RBIREFNO, ''),      
+CM_RBIAPPDATE = Isnull(CM_RBIAPPDATE, ''),      
+CM_SEBIREGNO = Isnull(CM_SEBIREGNO, ''),      
+CM_TAXDEDUCTION = Isnull(CM_TAXDEDUCTION, ''),      
+CM_CCID=convert(numeric,CM_CCID),      
+--CM_CMID = Isnull(CM_CMID, ''),  
+CM_CMID = 0,        
+--CM_STOCKEXCHANGE=convert(numeric,CM_STOCKEXCHANGE),   
+CM_STOCKEXCHANGE=convert(numeric,CM_STOCKEXCHANGE),       
+CM_TRADINGID = Isnull(CM_TRADINGID, ''),      
+CM_BOSTATEMENTCYCLE = Isnull(CM_BOSTATEMENTCYCLE, ''),      
+CM_MICR = Isnull(CM_MICR, ''),      
+CM_BANKNAME = Isnull(CM_BANKNAME, ''),      
+CM_BANKBRANCHNO = Isnull(CM_BANKBRANCHNO, ''),      
+CM_BANKACTNO = Isnull(CM_BANKACTNO, ''),      
+CM_BANKCCY,      
+CM_DIVBANKCODE = Isnull(CM_DIVBANKCODE, ''),      
+CM_DIVBRANCHNO = left(ltrim(rtrim(Isnull(CM_DIVBRANCHNO, ''))),12),      
+CM_DIVBANKACNO = Isnull(CM_DIVBANKACNO, ''),      
+--CM_DIVBANKCCY=convert(numeric,CM_DIVBANKCCY),    
+CM_DIVBANKCCY=0,   
+CM_POAID = Isnull(CM_POAID, ''),      
+CM_POANAME = Isnull(CM_POANAME, ''),      
+CM_PWD = Isnull(CM_PWD, ''),      
+CM_OPENDATE = Isnull(CM_OPENDATE, ''),      
+CM_ACC_CLOSUREDATE = Isnull(CM_ACC_CLOSUREDATE, ''),      
+CM_BRCODE = Isnull(CM_BRCODE, ''),      
+CM_BRBOFFCODE = Isnull(CM_BRBOFFCODE, ''),      
+CM_GROUPCD = left(ltrim(rtrim(Isnull(CM_GROUPCD, ''))),3),      
+CM_FAMILYCD = Isnull(CM_FAMILYCD, ''),      
+CM_CHGSSCHEME = Isnull(CM_CHGSSCHEME, ''),      
+CM_BILLCYCLE = Isnull(CM_BILLCYCLE, ''),      
+CM_STATEMENTS = Isnull(CM_STATEMENTS, ''),      
+CM_BILLFLAG = Isnull(CM_BILLFLAG, ''),      
+CM_BILLCODE = Isnull(CM_BILLCODE, ''),      
+CM_COLLECTIONCODE = Isnull(CM_COLLECTIONCODE, ''),      
+CM_ALLOWCREDIT,      
+CM_UPFRONT = Isnull(CM_UPFRONT, ''),      
+--CM_LASTBILL = Isnull(CM_LASTBILL, ''),      
+CM_LASTBILL = Isnull(BILL_DATE, ''),      
+CM_KEEPSETTLEMENT = Isnull(CM_KEEPSETTLEMENT, ''),      
+CM_FRE_TRX,      
+CM_FRE_HOLD,      
+CM_FRE_BILL,      
+CM_BLSAVINGCD = Isnull(CM_BLSAVINGCD, ''),      
+CM_AMTMNTDT = Isnull(CM_AMTMNTDT, ''),      
+--CM_UPDATEBAL=convert(numeric,CM_UPDATEBAL),      
+CM_UPDATEBAL=0,   
+CM_SCHEDULE = 49843750,      
+--CM_OPENINGBAL=convert(numeric,CM_OPENINGBAL),
+CM_OPENINGBAL=0,        
+CM_FREEZEDT = Isnull(CM_FREEZEDT, ''),      
+MKRDT = Isnull(MKRDT, ''),      
+MKRID = Isnull(MKRID, ''),      
+CM_FREEZEYN = Isnull(CM_FREEZEYN, ''),      
+CM_FREEZEREASON = Isnull(CM_FREEZEREASON, ''),      
+CM_PRODUCTCD = Isnull(PROD_NO, ''),      
+MKRTM = Isnull(MKRTM, ''),      
+CM_REMISSER = Isnull(CM_REMISSER, ''),      
+CM_POAFORPAYIN = Isnull(CM_POAFORPAYIN, ''),      
+CM_POAREGDATE = Isnull(CM_POAREGDATE, '')      
+From      
+(SELECT CLIENT_CODE, SECOND_HOLD_NAME, THIRD_HOLD_NAME, PROD_NO, [TYPE] FROM TBL_CLIENT_MASTER WITH (NOLOCK)) T,      
+dmat.citrus_usr.Synergy_Client_Master C with (nolock) left outer join      
+(      
+SELECT CLIENT_CODE, BILL_DATE = MAX(BILL_DATE) FROM VW_BILL_TRANSACTION WITH (NOLOCK)      
+GROUP BY CLIENT_CODE      
+) V      
+ON (C.CM_CD = V.CLIENT_CODE)      
+WHERE T.CLIENT_CODE = C.CM_CD
+
+GO

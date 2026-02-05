@@ -1,0 +1,111 @@
+-- Object: PROCEDURE citrus_usr.PR_INS_UPD_ENTITYMSTR
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE  PROCEDURE [citrus_usr].[PR_INS_UPD_ENTITYMSTR](@PA_FROM_SVR  VARCHAR(30)
+                                     ,@PA_FROM_DB   VARCHAR(30)
+                                     ,@PA_TO_SVR    VARCHAR(30)
+                                     ,@PA_TO_DB     VARCHAR(30)
+                                     )
+AS
+BEGIN
+--
+  SET NOCOUNT ON
+  --
+  DECLARE @@L_STRSQL         VARCHAR(8000)
+        , @@C_CURSOR         CURSOR
+        , @@L_ENTITY_ID      NUMERIC
+        , @@ENTM_NAME1       VARCHAR(50)
+        , @@ENTM_SHORT_NAME  VARCHAR(50)
+        , @@L_STRING         VARCHAR(8000)
+  --
+  CREATE TABLE #L_AREA
+  (ENTM_NAME1       VARCHAR(20)
+  ,ENTM_SHORT_NAME  VARCHAR(50)
+  )
+  INSERT INTO #L_AREA
+  (ENTM_NAME1
+  ,ENTM_SHORT_NAME
+  )
+  SELECT DISTINCT ENTM_NAME1, ENTM_SHORT_NAME
+  FROM ENTITY_MSTR WHERE ENTM_ENTTM_CD = 'AR'
+  --------
+  CREATE TABLE #L_BRANCH
+  (ENTM_NAME1       VARCHAR(20)
+  ,ENTM_SHORT_NAME  VARCHAR(50)
+  )
+  INSERT INTO #L_BRANCH
+  (ENTM_NAME1
+  ,ENTM_SHORT_NAME
+  )
+  SELECT DISTINCT ENTM_NAME1, ENTM_SHORT_NAME
+  FROM ENTITY_MSTR WHERE ENTM_ENTTM_CD IN('BR','H0')
+  --------
+  CREATE TABLE #L_BRANCHES
+  (ENTM_NAME1       VARCHAR(20)
+  ,ENTM_SHORT_NAME  VARCHAR(50)
+  )
+  INSERT INTO #L_BRANCHES
+  (ENTM_NAME1
+  ,ENTM_SHORT_NAME
+  )
+  SELECT DISTINCT ENTM_NAME1, ENTM_SHORT_NAME
+  FROM ENTITY_MSTR WHERE ENTM_ENTTM_CD IN('TRADER')
+  --------
+  CREATE TABLE #L_SUB_BROKER
+  (ENTM_NAME1       VARCHAR(20)
+  ,ENTM_SHORT_NAME  VARCHAR(50)
+  )
+  INSERT INTO #L_SUB_BROKER
+  (ENTM_NAME1
+  ,ENTM_SHORT_NAME
+  )
+  SELECT DISTINCT ENTM_NAME1, ENTM_SHORT_NAME
+  FROM ENTITY_MSTR WHERE ENTM_ENTTM_CD IN('SB')
+  --------
+  IF EXISTS(SELECT COUNT(*)
+            FROM #L_AREA
+            )
+  BEGIN
+  --
+    SET @@C_CURSOR =  CURSOR FAST_FORWARD FOR
+    SELECT ENTM_NAME1, ENTM_SHORT_NAME FROM #L_AREA
+    --
+    OPEN @@C_CURSOR
+    FETCH NEXT FROM @@C_CURSOR INTO @@ENTM_NAME1, @@ENTM_SHORT_NAME
+    --
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+    --
+      IF NOT EXISTS(SELECT COUNT(*)
+                    FROM AREA
+                    WHERE AREACODE = @@ENTM_NAME1 AND DESCRIPTION = @@ENTM_SHORT_NAME
+                    )
+      BEGIN
+      --
+       /* INSERT INTO ENTITY_MSTR
+        (AREACODE
+        ,DESCRIPTION
+        )
+        VALUES
+        (@@ENTM_NAME1
+        ,@@ENTM_SHORT_NAME
+        )*/
+      PRINT ''
+      --
+      END
+      --
+      FETCH NEXT FROM @@C_CURSOR INTO @@ENTM_NAME1, @@ENTM_SHORT_NAME
+    --
+    END
+    --
+    CLOSE @@C_CURSOR
+    DEALLOCATE @@C_CURSOR
+  --
+  END
+  --
+
+--
+END
+
+GO

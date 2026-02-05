@@ -1,0 +1,17 @@
+-- Object: TABLE dbo.V2_Table_Structures
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[V2_Table_Structures]
+(
+    [Table_Name] NVARCHAR(776) NOT NULL,
+    [Column_name] NVARCHAR(128) NOT NULL,
+    [Type] NVARCHAR(128) NULL,
+    [Computed] VARCHAR(35) NULL,
+    [Length] INT NULL,
+    [Prec] CHAR(5) NULL,
+    [Scale] CHAR(5) NULL,
+    [Nullable] VARCHAR(35) NULL
+);
+
+GO

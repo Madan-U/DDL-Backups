@@ -1,0 +1,27 @@
+-- Object: TABLE citrus_usr.DIY_POA_Process_Log_temp
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[DIY_POA_Process_Log_temp]
+(
+    [SRNO] INT IDENTITY(1,1) NOT NULL,
+    [Cl_code] VARCHAR(50) NULL,
+    [DP_ID] VARCHAR(16) NULL,
+    [SYMBOL] VARCHAR(50) NULL,
+    [ISIN] VARCHAR(20) NULL,
+    [EXCHANGE] VARCHAR(10) NULL,
+    [Qty] INT NULL,
+    [POA_STATUS_ONL] VARCHAR(5) NULL,
+    [CREATED_DATE] DATETIME NULL,
+    [POA_STATUS_BO] VARCHAR(5) NULL,
+    [BO_VALIDATION] VARCHAR(5) NULL,
+    [BO_VALID_COMPLETION_DT] DATETIME NULL,
+    [DP_VALID] VARCHAR(10) NULL,
+    [DP_PROCESS_DT] DATETIME NULL,
+    [VALID_QTY] VARCHAR(5) NULL,
+    [SLIP_NO] INT NULL,
+    [SETT_NO] VARCHAR(15) NULL,
+    [SETT_TYPE] VARCHAR(10) NULL
+);
+
+GO

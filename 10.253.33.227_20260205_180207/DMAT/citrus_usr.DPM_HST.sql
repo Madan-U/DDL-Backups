@@ -1,0 +1,21 @@
+-- Object: TABLE citrus_usr.DPM_HST
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[DPM_HST]
+(
+    [DPM_ID] NUMERIC(10, 0) NOT NULL,
+    [DPM_NAME] VARCHAR(250) NULL,
+    [DPM_DPID] VARCHAR(50) NOT NULL,
+    [DPM_RMKS] VARCHAR(250) NULL,
+    [DPM_CREATED_BY] VARCHAR(25) NOT NULL,
+    [DPM_CREATED_DT] DATETIME NOT NULL,
+    [DPM_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [DPM_LST_UPD_DT] DATETIME NOT NULL,
+    [DPM_DELETED_IND] SMALLINT NOT NULL,
+    [DPM_ACTION] VARCHAR(20) NOT NULL,
+    [dpm_short_name] VARCHAR(20) NULL,
+    [dpm_excsm_id] NUMERIC(10, 0) NULL
+);
+
+GO

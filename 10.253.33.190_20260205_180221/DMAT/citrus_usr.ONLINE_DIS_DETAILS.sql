@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.ONLINE_DIS_DETAILS
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ONLINE_DIS_DETAILS]
+(
+    [SR_NO] INT IDENTITY(1,1) NOT NULL,
+    [DPID] VARCHAR(16) NULL,
+    [IPADDRESS] VARCHAR(15) NULL,
+    [TRANSACTION_DATE] DATETIME NULL,
+    [TRANSACTION_ID] VARCHAR(50) NULL,
+    [OTP] VARCHAR(15) NULL,
+    [TRANSACTION_TYPE] VARCHAR(25) NULL,
+    [REMARKS] VARCHAR(500) NULL,
+    [boid] VARCHAR(10) NULL
+);
+
+GO

@@ -1,0 +1,9 @@
+-- Object: VIEW dbo.SYNERGY_TRXN_DETAILS
+-- Server: 10.253.33.231 | DB: DMAT
+--------------------------------------------------
+
+CREATE VIEW SYNERGY_TRXN_DETAILS
+AS
+SELECT  * FROM CITRUS_USR.SYNERGY_TRXN_DETAILS  WITH(NOLOCK)
+
+GO

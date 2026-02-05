@@ -1,0 +1,35 @@
+-- Object: PROCEDURE dbo.DP_LEDGER_ENTRIES
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+---SELECT * FROM SYNERGY_LEDGER WHERE LD_CLIENTCD='4000000001'AND LD_DT>='2019-10-01 00:00:00'AND LD_DT<='2019-10-31 23:59:59'
+
+
+
+--DP_LEDGER_ENTRIES 'OCT  1  2019','OCT 31 2019','4000000001'
+
+
+
+CREATE PROCEDURE [dbo].[DP_LEDGER_ENTRIES]
+
+(
+@Fdate varchar(15),@Tdate varchar(15)  ,@CLIENT_cODE VARCHAR(20)
+)
+
+AS
+
+BEGIN
+
+ 
+
+DECLARE @FromDate DATETIME=CAST(@Fdate  AS DATETIME)
+
+DECLARE @ToDate DATETIME=dateadd(ms, -3, (dateadd(day, +1, convert(varchar, @Tdate, 101))))--DATEADD(DD, -1, DATEADD(D, 1, CONVERT(DATETIME2, @Tdate)))  
+ 
+
+SELECT * FROM DMAT.CITRUS_USR.SYNERGY_LEDGER WHERE LD_CLIENTCD=@CLIENT_cODE AND LD_DT>=@FromDate AND LD_DT<=@ToDate
+
+
+ END
+
+GO

@@ -1,0 +1,24 @@
+-- Object: VIEW citrus_usr.Vw_Template_Charges
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE VIEW Vw_Template_Charges
+
+AS
+
+SELECT LEFT(BROM_DESC,10) [TEMPLATE_CODE],
+LEFT(cham_charge_type,10) [CHARGES_CODE],
+convert(varchar (10),CHAM_SLAB_no )    [SLAB_CODE],
+cast(CHAM_CHARGE_MINVAL as money) [MINIMUM_CHARGES],
+cast(CHAM_CHARGE_VALUE as money) [MAXIMUM_CHARGES],
+cast('0'  as money) [MAILING_CHARGES]
+FROM BROKERAGE_MSTR WITH(NOLOCK)
+,PROFILE_CHARGES WITH(NOLOCK)
+,CHARGE_MSTR  WITH(NOLOCK)
+WHERE BROM_ID = PROC_PROFILE_ID 
+AND PROC_SLAB_NO = CHAM_SLAB_NO 
+AND BROM_DELETED_IND =1 
+AND [PROC_DELETED_IND ] = 1
+AND [CHAM_DELETED_IND ] = 1
+
+GO

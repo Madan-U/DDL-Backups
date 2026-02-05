@@ -1,0 +1,9 @@
+-- Object: VIEW citrus_usr.SETTLEMENT_TYPE_MSTR
+-- Server: 10.253.33.231 | DB: DMAT
+--------------------------------------------------
+
+CREATE VIEW SETTLEMENT_TYPE_MSTR  
+AS  
+SELECT * FROM AGMUBODPL3.DMAT.CITRUS_USR.SETTLEMENT_TYPE_MSTR WITH(NOLOCK)
+
+GO

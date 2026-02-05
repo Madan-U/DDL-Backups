@@ -1,0 +1,20 @@
+-- Object: TABLE dbo.temled_final_JUL_DATA
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[temled_final_JUL_DATA]
+(
+    [ACC_CODE] VARCHAR(50) NULL,
+    [CLIENT_CODE] VARCHAR(50) NULL,
+    [VOUCHER_DATE] VARCHAR(50) NULL,
+    [VOUCHER_TYPE] VARCHAR(50) NULL,
+    [VOUCHER_NO] VARCHAR(50) NULL,
+    [AMOUNT] VARCHAR(50) NULL,
+    [DEBITFLAG] VARCHAR(50) NULL,
+    [CHQ_NO] VARCHAR(50) NULL,
+    [CHQ_DATE] VARCHAR(50) NULL,
+    [CHQ_TYPE] VARCHAR(50) NULL,
+    [NARRATION] VARCHAR(2000) NULL
+);
+
+GO

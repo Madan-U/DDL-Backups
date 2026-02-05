@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.YTEMP28102020
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[YTEMP28102020]
+(
+    [PARTY CODE] VARCHAR(20) NULL,
+    [PARTY NAME] VARCHAR(150) NULL,
+    [FREE HOLDING VALUE] NUMERIC(30, 2) NULL,
+    [PLEDGED VALUE] NUMERIC(30, 2) NULL,
+    [NO. OF ISINS] INT NULL,
+    [DEMAT ID] VARCHAR(20) NOT NULL,
+    [POA (Y/N)] VARCHAR(3) NOT NULL,
+    [STATUS] VARCHAR(200) NULL
+);
+
+GO

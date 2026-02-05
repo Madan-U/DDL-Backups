@@ -1,0 +1,12 @@
+-- Object: TABLE citrus_usr.INCOME13012017_Done
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[INCOME13012017_Done]
+(
+    [CLIENT_CODE] VARCHAR(50) NULL,
+    [NISE_PARTY_CODE] VARCHAR(50) NULL,
+    [Income As per Inhouse] VARCHAR(50) NULL
+);
+
+GO

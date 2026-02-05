@@ -1,0 +1,15 @@
+-- Object: TABLE dbo.scheme020322
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[scheme020322]
+(
+    [CLIENT_CODE] NVARCHAR(255) NULL,
+    [NISE_PARTY_CODE] NVARCHAR(255) NULL,
+    [FIRST_HOLD_NAME] NVARCHAR(255) NULL,
+    [STATUS] NVARCHAR(255) NULL,
+    [TEMPLATE_CODE] NVARCHAR(255) NULL,
+    [ACTIVE_DATE] NVARCHAR(255) NULL
+);
+
+GO

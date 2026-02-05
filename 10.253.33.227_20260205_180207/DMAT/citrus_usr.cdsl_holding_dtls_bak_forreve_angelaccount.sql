@@ -1,0 +1,45 @@
+-- Object: TABLE citrus_usr.cdsl_holding_dtls_bak_forreve_angelaccount
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[cdsl_holding_dtls_bak_forreve_angelaccount]
+(
+    [CDSHM_DPM_ID] NUMERIC(18, 0) NULL,
+    [CDSHM_BEN_ACCT_NO] VARCHAR(16) NULL,
+    [CDSHM_DPAM_ID] NUMERIC(10, 0) NULL,
+    [CDSHM_TRATM_CD] VARCHAR(25) NULL,
+    [CDSHM_TRATM_DESC] VARCHAR(200) NULL,
+    [CDSHM_TRAS_DT] DATETIME NULL,
+    [CDSHM_ISIN] VARCHAR(20) NULL,
+    [CDSHM_QTY] NUMERIC(18, 5) NULL,
+    [CDSHM_INT_REF_NO] VARCHAR(50) NULL,
+    [CDSHM_TRANS_NO] VARCHAR(50) NULL,
+    [CDSHM_SETT_TYPE] VARCHAR(6) NULL,
+    [CDSHM_SETT_NO] VARCHAR(10) NULL,
+    [CDSHM_COUNTER_BOID] VARCHAR(20) NULL,
+    [CDSHM_COUNTER_DPID] VARCHAR(20) NULL,
+    [CDSHM_COUNTER_CMBPID] VARCHAR(20) NULL,
+    [CDSHM_EXCM_ID] VARCHAR(20) NULL,
+    [CDSHM_TRADE_NO] VARCHAR(20) NULL,
+    [CDSHM_CREATED_BY] VARCHAR(25) NULL,
+    [CDSHM_CREATED_DT] DATETIME NULL,
+    [CDSHM_LST_UPD_BY] VARCHAR(25) NULL,
+    [CDSHM_LST_UPD_DT] DATETIME NULL,
+    [CDSHM_DELETED_IND] SMALLINT NULL,
+    [cdshm_slip_no] VARCHAR(50) NULL,
+    [cdshm_tratm_type_desc] VARCHAR(80) NULL,
+    [cdshm_internal_trastm] VARCHAR(50) NULL,
+    [CDSHM_BAL_TYPE] VARCHAR(30) NULL,
+    [cdshm_id] NUMERIC(10, 0) NULL,
+    [cdshm_opn_bal] NUMERIC(18, 5) NULL,
+    [cdshm_charge] NUMERIC(10, 5) NULL,
+    [CDSHM_DP_CHARGE] NUMERIC(10, 5) NULL,
+    [CDSHM_TRG_SETTM_NO] VARCHAR(13) NULL,
+    [WAIVE_FLAG] CHAR(1) NULL,
+    [cdshm_trans_cdas_code] VARCHAR(8000) NULL,
+    [CDSHM_CDAS_TRAS_TYPE] VARCHAR(25) NULL,
+    [CDSHM_CDAS_SUB_TRAS_TYPE] VARCHAR(25) NULL,
+    [cdshm_post_toacct] NUMERIC(18, 0) NULL
+);
+
+GO

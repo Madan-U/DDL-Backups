@@ -1,0 +1,22 @@
+-- Object: TABLE citrus_usr.synergy_holding_BAK_0803
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[synergy_holding_BAK_0803]
+(
+    [HLD_HOLD_DATE] SMALLDATETIME NULL,
+    [HLD_AC_CODE] VARCHAR(16) NULL,
+    [HLD_CAT] VARCHAR(2) NULL,
+    [HLD_ISIN_CODE] VARCHAR(12) NULL,
+    [HLD_AC_TYPE] VARCHAR(4) NULL,
+    [HLD_AC_POS] MONEY NULL,
+    [HLD_CCID] VARCHAR(8) NULL,
+    [HLD_MARKET_TYPE] VARCHAR(2) NULL,
+    [HLD_SETTLEMENT] VARCHAR(13) NULL,
+    [HLD_BLF] VARCHAR(1) NULL,
+    [HLD_BLC] VARCHAR(2) NULL,
+    [HLD_LRD] VARCHAR(8) NULL,
+    [HLD_PENDINGDT] VARCHAR(8) NULL
+);
+
+GO

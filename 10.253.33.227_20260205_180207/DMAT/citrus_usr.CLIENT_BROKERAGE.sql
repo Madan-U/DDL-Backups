@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.CLIENT_BROKERAGE
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[CLIENT_BROKERAGE]
+(
+    [CLIB_CLISBA_ID] NUMERIC(10, 0) NOT NULL,
+    [CLIB_BROM_ID] VARCHAR(20) NOT NULL,
+    [CLIB_CREATED_BY] VARCHAR(25) NOT NULL,
+    [CLIB_CREATED_DT] DATETIME NOT NULL,
+    [CLIB_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [CLIB_LST_UPD_DT] DATETIME NOT NULL,
+    [CLIB_DELETED_IND] SMALLINT NOT NULL,
+    [clidb_eff_from_dt] DATETIME NULL,
+    [clidb_eff_to_dt] DATETIME NULL
+);
+
+GO

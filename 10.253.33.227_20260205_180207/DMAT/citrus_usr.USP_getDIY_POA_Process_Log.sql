@@ -1,0 +1,16 @@
+-- Object: PROCEDURE citrus_usr.USP_getDIY_POA_Process_Log
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE procedure USP_getDIY_POA_Process_Log(
+@Date varchar(50)
+)
+As
+Begin
+
+SELECT SRNO,Cl_code,DP_ID,SYMBOL,ISIN,EXCHANGE,Qty,POA_STATUS_ONL,CREATED_DATE,IsNull(POA_STATUS_BO,'') As POA_STATUS_BO,IsNull(BO_VALIDATION,'') As BO_VALIDATION,BO_VALID_COMPLETION_DT,IsNull(DP_VALID,'') As DP_VALID,
+DP_PROCESS_DT,VALID_QTY,SLIP_NO,SETT_NO,SETT_TYPE FROM  DIY_POA_Process_Log d 
+WHERE CONVERT(VARCHAR(11),CREATED_DATE,103) = @Date --AND  POA_STATUS_BO =''  AND  BO_VALIDATION ='Y' AND DP_VALID <> ''
+End
+
+GO

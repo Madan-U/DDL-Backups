@@ -1,0 +1,48 @@
+-- Object: PROCEDURE dbo.PPS_TRFBR
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE PROCEDURE [dbo].[PPS_TRFBR]
+
+(
+
+ 
+
+@Fdate varchar(15)  ,
+
+@Tdate varchar(15)  
+
+
+
+)
+
+AS
+
+BEGIN
+
+ 
+
+DECLARE @FromDate DATETIME=CAST(@Fdate  AS DATETIME)
+
+DECLARE @ToDate DATETIME=dateadd(ms, -3, (dateadd(day, +1, convert(varchar, @Tdate, 101))))--DATEADD(DD, -1, DATEADD(D, 1, CONVERT(DATETIME2, @Tdate))) 
+
+
+
+
+SELECT DISTINCT A.CL_CODE,SUB_BROKER INTO #TEMP2  
+FROM [AngelNseCM].MSAJAG.DBO.CLIENT_DETAILS A,
+[AngelNseCM].MSAJAG.DBO.CLIENT_BROK_DETAILS B
+WHERE B.ACTIVE_DATE>=@FromDate AND B.ACTIVE_DATE<=@ToDate
+ AND A.SUB_BROKER IN ('PPS','TRFBR')
+ AND A.CL_CODE=B.CL_CODE
+
+
+
+SELECT A.*,CLIENT_CODE,TEMPLATE_CODE FROM #TEMP2 A
+LEFT OUTER JOIN
+TBL_CLIENT_MASTER B
+ON A.CL_CODE=B.NISE_PARTY_CODE
+END
+
+GO

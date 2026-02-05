@@ -1,0 +1,13 @@
+-- Object: VIEW citrus_usr.Vw_Client_poa_new
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE View [citrus_usr].[Vw_Client_poa_new]      
+AS      
+SELECT DISTINCT BOID,OLD_POA =ISNULL((CASE WHEN MASTERPOAID='2203320100000010' THEN 'Y' ELSE 'N' END),'N'),      
+NEW_POA =ISNULL((CASE WHEN MASTERPOAID='2203320100000082' THEN 'Y' ELSE 'N' END),'N'),      
+DDPI =ISNULL((CASE WHEN MASTERPOAID='2203320200000021' THEN 'Y' ELSE 'N' END),'N') FROM DPS8_PC5  (NOLOCK)   
+WHERE TypeOfTrans <>3  AND MASTERPOAID IN ( '2203320200000021')
+
+GO

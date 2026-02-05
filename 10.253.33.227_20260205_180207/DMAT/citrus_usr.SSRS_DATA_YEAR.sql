@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.SSRS_DATA_YEAR
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[SSRS_DATA_YEAR]
+(
+    [CLIENT_cODE] VARCHAR(16) NULL,
+    [NISE_PARTY_cODE] VARCHAR(10) NULL,
+    [FIRST_HOLD_NAME] VARCHAR(100) NULL,
+    [STATUS] VARCHAR(40) NULL,
+    [TEMPLATE_cODE] VARCHAR(21) NULL,
+    [ACTIVE_dATE] DATETIME NULL,
+    [FIRST_HOLD_STATE] VARCHAR(25) NULL
+);
+
+GO

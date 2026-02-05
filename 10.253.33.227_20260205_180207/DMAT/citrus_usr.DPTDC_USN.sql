@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.DPTDC_USN
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[DPTDC_USN]
+(
+    [USN_DPTDC_ID] NUMERIC(18, 0) NULL,
+    [USN_BATCH_NO] VARCHAR(20) NULL,
+    [USN_NO] NUMERIC(18, 0) NULL,
+    [USN_CREATED_BY] VARCHAR(30) NULL,
+    [USN_CREATED_DT] DATETIME NULL,
+    [USN_LST_UPD_BY] VARCHAR(30) NULL,
+    [USN_LST_UPD_DT] DATETIME NULL,
+    [USN_DELETED_IND] SMALLINT NULL
+);
+
+GO

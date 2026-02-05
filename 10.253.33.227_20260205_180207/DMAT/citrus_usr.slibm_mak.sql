@@ -1,0 +1,27 @@
+-- Object: TABLE citrus_usr.slibm_mak
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[slibm_mak]
+(
+    [SLIBM_ID] NUMERIC(18, 0) NULL,
+    [SLIBM_TRATM_ID] NUMERIC(18, 0) NULL,
+    [SLIBM_DPM_ID] NUMERIC(18, 0) NULL,
+    [SLIBM_SERIES_TYPE] VARCHAR(20) NULL,
+    [SLIBM_FROM_NO] NUMERIC(18, 0) NULL,
+    [SLIBM_TO_NO] NUMERIC(18, 0) NULL,
+    [SLIBM_NO_OF_SLIPS] NUMERIC(18, 0) NULL,
+    [SLIBM_REORDER_NO] NUMERIC(18, 0) NULL,
+    [SLIBM_REORDER_DT] DATETIME NULL,
+    [SLIBM_RMKS] VARCHAR(200) NULL,
+    [SLIBM_CREATED_BY] VARCHAR(20) NULL,
+    [SLIBM_CREATED_DT] DATETIME NULL,
+    [SLIBM_LST_UPD_BY] VARCHAR(20) NULL,
+    [SLIBM_LST_UPD_DT] DATETIME NULL,
+    [SLIBM_DELETED_IND] SMALLINT NULL,
+    [slibm_book_name] VARCHAR(20) NULL,
+    [slibm_book_type] CHAR(1) NULL,
+    [slibm_dt] DATETIME NULL
+);
+
+GO

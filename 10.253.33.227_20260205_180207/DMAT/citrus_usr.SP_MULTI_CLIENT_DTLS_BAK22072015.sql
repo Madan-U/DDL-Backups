@@ -1,0 +1,253 @@
+-- Object: PROCEDURE citrus_usr.SP_MULTI_CLIENT_DTLS_BAK22072015
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+--exec Sp_Multi_Client_Dtls @PA_FROM_ACCTNO='1201090000004621',@PA_TO_ACCTNO='|*~|',@PA_EXCSMID=3,@pa_login_pr_entm_id=1,@pa_login_entm_cd_chain='HO|*~|'
+
+
+--select * from dp_acct_mstr
+--select * from client_mstr 
+
+
+
+--sELECT * FROM ACCOUNT_PROPERTIES WHERE ACCP_ACCPM_PROP_CD LIKE  '%SMS%'
+
+--exec SP_MULTI_CLIENT_DTLS @PA_FROM_ACCTNO='',@PA_TO_ACCTNO='|*~|T06621',@PA_EXCSMID=3,@pa_login_pr_entm_id=1,@pa_login_entm_cd_chain='HO|*~|'
+
+--SP_MULTI_CLIENT_DTLS '10000037','10000037',4,1,0
+--SP_MULTI_CLIENT_DTLS '1234567890123456','1234567890123456',3,1,0
+CREATE PROCEDURE [citrus_usr].[SP_MULTI_CLIENT_DTLS_BAK22072015]
+( 
+@PA_FROM_ACCTNO VARCHAR(16),
+@PA_TO_ACCTNO VARCHAR(30),
+@PA_EXCSMID INT,
+@pa_login_pr_entm_id numeric,              
+@pa_login_entm_cd_chain  varchar(8000)   
+)
+AS
+BEGIN -- MAIN
+--
+exec SP_MULTI_CLIENT_DTLS_DPS8 @PA_FROM_ACCTNO
+,@PA_TO_ACCTNO
+,@PA_EXCSMID
+,@pa_login_pr_entm_id
+,@pa_login_entm_cd_chain
+
+
+return 
+
+
+declare @l_bbo_code varchar(100)  
+set @l_bbo_code =''  
+set @l_bbo_code = citrus_usr.fn_splitval(@PA_TO_ACCTNO,2)  
+SET @PA_TO_ACCTNO = citrus_usr.fn_splitval(@PA_TO_ACCTNO,1)  
+
+
+ IF @PA_FROM_ACCTNO = ''  and    @l_bbo_code<>''     
+ BEGIN            
+  SET @PA_FROM_ACCTNO = '0'            
+  SET @PA_TO_ACCTNO = '99999999999999999'            
+ END            
+ 
+--IF @PA_TO_ACCTNO = '' or @PA_TO_ACCTNO <> ''           
+-- BEGIN        
+--   SET @PA_TO_ACCTNO = @PA_FROM_ACCTNO            
+-- END    
+
+--print @PA_FROM_ACCTNO
+--print @PA_TO_ACCTNO
+--print @l_bbo_code
+
+--
+--
+--select accp_value bbo ,dpam_sba_no clientid   
+--into #bbocode  from account_properties , dp_Acct_mstr 
+--where accp_accpm_prop_Cd='bbo_code'  
+--and accp_clisba_id = dpam_id   
+  
+ --create clustered index ix_1 on #bbocode(clientid,bbo)  
+
+DECLARE @@DPMID INT                     
+SELECT @@DPMID = DPM_ID FROM DP_MSTR WHERE DEFAULT_DP = @PA_EXCSMID AND DPM_DELETED_IND =1    
+DECLARE @@L_CHILD_ENTM_ID      NUMERIC              
+SELECT @@L_CHILD_ENTM_ID    =  CITRUS_USR.FN_GET_CHILD(@PA_LOGIN_PR_ENTM_ID , @PA_LOGIN_ENTM_CD_CHAIN)  
+
+print @PA_FROM_ACCTNO
+print @PA_to_ACCTNO
+
+print '222'
+print @@DPMID 
+print @PA_LOGIN_PR_ENTM_ID
+print @@L_CHILD_ENTM_ID
+		SELECT distinct case when fre_action = 'F' then 'FREEZED' else STAM_DESC end [STATUS]
+--DISTINCT top 1 case when fre_action = 'F' then 'FREEZED' else STAM_DESC end [STATUS]
+		,CLICM_DESC  [CATEGORY]
+		,SUBCM_DESC  [SUBCATEGORY]
+		,ENTTM_DESC  [TYPE]
+		,convert(varchar(11),clim_dob,103) clim_dob
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),1) [PADDRESS1]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),2)+ ' '+ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),3),'')  [PADDRESS2]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),4) [PCITY]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),5) [PSTATE]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),6) [PCOUNTRY]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'PER_ADR1'),7) [PPIN CODE]
+		,ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'RES_PH1'),'') [RESPHONENO]
+		,ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'RES_PH2'),'') [RESPHONENO2]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),1) [CADDRESS1]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),2)+' '+ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),3),'') [CADDRESS2]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),4) [CCITY]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),5) [CSTATE]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),6) [CCOUNTRY]
+		,CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(DPAM.DPAM_CRN_NO,'COR_ADR1'),7) [CPIN CODE]
+		--,CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'RES_PH1') [OFFPHONENO] --commented by pankaj on 14062011
+		,ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'OFF_PH1'),'') [OFFPHONENO]
+--		,citrus_usr.fn_splitval_by(banm_name ,1,'-')+ '-' + banm_micr + '-' +  case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),1) end [BADDRESS1]
+--		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),2)+ ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'cor_ADR1'),3),'') else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),2)+ ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),3),'')  end [BADDRESS2]
+--		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),4) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),4) end  [BCITY]
+--		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),5) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),5)  end [BSTATE]
+--		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),6) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),6)  end [BCOUNTRY]
+--		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'COR_ADR1'),7) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_ADDR_VALUE(BANM_ID,'OFF_ADR1'),7)  end [BPIN CODE]
+--,BANM_NAME + ' ,' + isnull(TMPBA_DP_BANK_ADD1,'') [BADDRESS1]
+,left(BANM_NAME,30) + ' ,' + isnull(TMPBA_DP_BANK_ADD1,'') [BADDRESS1]
+,isnull(TMPBA_DP_BANK_ADD2,'') [BADDRESS2]
+,isnull(TMPBA_DP_BANK_CITY,'') [BCITY]
+,isnull(TMPBA_DP_BANK_STATE,'') [BSTATE]
+,isnull(TMPBA_DP_BANK_CNTRY,'') [BCOUNTRY]
+,isnull(TMPBA_DP_BANK_ZIP,'') [BPIN CODE]
+		--,CITRUS_USR.FN_CONC_VALUE(BANM_ID,'RES_PH1') [OFFPHONENO]
+		,case when  ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'MOBSMS'),'') <> '' then ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'MOBSMS'),'') else ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'MOBILE1'),'') end   [MOBILE]
+		,ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'EMAIL1'),'') [EMAIL]
+		,ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'FAX1'),'') [FAX1]
+		--,ISNULL(CITRUS_USR.FN_FIND_RELATIONS(DPAM.DPAM_CRN_NO,'BR'),'') BRANCH
+		,ISNULL(CITRUS_USR.FN_FIND_RELATIONS(DPAM.DPAM_CRN_NO,'BA'),CITRUS_USR.FN_FIND_RELATIONS(DPAM.DPAM_CRN_NO,'BR')) BRANCH
+		,ISNULL(CITRUS_USR.FN_FIND_RELATIONS(DPAM.DPAM_CRN_NO,'REM'),CITRUS_USR.FN_FIND_RELATIONS(DPAM.DPAM_CRN_NO,'ONW')) ONWARD
+		,DPAM.DPAM_SBA_NO CLIENTID
+		,CLIM_SHORT_NAME SHORTNAME
+		,CLIM_NAME1,CLIM_NAME2,CLIM_NAME3
+		--,CONVERT(VARCHAR(11),CLIM_CREATED_DT ,105) ACTDT
+		,ISNULL(CITRUS_USR.FN_UCC_ACCP(dpam.DPAM_id,'BILL_START_DT',''),'') ACTDT
+	--	, ISNULL(CITRUS_USR.FN_UCC_ACCP(DPAM.DPAM_ID,'BILL_START_DT'),'') ACTDT
+		, ISNULL(CITRUS_USR.FN_ACCT_ENTP(DPAM.DPAM_CRN_NO,'ACC_CLOSE_DT'),'') CLDT
+		,CLIM_NAME1 + ' ' + isnull(CLIM_NAME2,'') + ' ' + isnull(CLIM_NAME3,'')  CLIM_NAME1
+		,CLIBA_AC_NO
+		,CLIBA_AC_TYPE
+		,BANM_NAME
+		,isnull(BANM_MICR,'') BANM_MICR
+		, isnull(BANM_rtgs_cd,'') IFS_CODE
+		,ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM.DPAM_CRN_NO,'PAN_GIR_NO',''),'') PAN  
+		,CASE WHEN ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM.DPAM_CRN_NO,'PAN_GIR_NO',''),'') <> '' THEN 'VERIFIED' ELSE '' END PANFLAG  
+		,CASE WHEN ISNULL(CITRUS_USR.FN_ACCT_ENTP(DPAM.dpam_id,'SMS_FLAG'),'') = '1' or ISNULL(CITRUS_USR.FN_CONC_VALUE(DPAM.DPAM_CRN_NO,'MOBSMS'),'') <> '' THEN 'Y' ELSE 'N' END SMS  
+        ,ISNULL(CITRUS_USR.FN_ACCT_ENTP(DPAM.DPAM_CRN_NO,'SEBI_REG_NO'),'') SEBI_REG_NO
+        ,ISNULL(CITRUS_USR.FN_ACCT_ENTPd(DPAM.DPAM_CRN_NO,'RBI_REF_NO','RBI_APP_DT'),'') RBI_APP_DATE
+        ,ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM.DPAM_CRN_NO,'OCCUPATION',''),'') OCCUPATION 
+		--	,ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM.DPAM_CRN_NO,'SMS_FLAG',''),'') SMS 
+		,ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM.DPAM_CRN_NO,'TAX_DEDUCTION',''),'') TAXDEDUCTION 
+	    --, citrus_usr.fn_get_listing('TAX_DEDUCTION',isnull(citrus_usr.fn_ucc_entp(DPAM.DPAM_CRN_NO,'TAX_DEDUCTION',''),''))  TAXDEDUCTION 
+		--, '' DPPD_FNAME --ISNULL(DPPD_FNAME,'') DPPD_FNAME
+		,ISNULL(DPPD_FNAME,'') DPPD_FNAME      
+		,ISNULL(DPPD_MNAME,'') DPPD_MNAME      
+		,ISNULL(DPPD_LNAME,'') DPPD_LNAME      
+		,CASE WHEN isnull(convert(varchar(11),DPPD_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(convert(varchar(11),DPPD_DOB,106),'') END DPPD_DOB      
+		,ISNULL(DPPD_PAN_NO,'')  DPPD_PAN_NO    
+		,ISNULL(DPHD_SH_FNAME,'') DPHD_SH_FNAME
+		,ISNULL(DPHD_SH_MNAME,'') DPHD_SH_MNAME
+		,ISNULL(DPHD_SH_LNAME,'') DPHD_SH_LNAME
+		,CASE WHEN ISNULL(convert(varchar(11),DPHD_SH_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(convert(varchar(11),DPHD_SH_DOB,106),'') END DPHD_SH_DOB
+		,ISNULL(DPHD_SH_PAN_NO,'')  DPHD_SH_PAN_NO
+		,ISNULL(DPHD_TH_FNAME,'') DPHD_TH_FNAME
+		,ISNULL(DPHD_TH_MNAME,'') DPHD_TH_MNAME
+		,ISNULL(DPHD_TH_LNAME,'') DPHD_TH_LNAME
+		,CASE WHEN ISNULL(convert(varchar(11),DPHD_TH_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(convert(varchar(11),DPHD_TH_DOB,106),'') END DPHD_TH_DOB
+		,ISNULL(DPHD_TH_PAN_NO ,'') DPHD_TH_PAN_NO
+        ,CASE WHEN ISNULL(convert(varchar(11),DPHD_NOM_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(convert(varchar(11),DPHD_NOM_DOB,106),'') END DPHD_NOM_DOB
+		,ISNULL(DPHD_NOM_PAN_NO,'')  DPHD_NOM_PAN_NO
+		,ISNULL(DPHD_NOM_FNAME,'') + ' ' + ISNULL(DPHD_NOM_MNAME,'') + ' ' + ISNULL(DPHD_NOM_LNAME,'') DPHD_NOM_FNAME
+		,ISNULL(DPHD_NOM_MNAME,'') DPHD_NOM_MNAME
+		,ISNULL(DPHD_NOM_LNAME,'') DPHD_NOM_LNAME
+		,ISNULL(DPHD_FH_FTHNAME,'') DPHD_FH_FTHNAME
+		,'' dobminor
+		,'' poa_asign
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) end [NADDRESS1]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),2)+ ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),3),'') else CITRUS_USR.FN_SPLITVAL(isnull(citrus_usr.FN_acct_addr_value(dpam.dpam_id ,'NOMINEE_ADR1'),2),'') + ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),3),'')  end  NADDRESS2
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),4) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),4) end  [nCITY]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),5) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),5)  end [nSTATE]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),6) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),6)  end [nCOUNTRY]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),7) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'NOMINEE_ADR1'),7)  end [nPINCODE]
+		 ,CASE WHEN ISNULL(convert(varchar(11),DPHD_gau_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(convert(varchar(11),DPHD_gau_DOB,106),'') END DPHD_gau_DOB
+		,ISNULL(DPHD_gau_PAN_NO,'')  DPHD_gau_PAN_NO
+		,ISNULL(DPHD_gau_FNAME,'') + ' ' + ISNULL(DPHD_gau_MNAME,'') + ' ' + ISNULL(DPHD_gau_LNAME,'') DPHD_gau_FNAME
+		,ISNULL(DPHD_Gau_MNAME,'') DPHD_gau_MNAME
+		,ISNULL(DPHD_Gau_LNAME,'') DPHD_gau_LNAME
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) end [GADDRESS1]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),2)+ ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),3),'') else CITRUS_USR.FN_SPLITVAL(isnull(citrus_usr.FN_acct_addr_value(dpam.dpam_id ,'GUARD_ADR'),2),'') + ' ' +ISNULL(CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),3),'')  end  GADDRESS2
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),4) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),4) end  [GCITY]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),5) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),5)  end [GSTATE]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),6) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),6)  end [GCOUNTRY]
+		,case when CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),1) <> '' then  CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),7) else CITRUS_USR.FN_SPLITVAL(CITRUS_USR.FN_acct_addr_value(DPAM.dpam_id,'GUARD_ADR'),7)  end [GPINCODE]
+		,CASE WHEN ISNULL(CITRUS_USR.FN_ACCT_ENTP(dpam.DPAM_CRN_NO,'CONFIRMATION'),'') = '1' THEN 'Y' ELSE 'N' END CONFIRMATION
+		,CASE WHEN ISNULL(CITRUS_USR.FN_UCC_ACCP(dpam.DPAM_id,'ECS_FLG',''),'') = '1' THEN 'Y' ELSE 'N' END ECS
+		,DPAM_ACCT_NO INREFNO
+		,CASE WHEN isnull(CONVERT(VARCHAR(11),CLIM_DOB,106),'') ='01 Jan 1900' THEN '' ELSE ISNULL(CONVERT(VARCHAR(11),CLIM_DOB,105),'') END CLIM_DOB       
+	,ISNULL(CITRUS_USR.FN_UCC_ENTP(dpam.DPAM_CRN_NO,'OCCUPATION',''),'') OCCUPATION
+  --  ,ISNULL(CITRUS_USR.FN_UCC_ENTP(DPAM_CRN_NO,'EDUCATION',''),'') EDUCATION
+    ,dpam_acct_no formno
+    ,ISNULL(brom_desc,'') scheme
+    ,ISNULL(CITRUS_USR.FN_UCC_ENTP(dpam.DPAM_CRN_NO,'EDUCATION',''),'') EDUCATION
+    ,ISNULL(CITRUS_USR.FN_UCC_ACCP(dpam.DPAM_id,'BBO_CODE',''),'') BBO_CODE
+    ,isnull(accd_doc_path,'') accd_doc_path
+	,ACCD_BINARY_IMAGE	
+	,clidb_created_dt	
+	,case when clim_gender = 'M' then 'Male' 
+		  when clim_gender = 'F' then 'Female' else '' end Gender
+    ,isnull(banm_rtgs_cd,'') ifsc
+FROM DP_ACCT_MSTR DPAM
+		LEFT OUTER JOIN 
+        client_dp_brkg     on dpam_id = clidb_dpam_id  and getdate() between clidb_eff_from_dt and clidb_eff_to_dt
+        LEFT OUTER JOIN 
+      	brokerage_mstr on brom_id = clidb_brom_id  
+        LEFT OUTER JOIN 
+		DP_HOLDER_DTLS ON  DPAM_ID = DPHD_DPAM_ID AND DPHD_DELETED_IND =1
+		LEFT OUTER JOIN 
+		DP_POA_DTLS    ON   DPAM_ID = DPPD_DPAM_ID  AND DPPD_DELETED_IND =1
+		left outer join
+		CLIENT_BANK_ACCTS on DPAM_ID = CLIBA_CLISBA_ID and CLIBA_DELETED_IND = 1
+		left outer join
+		BANK_MSTR    on   CLIBA_BANM_ID      = BANM_ID and  BANM_DELETED_IND = 1
+        left outer join
+        bank_addresses_dtls on TMPBA_DP_BANK = banm_micr and TMPBA_DP_BR = banm_rtgs_cd
+        left outer join 
+        account_documents on accd_clisba_id = DPAM_ID and accd_deleted_ind = 1 and accd_accdocm_doc_id = 12
+		,CLIENT_CTGRY_MSTR
+		,ENTITY_TYPE_MSTR
+		,STATUS_MSTR
+		,SUB_CTGRY_MSTR 
+		,CLIENT_MSTR
+		--,CLIENT_BANK_ACCTS
+		--,BANK_MSTR  
+		,CITRUS_USR.FN_ACCT_LIST(@@DPMID ,@PA_LOGIN_PR_ENTM_ID,@@L_CHILD_ENTM_ID) ACCOUNT 		       
+		left outer join freeze_unfreeze_dtls on fre_Dpam_id = ACCOUNT.dpam_id and fre_deleted_ind = 1
+	   
+		WHERE isNumeric(dpam.DPAM_SBA_NO)=1 
+        --and right(dpam.DPAM_SBA_NO,8)  BETWEEN @PA_FROM_ACCTNO AND @PA_TO_ACCTNO
+        and dpam.DPAM_SBA_NO  BETWEEN @PA_FROM_ACCTNO AND @PA_TO_ACCTNO
+		AND   DPAM.DPAM_CLICM_CD = CLICM_CD 
+		AND   DPAM.DPAM_ENTTM_CD = ENTTM_CD
+		AND   DPAM.DPAM_STAM_CD  = STAM_CD
+		AND   DPAM.DPAM_SUBCM_CD = SUBCM_CD
+		AND   CLICM_ID           = SUBCM_CLICM_ID
+		AND   CLIM_CRN_NO        = DPAM.DPAM_CRN_NO 
+		--AND   CLIBA_CLISBA_ID    = DPAM.DPAM_ID
+		--AND   CLIBA_BANM_ID      = BANM_ID     
+		AND   DPAM.DPAM_ID       = ACCOUNT.DPAM_ID
+       -- and ISNULL(CITRUS_USR.FN_UCC_ACCP(dpam.DPAM_id,'BBO_CODE',''),'') like case when isnull(@l_bbo_code,'') ='' then '%' else @l_bbo_code end  --+ '%'
+		and isnull(dpam_bbo_code ,'') like case when isnull(@l_bbo_code,'') ='' then '%' else @l_bbo_code end 
+		
+		--and exists(select clientid,bbo from #bbocode where clientid = dpam.dpam_sba_no and bbo = case when @l_bbo_code <> '' then @l_bbo_code else bbo end ) 
+order by clidb_created_dt desc
+--
+--truncate table #bbocode
+--drop table #bbocode
+
+END -- MAIN
+
+GO

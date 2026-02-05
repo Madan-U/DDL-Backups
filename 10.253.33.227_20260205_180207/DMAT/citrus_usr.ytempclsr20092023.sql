@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.ytempclsr20092023
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ytempclsr20092023]
+(
+    [CLSR_BO_ID] VARCHAR(16) NULL,
+    [CLSR_TRX_TYPE] VARCHAR(1) NULL,
+    [CLSR_INI_BY] VARCHAR(1) NULL,
+    [CLSR_REASON_CD] VARCHAR(2) NULL,
+    [CLSR_REMAINING_BAL] VARCHAR(1) NULL,
+    [CLSR_NEW_BO_ID] VARCHAR(16) NULL,
+    [CLSR_RMKS] VARCHAR(100) NULL,
+    [CLSR_REQ_INT_REFNO] VARCHAR(16) NULL,
+    [CLSR_DATE] VARCHAR(8000) NULL
+);
+
+GO

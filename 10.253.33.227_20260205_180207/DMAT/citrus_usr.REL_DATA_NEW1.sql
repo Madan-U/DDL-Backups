@@ -1,0 +1,20 @@
+-- Object: TABLE citrus_usr.REL_DATA_NEW1
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[REL_DATA_NEW1]
+(
+    [ESBA] VARCHAR(25) NOT NULL,
+    [RECODE] VARCHAR(100) NULL,
+    [RENAME] VARCHAR(100) NULL,
+    [ARCODE] VARCHAR(100) NULL,
+    [ARNAME] VARCHAR(100) NULL,
+    [BRCODE] VARCHAR(100) NULL,
+    [BRNAME] VARCHAR(100) NULL,
+    [SBCODE] VARCHAR(100) NULL,
+    [SBNAME] VARCHAR(100) NULL,
+    [BLCODE] VARCHAR(100) NULL,
+    [BLNAME] VARCHAR(100) NULL
+);
+
+GO
