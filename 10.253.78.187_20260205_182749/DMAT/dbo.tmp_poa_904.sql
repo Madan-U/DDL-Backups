@@ -1,0 +1,18 @@
+-- Object: TABLE dbo.tmp_poa_904
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[tmp_poa_904]
+(
+    [Column 0] NVARCHAR(50) NULL,
+    [Column 1] NVARCHAR(50) NULL,
+    [Column 2] NVARCHAR(50) NULL,
+    [Column 3] NVARCHAR(50) NULL,
+    [Column 4] NVARCHAR(50) NULL,
+    [Column 5] NVARCHAR(50) NULL,
+    [Column 6] NVARCHAR(50) NULL,
+    [Column 7] NVARCHAR(50) NULL,
+    [Column 8] NVARCHAR(50) NULL
+);
+
+GO

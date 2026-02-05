@@ -1,0 +1,24 @@
+-- Object: TABLE citrus_usr.Holding_report_log
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[Holding_report_log]
+(
+    [Run_date] DATETIME NULL,
+    [DPTYPE] VARCHAR(4) NULL,
+    [EXCSMID] INT NULL,
+    [ASONDATE] CHAR(1) NULL,
+    [FORDATE] DATETIME NULL,
+    [FROMACCID] VARCHAR(16) NULL,
+    [TOACCID] VARCHAR(16) NULL,
+    [ISINCD] VARCHAR(12) NULL,
+    [WITHVALUE] VARCHAR(100) NULL,
+    [LOGIN_PR_ENTM_ID] NUMERIC(18, 0) NULL,
+    [LOGIN_ENTM_CD_CHAIN] VARCHAR(8000) NULL,
+    [SETTM_TYPE] VARCHAR(100) NULL,
+    [SETTM_NO_FR] VARCHAR(100) NULL,
+    [SETTM_NO_TO] VARCHAR(100) NULL,
+    [OUTPUT] VARCHAR(8000) NULL
+);
+
+GO

@@ -1,0 +1,20 @@
+-- Object: TABLE citrus_usr.DP_MSTR_MAK
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[DP_MSTR_MAK]
+(
+    [DPM_ID] DECIMAL(10, 0) NOT NULL,
+    [DPM_NAME] VARCHAR(100) NULL,
+    [DPM_DPID] VARCHAR(50) NOT NULL,
+    [DPM_RMKS] VARCHAR(250) NULL,
+    [DPM_CREATED_BY] VARCHAR(25) NOT NULL,
+    [DPM_CREATED_DT] DATETIME NOT NULL,
+    [DPM_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [DPM_LST_UPD_DT] DATETIME NOT NULL,
+    [DPM_DELETED_IND] SMALLINT NOT NULL,
+    [DPM_EXCSM_ID] NUMERIC(10, 0) NULL,
+    [dpm_short_name] VARCHAR(20) NULL
+);
+
+GO

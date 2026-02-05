@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.TMP_POA_DTLS
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TMP_POA_DTLS]
+(
+    [TMPD_GRPID_BY_CDSL] VARCHAR(7) NULL,
+    [TMPD_DPID] NUMERIC(18, 0) NULL,
+    [TMPD_BOID] VARCHAR(16) NULL,
+    [TMPD_HLDR_NOS] NUMERIC(18, 0) NULL,
+    [TMPD_HLDR_FNAME] VARCHAR(100) NULL,
+    [TMPD_HLDR_MNAME] VARCHAR(20) NULL,
+    [TMPD_HLDR_SEARCHNAME] VARCHAR(20) NULL
+);
+
+GO

@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.TBL_AUTO_PROCESS_EMAIL
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TBL_AUTO_PROCESS_EMAIL]
+(
+    [EXCHANGE] VARCHAR(3) NULL,
+    [SEGMENT] VARCHAR(7) NULL,
+    [PROCESS_FOR] VARCHAR(30) NULL,
+    [TO_EMAIL_ID] VARCHAR(500) NULL,
+    [CC_EMAIL_ID] VARCHAR(500) NULL,
+    [BCC_EMAIL_ID] VARCHAR(500) NULL,
+    [EMAIL_SEND_FLAG] INT NULL
+);
+
+GO

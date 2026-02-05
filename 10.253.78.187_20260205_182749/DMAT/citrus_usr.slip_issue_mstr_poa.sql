@@ -1,0 +1,30 @@
+-- Object: TABLE citrus_usr.slip_issue_mstr_poa
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[slip_issue_mstr_poa]
+(
+    [SLIIM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_TRATM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_SERIES_TYPE] VARCHAR(20) NULL,
+    [SLIIM_ENTM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_DPAM_ACCT_NO] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_FR] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_TO] VARCHAR(20) NULL,
+    [SLIIM_LOOSE_Y_N] SMALLINT NULL,
+    [SLIIM_CREATED_BY] VARCHAR(20) NOT NULL,
+    [SLIIM_CREATED_DT] DATETIME NOT NULL,
+    [SLIIM_LST_UPD_BY] VARCHAR(20) NOT NULL,
+    [SLIIM_LST_UPD_DT] DATETIME NOT NULL,
+    [SLIIM_DELETED_IND] SMALLINT NOT NULL,
+    [sliim_dpm_id] NUMERIC(10, 0) NULL,
+    [sliim_no_used] NUMERIC(10, 0) NULL,
+    [sliim_all_used] NUMERIC(10, 0) NULL,
+    [sliim_dt] DATETIME NULL,
+    [sliim_book_name] VARCHAR(100) NULL,
+    [SLIIM_SUCCESS_FLAG] CHAR(1) NULL,
+    [SLIIM_ERROR_CODE] VARCHAR(240) NULL,
+    [sliim_RECHK_FLAG] CHAR(1) NULL
+);
+
+GO

@@ -1,0 +1,24 @@
+-- Object: TABLE citrus_usr.entity_mstr_tobedelete
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[entity_mstr_tobedelete]
+(
+    [ENTM_ID] NUMERIC(10, 0) NOT NULL,
+    [ENTM_NAME1] VARCHAR(100) NULL,
+    [ENTM_NAME2] VARCHAR(100) NULL,
+    [ENTM_NAME3] VARCHAR(100) NULL,
+    [ENTM_SHORT_NAME] VARCHAR(100) NULL,
+    [ENTM_ENTTM_CD] VARCHAR(20) NOT NULL,
+    [ENTM_CLICM_CD] VARCHAR(20) NOT NULL,
+    [ENTM_PARENT_ID] NUMERIC(10, 0) NULL,
+    [ENTM_RMKS] VARCHAR(1000) NULL,
+    [ENTM_CREATED_BY] VARCHAR(25) NOT NULL,
+    [ENTM_CREATED_DT] DATETIME NOT NULL,
+    [ENTM_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [ENTM_LST_UPD_DT] DATETIME NOT NULL,
+    [ENTM_DELETED_IND] SMALLINT NOT NULL,
+    [entm_preapproval_flg] INT NULL
+);
+
+GO

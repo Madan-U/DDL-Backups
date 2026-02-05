@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.INDIVIDUAL_DATE_OF_BIRTH
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[INDIVIDUAL_DATE_OF_BIRTH]
+(
+    [TYPE_OF_DATE] VARCHAR(MAX) NULL,
+    [FROM_YEAR] VARCHAR(MAX) NULL,
+    [TO_YEAR] VARCHAR(MAX) NULL,
+    [NOTE] VARCHAR(MAX) NULL,
+    [DATE] VARCHAR(MAX) NULL,
+    [YEAR] VARCHAR(MAX) NULL,
+    [INDIVIDUAL_Id] NUMERIC(18, 0) NULL
+);
+
+GO

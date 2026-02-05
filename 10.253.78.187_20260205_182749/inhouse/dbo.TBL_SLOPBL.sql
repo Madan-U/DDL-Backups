@@ -1,0 +1,17 @@
+-- Object: TABLE dbo.TBL_SLOPBL
+-- Server: 10.253.78.187 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[TBL_SLOPBL]
+(
+    [SL_CODE] VARCHAR(10) NOT NULL,
+    [SL_NAME] VARCHAR(250) NULL,
+    [GL_CODE] VARCHAR(10) NULL,
+    [OPEN_BAL] VARCHAR(40) NULL,
+    [BRANCH_CODE] VARCHAR(6) NULL,
+    [ECS_MANDATE] VARCHAR(1) NULL,
+    [SEC_DEPOSIT] VARCHAR(1) NULL,
+    [INTEREST_PER] NUMERIC(4, 2) NULL
+);
+
+GO

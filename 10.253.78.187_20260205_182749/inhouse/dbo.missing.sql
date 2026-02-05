@@ -1,0 +1,10 @@
+-- Object: TABLE dbo.missing
+-- Server: 10.253.78.187 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[missing]
+(
+    [cl_code] NVARCHAR(255) NULL
+);
+
+GO

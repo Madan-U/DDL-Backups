@@ -1,0 +1,147 @@
+-- Object: PROCEDURE dbo.Angel_SBHolding_25_oct_2017
+-- Server: 10.253.78.167 | DB: inhouse
+--------------------------------------------------
+
+/*          
+EXEC ANGEL_SBHOLDING '', 's1294', 'BROKER'      
+*/          
+Create PROC [dbo].[Angel_SBHolding_25_cot_2017]          
+(          
+@CODE AS VARCHAR(25)='', @PARTY AS VARCHAR(15)='', @ACCESSTO AS VARCHAR(10)=''          
+)          
+          
+AS   
+set transaction isolation level read uncommitted       
+/*
+declare @CODE AS VARCHAR(25), @PARTY AS VARCHAR(15), @ACCESSTO AS VARCHAR(10)          
+set @CODE=''
+set @PARTY='s1294'
+set @ACCESSTO='BROKER'
+*/
+ 
+ /*   
+IF @ACCESSTO='SB'          
+BEGIN          
+ SET @CODE=@CODE          
+END          
+IF @ACCESSTO='BROKER'          
+BEGIN          
+ SET @CODE='%%'          
+END          
+          
+--DROP SELECT * FROM #Y          
+SELECT TOP 0 PARTY_CODE AS CL_CODE,LONG_NAME AS CM_NAME,BRANCH_CD,SUB_BROKER          
+INTO #Y FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS Y WITH (NOLOCK)          
+      
+          
+IF LTRIM(RTRIM(@ACCESSTO)) = 'SB'          
+BEGIN          
+ INSERT INTO #Y          
+ SELECT DISTINCT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE SUB_BROKER LIKE @CODE AND PARTY_CODE LIKE @PARTY          
+END          
+          
+--IF @ACCESSTO='BROKER'          
+--BEGIN          
+          
+-- INSERT INTO #Y          
+-- SELECT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+-- FROM INHOUSE.DBO.CLIENT_DETAILS X WITH (NOLOCK) WHERE SUB_BROKER LIKE @CODE          
+-- AND PARTY_CODE LIKE @PARTY          
+          
+--END          
+          
+IF @ACCESSTO='SBMAST'          
+BEGIN          
+ SELECT DISTINCT SUB_BROKER INTO #SB          
+ FROM [196.1.115.132].RISK.DBO.SB_MASTER NOLOCK           
+ WHERE SBMAST_CD=@CODE          
+          
+ INSERT INTO #Y          
+ SELECT DISTINCT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE SUB_BROKER IN (SELECT SUB_BROKER FROM #SB) AND PARTY_CODE LIKE @PARTY          
+END          
+          
+ELSE IF @ACCESSTO='BRMAST'          
+BEGIN          
+ SELECT DISTINCT BRANCH_CD INTO #BR           
+ FROM [196.1.115.132].RISK.DBO.BRANCH_MASTER WITH (NOLOCK) WHERE BRMAST_CD=@CODE          
+          
+ INSERT INTO #Y          
+ SELECT DISTINCT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE BRANCH_CD IN (SELECT BRANCH_CD FROM #BR) AND PARTY_CODE LIKE @PARTY          
+END          
+          
+ELSE IF @ACCESSTO='BRANCH'          
+BEGIN          
+ INSERT INTO #Y          
+ SELECT DISTINCT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE BRANCH_CD LIKE @CODE AND PARTY_CODE LIKE @PARTY          
+END          
+          
+ELSE IF @ACCESSTO='REGION'          
+BEGIN          
+ SELECT DISTINCT CODE INTO #REG           
+ FROM [196.1.115.132].RISK.DBO.REGION WITH(NOLOCK) WHERE REG_CODE=@CODE          
+          
+ INSERT INTO #Y          
+ SELECT DISTINCT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE BRANCH_CD IN (SELECT BRANCH_CD FROM #REG) AND PARTY_CODE LIKE @PARTY          
+END          
+          
+ELSE IF @ACCESSTO='BROKER'          
+BEGIN          
+ INSERT INTO #Y          
+ SELECT PARTY_CODE,LONG_NAME,BRANCH_CD,SUB_BROKER          
+ FROM [196.1.115.132].RISK.DBO.CLIENT_DETAILS X WITH (NOLOCK)           
+ WHERE SUB_BROKER LIKE @CODE AND PARTY_CODE LIKE @PARTY --+ '%%'          
+END          
+          
+SELECT * INTO #A FROM          
+(SELECT DISTINCT SCRIPNAME,ISIN FROM [196.1.115.197].MSAJAG.DBO.V_ISIN WITH (NOLOCK))S  
+
+
+  SELECT CM.Client_code as CM_CD,CM.Nise_party_code as CM_BLSAVINGCD,CM.First_hold_name as CM_NAME     into #party     
+  FROM tbl_CLIENT_MASTER CM WITH (NOLOCK)          
+  INNER JOIN #Y A ON Nise_party_code = A.CL_CODE          
+  
+  
+  SELECT  HLD_AC_CODE,           
+ HLD_AC_TYPE=CASE WHEN HLD_AC_TYPE='11' THEN 'BENEFICIARY'          
+ WHEN HLD_AC_TYPE='12' THEN 'PENDING DEMAT'          
+ WHEN HLD_AC_TYPE='13' THEN 'REMAT'          
+ WHEN HLD_AC_TYPE='14' THEN 'PLEDGE'          
+ WHEN HLD_AC_TYPE='51' THEN 'LOCK IN BALANCE'          
+ ELSE HLD_AC_TYPE END ,          
+ HLD_ISIN_CODE,          
+ SUM(HLD_AC_POS) AS HOLDQTY,          
+ CM_BLSAVINGCD,          
+ Y.CM_NAME          into #hld
+ --FROM ACER_HOLDING WITH(NOLOCK)          
+ FROM HOLDING WITH (NOLOCK)  ,
+ (          
+  SELECT  CM_CD,CM_BLSAVINGCD,CM_NAME          
+  FROM #party         
+ ) Y          
+ where HLD_AC_CODE = CM_CD  
+     
+ GROUP BY HLD_AC_CODE,HLD_ISIN_CODE ,HLD_AC_TYPE,CM_BLSAVINGCD,CM_NAME          
+          
+SELECT  CM_BLSAVINGCD AS CLCODE, HLD_AC_CODE AS [AC CODE], CM_NAME AS NAME,          
+[HLD AC.TYPE]=HLD_AC_TYPE, HLD_ISIN_CODE AS ISIN,SCRIPNAME,          
+CONVERT(int,HOLDQTY) AS HOLDQTY, VALUE =(HOLDQTY * IR.RATE)          
+FROM (          
+ select * from #hld
+)X          
+LEFT JOIN #A A ON A.ISIN = X.HLD_ISIN_CODE           
+LEFT JOIN [196.1.115.132].RISK.DBO.V_ISINSCRIPRATES IR ON HLD_ISIN_CODE=IR.ISIN      
+ORDER BY CM_BLSAVINGCD  
+*/ 
+Select '0'
+
+GO

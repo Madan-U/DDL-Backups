@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.TEMP_CDSL_UCC_DTLS
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TEMP_CDSL_UCC_DTLS]
+(
+    [TCUD_BOID] VARCHAR(16) NULL,
+    [TCUD_UCC] VARCHAR(100) NULL,
+    [TCUD_EXID] VARCHAR(10) NULL,
+    [TCUD_CMID] VARCHAR(10) NULL,
+    [TCUD_TMCD] VARCHAR(20) NULL,
+    [TCUD_SEGID] VARCHAR(30) NULL,
+    [TCUD_LINKSTATUS] VARCHAR(200) NULL
+);
+
+GO

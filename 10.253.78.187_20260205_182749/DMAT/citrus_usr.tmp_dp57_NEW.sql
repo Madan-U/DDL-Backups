@@ -1,0 +1,57 @@
+-- Object: TABLE citrus_usr.tmp_dp57_NEW
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[tmp_dp57_NEW]
+(
+    [value1] VARCHAR(250) NULL,
+    [value2] VARCHAR(250) NULL,
+    [value3] VARCHAR(250) NULL,
+    [value4] VARCHAR(250) NULL,
+    [value5] VARCHAR(250) NULL,
+    [value6] VARCHAR(250) NULL,
+    [value7] VARCHAR(250) NULL,
+    [value8] VARCHAR(250) NULL,
+    [value9] VARCHAR(250) NULL,
+    [value10] VARCHAR(250) NULL,
+    [value11] VARCHAR(250) NULL,
+    [value12] VARCHAR(250) NULL,
+    [value13] VARCHAR(250) NULL,
+    [value14] VARCHAR(250) NULL,
+    [value15] VARCHAR(250) NULL,
+    [value16] VARCHAR(250) NULL,
+    [value17] VARCHAR(250) NULL,
+    [value18] VARCHAR(250) NULL,
+    [value19] VARCHAR(250) NULL,
+    [value20] VARCHAR(250) NULL,
+    [value21] VARCHAR(250) NULL,
+    [value22] VARCHAR(250) NULL,
+    [value23] VARCHAR(250) NULL,
+    [value24] VARCHAR(250) NULL,
+    [value25] VARCHAR(250) NULL,
+    [value26] VARCHAR(250) NULL,
+    [value27] VARCHAR(250) NULL,
+    [value28] VARCHAR(250) NULL,
+    [value29] VARCHAR(250) NULL,
+    [value30] VARCHAR(250) NULL,
+    [value31] VARCHAR(250) NULL,
+    [value32] VARCHAR(250) NULL,
+    [value33] VARCHAR(250) NULL,
+    [value34] VARCHAR(250) NULL,
+    [value35] VARCHAR(250) NULL,
+    [value36] VARCHAR(250) NULL,
+    [value37] VARCHAR(250) NULL,
+    [value38] VARCHAR(250) NULL,
+    [value39] VARCHAR(250) NULL,
+    [value40] VARCHAR(250) NULL,
+    [value41] VARCHAR(250) NULL,
+    [value42] VARCHAR(250) NULL,
+    [value43] VARCHAR(250) NULL,
+    [value44] VARCHAR(250) NULL,
+    [value45] VARCHAR(250) NULL,
+    [value46] VARCHAR(250) NULL,
+    [value47] VARCHAR(250) NULL,
+    [value48] VARCHAR(250) NULL
+);
+
+GO

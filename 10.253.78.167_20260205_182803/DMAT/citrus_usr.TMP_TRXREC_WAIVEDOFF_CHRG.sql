@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.TMP_TRXREC_WAIVEDOFF_CHRG
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TMP_TRXREC_WAIVEDOFF_CHRG]
+(
+    [TMP_TRXNO] VARCHAR(20) NULL,
+    [TMP_TRXDATE] DATETIME NULL,
+    [TMP_BEN_ACCT_NO] VARCHAR(20) NULL,
+    [TMP_ISIN_CD] VARCHAR(20) NULL,
+    [TMP_TRATM_CD] VARCHAR(50) NULL,
+    [TMP_QTY] NUMERIC(18, 3) NULL,
+    [TMP_TRANS_DESC] VARCHAR(500) NULL,
+    [TMP_STATUS] CHAR(1) NULL
+);
+
+GO

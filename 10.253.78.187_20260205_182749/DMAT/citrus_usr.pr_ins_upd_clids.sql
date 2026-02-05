@@ -1,0 +1,226 @@
+-- Object: PROCEDURE citrus_usr.pr_ins_upd_clids
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+--select * from client_discount_scheme
+--pr_ins_upd_clids 3,'DEL','VISHAL','01/03/2010|**|23/03/2010|**|1|**|2|**|3.000000000|**|R|**||**||**|TEST PROFILE','|*~|','*|~*'
+--pr_ins_upd_clids 0,'INS','VISHAL','26/03/2010|*~|26/03/2010|*~|12|*~|33|*~|66|*~|R*|~*26/03/2010|*~|26/03/2010|*~|55|*~|66|*~|44|*~|R*|~*','|*~|','*|~*'
+--pr_ins_upd_clids 	0,'INS','VISHAL','26/03/2010|**|26/03/2010|**|23|**|33|**|44|**|R|**|HO|*~|HETAL|*~|RPTA|*~|*|~*','|*~|','*|~*'
+
+
+CREATE Procedure [citrus_usr].[pr_ins_upd_clids]
+(
+	 @pa_dpm_id		numeric(9,0)
+	,@pa_action     varchar(20)
+	,@pa_login_name varchar(20)
+	,@pa_values		varchar(8000)
+	,@rowdelimiter  char(4)  = '*|~*'
+    ,@coldelimiter  char(4)  = '|*~|'
+)
+AS
+BEGIN --1 
+
+	SET NOCOUNT ON
+	DECLARE	@@T_ERRORSTR			VARCHAR(8000),
+			@@L_ERROR				BIGINT,
+			@DELIMETER				VARCHAR(10),
+			@@REMAININGSTRING		VARCHAR(8000),
+			@@CURRSTRING			VARCHAR(8000),
+			@@REMAININGSTRING2		VARCHAR(8000),
+			@@CURRSTRING2			VARCHAR(8000),
+			@@FOUNDAT				INTEGER,
+			@@DELIMETERLENGTH		INT,
+			@@L_CLIDS_FROM_DT		VARCHAR(25),
+			@@L_CLIDS_TO_DT			VARCHAR(25),
+			@@L_CLIDS_VALUE			VARCHAR(30),
+			@@L_CLIDS_PERCENTAGE	VARCHAR(30),
+			@@L_CLIDS_TRX_TYPE		VARCHAR(20),
+			@@L_CLIDS_FIXEDAMT		VARCHAR(20),
+			@@L_CLIDS_RF			CHAR(1),
+			@@L_CLIDS_ENTM_ID		VARCHAR(500),
+			@@L_CLIDS_ENTM_CD_CHAIN	VARCHAR(500),
+			@@L_CLIDS_PROFILE_ID	VARCHAR(20),
+			@@L_CLIDS_PROFILE_NAME  VARCHAR(100)
+
+	SET @@L_ERROR = 0
+	SET @@T_ERRORSTR=''
+	SET @DELIMETER = '%'+ @ROWDELIMITER + '%'
+	SET @@DELIMETERLENGTH = LEN(@ROWDELIMITER)
+	SET @@REMAININGSTRING2 = @PA_DPM_ID
+	--
+	WHILE @@REMAININGSTRING2 <> ''
+	BEGIN --2
+	--
+		SET @@FOUNDAT = 0
+		SET @@FOUNDAT =  PATINDEX('%'+@DELIMETER+'%',@@REMAININGSTRING2)
+	--
+		IF @@FOUNDAT > 0
+		BEGIN
+		--
+		  SET @@CURRSTRING2      = SUBSTRING(@@REMAININGSTRING2, 0,@@FOUNDAT)
+		  SET @@REMAININGSTRING2 = SUBSTRING(@@REMAININGSTRING2, @@FOUNDAT+@@DELIMETERLENGTH,LEN(@@REMAININGSTRING2)- @@FOUNDAT+@@DELIMETERLENGTH)
+		--
+		END
+	ELSE
+	BEGIN
+	--
+		  SET @@CURRSTRING2 = @@REMAININGSTRING2
+		  SET @@REMAININGSTRING2 = ''
+	--
+	END
+	--
+		IF @@CURRSTRING2 <> ''
+		BEGIN --3
+		--
+		  SET @DELIMETER = '%'+ @ROWDELIMITER + '%'
+		  SET @@DELIMETERLENGTH = LEN(@ROWDELIMITER)
+		--
+		  SET @@REMAININGSTRING = @PA_VALUES
+		  --
+
+		 WHILE @@REMAININGSTRING <> ''
+		  BEGIN --4
+		  --
+			/*SET @@FOUNDAT = 0
+			SET @@FOUNDAT =  PATINDEX('%'+@DELIMETER+'%',@@REMAININGSTRING)
+		  --
+
+			IF @@FOUNDAT > 0
+			BEGIN
+			--
+			  SET @@CURRSTRING      = SUBSTRING(@@REMAININGSTRING, 0,@@FOUNDAT)
+			  SET @@REMAININGSTRING = SUBSTRING(@@REMAININGSTRING, @@FOUNDAT+@@DELIMETERLENGTH,LEN(@@REMAININGSTRING)- @@FOUNDAT+@@DELIMETERLENGTH)
+			--
+PRINT @@REMAININGSTRING
+
+			END
+			ELSE
+			BEGIN*/
+			--
+			  SET @@CURRSTRING      = @@REMAININGSTRING
+			  SET @@REMAININGSTRING = ''
+			--
+			
+			--
+
+			IF @@CURRSTRING <> ''
+			BEGIN --5
+			--
+				SET @@L_CLIDS_FROM_DT			= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,1,'|**|')
+				SET @@L_CLIDS_TO_DT				= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,2,'|**|')
+				SET @@L_CLIDS_VALUE				= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,3,'|**|')
+				SET @@L_CLIDS_PERCENTAGE		= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,4,'|**|')
+				--SET @@L_CLIDS_TRX_TYPE			= citrus_usr.FN_SPLITVAL1(@@CURRSTRING,5,'|**|')
+				SET @@L_CLIDS_FIXEDAMT			= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,5,'|**|')
+				SET @@L_CLIDS_RF				= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,6,'|**|')
+				--SET @@L_CLIDS_ENTM_ID			= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,7,'|**|')
+				SET @@L_CLIDS_ENTM_CD_CHAIN		= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,7,'|**|')
+				SET @@L_CLIDS_PROFILE_ID		= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,8,'|**|')
+				SET @@L_CLIDS_PROFILE_NAME		= citrus_usr.FN_SPLITVAL_BY(@@CURRSTRING,9,'|**|')
+
+			  
+			IF @PA_ACTION = 'INS'
+			BEGIN
+			--
+				INSERT INTO client_discount_scheme
+				(
+					CLIDS_DPM_ID,
+					CLIDS_FROM_DT,
+					CLIDS_TO_DT,
+					CLIDS_VALUE,
+					CLIDS_PERCENTAGE,
+					CLIDS_TRX_TYPE,
+					CLIDS_FIXEDAMT,
+					CLIDS_RF,
+					CLIDS_ENTM_ID,
+					CLIDS_ENTM_CD_CHAIN,
+					CLIDS_CREATED_BY,
+					CLIDS_CREATED_DT,
+					CLIDS_LST_UPD_BY,
+					CLIDS_LST_UPD_DT,
+					CLIDS_DELETED_IND,
+					CLIDS_PROFILE_ID,
+					CLIDS_PROFILE_NAME
+				)
+				VALUES
+				(
+					@pa_dpm_id,
+					CONVERT(DATETIME,@@L_CLIDS_FROM_DT,103),		
+					CONVERT(DATETIME,@@L_CLIDS_TO_DT,103),			
+					CONVERT(NUMERIC,@@L_CLIDS_VALUE),			
+					CONVERT(NUMERIC,@@L_CLIDS_PERCENTAGE),	
+					'AMC',		
+					CONVERT(NUMERIC,@@L_CLIDS_FIXEDAMT),		
+					@@L_CLIDS_RF,			
+					1,		
+					@@L_CLIDS_ENTM_CD_CHAIN,
+					@pa_login_name,
+					getdate(),
+					@pa_login_name,
+					getdate(),
+					1,
+					@@L_CLIDS_PROFILE_ID,
+					@@L_CLIDS_PROFILE_NAME
+				)
+			END
+			--
+			--	
+			IF @PA_ACTION = 'EDT'
+			BEGIN
+			--
+				IF EXISTS(SELECT CLIDS_DPM_ID FROM CLIENT_DISCOUNT_SCHEME 
+						  WHERE CLIDS_FROM_DT = CONVERT(DATETIME,@@L_CLIDS_FROM_DT)
+						  AND CLIDS_TO_DT = CONVERT(DATETIME,@@L_CLIDS_TO_DT)
+						  --AND CLIDS_VALUE = @@L_CLIDS_VALUE
+						  AND CLIDS_ENTM_ID = @@L_CLIDS_ENTM_ID)
+				BEGIN
+				--
+					UPDATE CLIENT_DISCOUNT_SCHEME
+					SET CLIDS_VALUE = @@L_CLIDS_VALUE
+					,	CLIDS_PERCENTAGE = @@L_CLIDS_PERCENTAGE
+					,	CLIDS_TRX_TYPE = @@L_CLIDS_TRX_TYPE
+					,	CLIDS_FIXEDAMT = @@L_CLIDS_FIXEDAMT
+					,	CLIDS_RF = @@L_CLIDS_RF
+					--,	CLIDS_ENTM_ID = @@L_CLIDS_ENTM_ID
+					,	CLIDS_ENTM_CD_CHAIN = @@L_CLIDS_ENTM_CD_CHAIN
+					,	CLIDS_PROFILE_ID = @@L_CLIDS_PROFILE_ID
+					,	CLIDS_PROFILE_NAME = @@L_CLIDS_PROFILE_NAME
+					WHERE CLIDS_FROM_DT = CONVERT(DATETIME,@@L_CLIDS_FROM_DT)
+					AND CLIDS_TO_DT = CONVERT(DATETIME,@@L_CLIDS_TO_DT)
+					--AND CLIDS_VALUE = @@L_CLIDS_VALUE
+					AND CLIDS_ENTM_ID = @@L_CLIDS_ENTM_ID
+				END
+				--
+			END
+			--
+			--
+			IF @PA_ACTION = 'DEL'
+			BEGIN
+			--
+				UPDATE CLIENT_DISCOUNT_SCHEME
+				SET CLIDS_DELETED_IND = 3
+				WHERE CONVERT(VARCHAR,CLIDS_FROM_DT,103) = @@L_CLIDS_FROM_DT
+				AND CONVERT(VARCHAR,CLIDS_TO_DT,103) = @@L_CLIDS_TO_DT		
+			END
+			--
+
+			IF @PA_ACTION = 'SEL'
+			BEGIN
+			--
+				SELECT * FROM CLIENT_DISCOUNT_SCHEME
+				WHERE CONVERT(VARCHAR,CLIDS_FROM_DT,103) >= @@L_CLIDS_FROM_DT
+				AND CONVERT(VARCHAR,CLIDS_TO_DT,103) <= @@L_CLIDS_TO_DT		
+			END
+			--
+
+		END --5	
+		--
+	END --4
+	--
+	END --3
+	--
+	END --2
+	--
+END --1
+
+GO

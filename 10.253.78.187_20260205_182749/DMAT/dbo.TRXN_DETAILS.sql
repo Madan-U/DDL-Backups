@@ -1,0 +1,12 @@
+-- Object: VIEW dbo.TRXN_DETAILS
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE VIEW TRXN_DETAILS 
+AS
+SELECT *,''  CM_BLSAVINGCD FROM SYNERGY_Trxn_details 
+UNION ALL
+SELECT   *  FROM SYNERGY.DBO.TRXN_DETAILS  WHERE TD_CURDATE <'2015-04-01'
+
+GO

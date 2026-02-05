@@ -1,0 +1,30 @@
+-- Object: PROCEDURE dbo.Spx_GetNisePartyCodeUpdationIntoClientMasterfrom_MKT
+-- Server: 10.253.78.187 | DB: inhouse
+--------------------------------------------------
+
+create PROC [dbo].[Spx_GetNisePartyCodeUpdationIntoClientMasterfrom_MKT]  
+AS  
+SELECT T.CLIENT_CODE, S.NISE_PARTY_CODE, S.TEMPLATE_CODE  
+INTO #T  
+FROM Tbl_Client_Master T, DMAT.DBO.TBL_CLIENT_MASTER S  
+WHERE T.CLIENT_CODE = S.CLIENT_CODE  
+ AND T.NISE_PARTY_CODE IS NULL  
+ AND S.NISE_PARTY_CODE IS NOT NULL  
+ 
+IF((SELECT COUNT(*) FROM #T) >0) 
+BEGIN
+  
+BEGIN TRAN  
+  
+UPDATE T  
+SET NISE_PARTY_CODE = S.NISE_PARTY_CODE, TEMPLATE_CODE = S.TEMPLATE_CODE  
+FROM Tbl_Client_Master T, #T S  
+WHERE T.CLIENT_CODE = S.CLIENT_CODE  
+ AND T.NISE_PARTY_CODE IS NULL  
+ AND S.NISE_PARTY_CODE IS NOT NULL  
+  
+COMMIT  
+
+END
+
+GO

@@ -1,0 +1,15 @@
+-- Object: TABLE dbo.SYNERGY_HOLD_VIEW
+-- Server: 10.253.78.167 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[SYNERGY_HOLD_VIEW]
+(
+    [HOLDING_DATE] DATETIME NOT NULL,
+    [CLIENT_CODE] VARCHAR(16) NOT NULL,
+    [PARTY_CODE] VARCHAR(10) NULL,
+    [ISIN] VARCHAR(12) NOT NULL,
+    [ISIN_DESC] VARCHAR(20) NULL,
+    [CURR_BAL] VARCHAR(40) NULL
+);
+
+GO

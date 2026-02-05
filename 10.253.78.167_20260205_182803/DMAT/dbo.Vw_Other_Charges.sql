@@ -1,0 +1,20 @@
+-- Object: TABLE dbo.Vw_Other_Charges
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [dbo].[Vw_Other_Charges]
+(
+    [CHARGE_CODE] VARCHAR(10) NULL,
+    [CLIENT_CODE] VARCHAR(16) NULL,
+    [CHARGE_DATE] DATETIME NULL,
+    [CHARGE_AMOUNT] MONEY NULL,
+    [CHARGE_DESCRIPTION] VARCHAR(200) NULL,
+    [BILL_NO] VARCHAR(50) NULL,
+    [MKRID] VARCHAR(10) NULL,
+    [MKRDT] VARCHAR(8) NULL,
+    [BILL_CODE] VARCHAR(20) NULL,
+    [CDSL_CHARGE] MONEY NULL,
+    [ACTUAL_CDSL_CHARGE] MONEY NULL
+);
+
+GO

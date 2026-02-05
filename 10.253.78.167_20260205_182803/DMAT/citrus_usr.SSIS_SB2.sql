@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.SSIS_SB2
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[SSIS_SB2]
+(
+    [CL_CODE] VARCHAR(50) NULL,
+    [SUB_BROKER] VARCHAR(20) NULL,
+    [CLIENT_CODE] VARCHAR(20) NULL,
+    [FIRST_HOLD_NAME] VARCHAR(20) NULL,
+    [ACTIVE_DATE] DATETIME NULL,
+    [TEMPLATE_CODE] VARCHAR(21) NULL,
+    [STATUS] VARCHAR(40) NULL,
+    [CLOSURE_DATE] DATETIME NULL
+);
+
+GO

@@ -1,0 +1,21 @@
+-- Object: TABLE citrus_usr.FREE_VALUE_SSRS_DATA
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[FREE_VALUE_SSRS_DATA]
+(
+    [hld_ac_code] VARCHAR(20) NOT NULL,
+    [tradingid] VARCHAR(100) NULL,
+    [FIRST_HOLD_NAME] VARCHAR(100) NULL,
+    [ACTIVE_DATE] DATETIME NULL,
+    [STATUS] VARCHAR(40) NULL,
+    [ISIN_COUNT] INT NULL,
+    [FREE_VALUE] NUMERIC(38, 9) NULL,
+    [PLEDGE_VALUE] NUMERIC(38, 9) NULL,
+    [POA_STATUS] VARCHAR(3) NOT NULL,
+    [POA_TYPE] CHAR(1) NULL,
+    [B2B_B2C] VARCHAR(3) NOT NULL,
+    [LAST_TRADE_DATE] DATETIME NULL
+);
+
+GO

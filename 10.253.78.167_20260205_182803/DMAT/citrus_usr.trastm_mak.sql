@@ -1,0 +1,19 @@
+-- Object: TABLE citrus_usr.trastm_mak
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[trastm_mak]
+(
+    [TRASTM_ID] NUMERIC(10, 0) NULL,
+    [TRASTM_EXCM_ID] NUMERIC(10, 0) NULL,
+    [TRASTM_TRATM_ID] NUMERIC(10, 0) NULL,
+    [TRASTM_CD] VARCHAR(25) NULL,
+    [TRASTM_DESC] VARCHAR(100) NULL,
+    [TRASTM_CREATED_DT] DATETIME NULL,
+    [TRASTM_CREATED_BY] VARCHAR(20) NULL,
+    [TRASTM_LST_UPD_DT] DATETIME NULL,
+    [TRASTM_LST_UPD_BY] VARCHAR(20) NULL,
+    [TRASTM_DELETED_IND] SMALLINT NULL
+);
+
+GO

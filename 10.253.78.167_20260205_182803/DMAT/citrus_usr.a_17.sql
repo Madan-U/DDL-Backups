@@ -1,0 +1,31 @@
+-- Object: TABLE citrus_usr.a_17
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[a_17]
+(
+    [DPPD_ID] NUMERIC(10, 0) NOT NULL,
+    [DPPD_DPAM_ID] NUMERIC(10, 0) NOT NULL,
+    [DPPD_HLD] VARCHAR(20) NOT NULL,
+    [DPPD_POA_TYPE] VARCHAR(20) NULL,
+    [DPPD_FNAME] VARCHAR(100) NULL,
+    [DPPD_MNAME] VARCHAR(50) NULL,
+    [DPPD_LNAME] VARCHAR(50) NULL,
+    [DPPD_FTHNAME] VARCHAR(100) NULL,
+    [DPPD_DOB] DATETIME NULL,
+    [DPPD_PAN_NO] VARCHAR(20) NULL,
+    [DPPD_GENDER] VARCHAR(10) NULL,
+    [DPPD_CREATED_BY] VARCHAR(20) NULL,
+    [DPPD_CREATED_DT] DATETIME NULL,
+    [DPPD_LST_UPD_BY] VARCHAR(20) NULL,
+    [DPPD_LST_UPD_DT] DATETIME NULL,
+    [DPPD_DELETED_IND] SMALLINT NULL,
+    [dppd_poa_id] VARCHAR(16) NULL,
+    [dppd_setup] DATETIME NULL,
+    [dppd_gpabpa_flg] CHAR(1) NULL,
+    [dppd_eff_fr_dt] DATETIME NULL,
+    [dppd_eff_TO_dt] DATETIME NULL,
+    [dppd_master_id] VARCHAR(25) NULL
+);
+
+GO

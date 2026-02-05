@@ -1,0 +1,50 @@
+-- Object: VIEW citrus_usr.SYNERGY_TRXN_DETAILS_01072015
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+
+
+create view [citrus_usr].[SYNERGY_TRXN_DETAILS_01072015]
+as
+select convert(datetime,convert(varchar(11),getdate(),109) ,109) TD_CURDATE
+,cdshm_ben_Acct_no 	TD_AC_CODE
+,cdshm_isin	TD_ISIN_CODE
+,case when cdshm_qty	 < 0 then cdshm_qty * -1 else cdshm_qty end TD_QTY
+,''	TD_CLEAR_CORPN
+,CDSHM_COUNTER_DPID 	TD_COUNTERDP
+,''	TD_BENEFICIERY
+,''	TD_REFERENCE
+,CDSHM_TRATM_DESC 	TD_DESCRIPTION
+,''	TD_CATEGORY
+,''	TD_AC_TYPE
+,''	TD_NARRATION
+,''	TD_BOOKING_TYPE
+,CDSHM_SETT_TYPE 	TD_MARKET_TYPE
+,CDSHM_SETT_NO 	TD_SETTLEMENT
+,''	TD_BLOCKED
+,''	TD_BLOCKEDCD
+,''	TD_RDATE
+,CDSHM_TRAS_DT 	TD_TRXDATE
+,''	TD_TRXTIME
+,case when CDSHM_QTY < 0 then 'D' else 'C' end 	TD_DEBIT_CREDIT
+,CDSHM_TRANS_NO 	TD_TRXNO
+,''	TD_CHARGE_CODE
+,''	TD_RATE
+,''	TD_AMOUNT
+,''	TD_INTERNAL_REFNO
+,''	TD_COUNTERCMBPID
+,''	TD_TOTCERT
+,''	TD_CHARGEFLAG
+,''	MKRID
+,''	MKRDT
+,''	TD_REJCODE
+,''	TD_BILLCODE
+,''	TD_CDSLCHARGE
+,''	TD_PDCD
+,''	TD_PDCODE
+,''	TD_REMARKS
+,''	TD_ACTUALCDSLCHARGE
+from CDSL_HOLDING_DTLS  with(nolock)
+where  cdshm_tratm_cd in('2246','2277','2201','3102','2270','2220','2262','2251','2202','2205')
+
+GO

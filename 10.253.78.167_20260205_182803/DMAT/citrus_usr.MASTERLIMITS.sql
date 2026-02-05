@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.MASTERLIMITS
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[MASTERLIMITS]
+(
+    [ID] BIGINT IDENTITY(1,1) NOT NULL,
+    [RANGENAME] VARCHAR(1000) NULL,
+    [FROM_LIMIT] NUMERIC(18, 0) NULL,
+    [TO_LIMIT] NUMERIC(18, 0) NULL,
+    [CREATED_BY] VARCHAR(100) NULL,
+    [CREATED_DT] DATETIME NULL,
+    [LST_UPD_BY] VARCHAR(100) NULL,
+    [LST_UPD_DT] DATETIME NULL,
+    [DELETED_IND] BIGINT NULL
+);
+
+GO

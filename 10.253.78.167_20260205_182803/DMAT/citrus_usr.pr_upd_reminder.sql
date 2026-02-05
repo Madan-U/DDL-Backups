@@ -1,0 +1,32 @@
+-- Object: PROCEDURE citrus_usr.pr_upd_reminder
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE PROC [citrus_usr].[pr_upd_reminder]
+(
+	@PA_DISP_ID NUMERIC(10,0),
+	@PA_DISP_DEMRM_ID NUMERIC(10,0),
+	@PA_TAB VARCHAR(50)
+)
+AS
+BEGIN
+
+	IF @PA_TAB = 'DEMAT'                      
+	BEGIN 
+		UPDATE DMAT_DISPATCH
+		SET DISP_REMINDER = DISP_REMINDER+1
+		WHERE DISP_ID = @PA_DISP_ID
+		AND DISP_DEMRM_ID = @PA_DISP_DEMRM_ID
+	END
+
+	IF @PA_TAB = 'REMAT'
+	BEGIN
+		UPDATE DMAT_DISPATCH_REMAT
+		SET DISPR_REMINDER = DISPR_REMINDER+1
+		WHERE DISPR_ID = @PA_DISP_ID
+		AND DISPR_REMRM_ID = @PA_DISP_DEMRM_ID
+	END
+
+END
+
+GO

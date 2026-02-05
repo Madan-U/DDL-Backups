@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.BULK_FREUNFRE_MSTR
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[BULK_FREUNFRE_MSTR]
+(
+    [B_FU_BOID] VARCHAR(16) NULL,
+    [B_FU_RMKS] VARCHAR(800) NULL,
+    [B_FU_DT] DATETIME NULL,
+    [B_FU] VARCHAR(8) NULL,
+    [B_CREATED_BY] VARCHAR(800) NULL,
+    [B_CREATED_DT] DATETIME NULL,
+    [B_LST_UPD_BY] VARCHAR(800) NULL,
+    [B_LST_UPD_DT] DATETIME NULL,
+    [B_DEL_IND] SMALLINT NULL
+);
+
+GO

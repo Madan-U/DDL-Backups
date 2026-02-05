@@ -1,0 +1,863 @@
+-- Object: PROCEDURE citrus_usr.PR_INS_UPD_BLACM
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+/*
+A.BLACM_ID
+1.Salutation
+2.First Name
+3.Middle Name
+4.Last Name
+5.Suffix
+6.Entity Type (Individual / Non Individual)
+7.PAN
+8.Address 1
+9.Address 2
+10.Address 3
+11.City
+12.State
+13.Country
+14.PIN
+15.Residence Number
+16.Office Number
+17.Mobile
+18.Date of order
+19.Order Issuing Authority
+20.Order reference
+21.BAN Period (In month or years)
+22.Order description
+23.Remarks
+ADDRESSES
+create table BLACKLISTED_CLIENT_MSTR
+(BLACM_ID NUMERIC 
+,BLACM_SALUTATION  VARCHAR(100)
+,BLACM_FIRST_NM    VARCHAR(50)
+,BLACM_MIDDLE_NM  VARCHAR(50)
+,BLACM_LAST_NM     VARCHAR(50)
+,BLACM_SUFFIX      VARCHAR(10)
+,BLACM_ENTITY_TYPE VARCHAR(25)
+,BLACM_PAN         VARCHAR(20)
+,BLACM_ADR_1       VARCHAR(50) 
+,BLACM_ADR_2       VARCHAR(50)
+,BLACM_ADR_3       VARCHAR(50)
+,BLACM_CITY        VARCHAR(50)
+,BLACM_STATE       VARCHAR(50)
+,BLACM_COUNTRY     VARCHAR(50)
+,BLACM_PIN         VARCHAR(50)
+,BLACM_RES_NO      VARCHAR(25) 
+,BLACM_OFF_NO      VARCHAR(25)
+,BLACM_MOB         VARCHAR(25)
+,BLACM_DT_OF_ORD   DATETIME 
+,BLACM_ORD_ISS_AUTH  VARCHAR(100)
+,BLACM_ORD_REF       VARCHAR(100)
+,BLACM_BAN_PERIOD    CHAR(5)
+,BLACM_ORD_DESC      VARCHAR(100) 
+,BLACM_RMKS          VARCHAR(250)
+,BLACM_CREATED_DT    DATETIME
+,BLACM_CREATED_BY    VARCHAR(25)
+,BLACM_LST_UPD_DT    DATETIME
+,BLACM_LST_UPD_BY    VARCHAR(25)
+,BLACM_DELETED_IND   SMALLINT
+)
+
+alter table BLACM_DIR_MSTR drop column BLADM_DT_OF_ORD   DATETIME 
+alter table BLACM_DIR_MSTR drop column BLADM_ORD_ISS_AUTH  VARCHAR(100)
+alter table BLACM_DIR_MSTR drop column BLADM_ORD_REF       VARCHAR(100)
+alter table BLACM_DIR_MSTR drop column BLADM_BAN_PERIOD    CHAR(5)
+alter table BLACM_DIR_MSTR drop column  BLADM_ORD_DESC      VARCHAR(100) 
+
+CREATE TABLE BLACM_DIR_MSTR
+(BLADM_ID NUMERIC
+,BLADM_BLACM_ID  NUMERIC
+,BLADM_SALUTATION  VARCHAR(100)
+,BLADM_FIRST_NM    VARCHAR(50)
+,BLADM_MIDDLE_NM   VARCHAR(50)
+,BLADM_LAST_NM     VARCHAR(50)
+,BLADM_SUFFIX      VARCHAR(10)
+,BLADM_PAN         VARCHAR(20)
+,BLADM_ADR_1       VARCHAR(50) 
+,BLADM_ADR_2       VARCHAR(50)
+,BLADM_ADR_3       VARCHAR(50)
+,BLADM_CITY        VARCHAR(50)
+,BLADM_STATE       VARCHAR(50)
+,BLADM_COUNTRY     VARCHAR(50)
+,BLADM_PIN         VARCHAR(50)
+,BLADM_RES_NO      VARCHAR(25) 
+,BLADM_OFF_NO      VARCHAR(25)
+,BLADM_MOB         VARCHAR(25)
+,BLADM_DT_OF_ORD   DATETIME 
+,BLADM_ORD_ISS_AUTH  VARCHAR(100)
+,BLADM_ORD_REF       VARCHAR(100)
+,BLADM_BAN_PERIOD    CHAR(5)
+,BLADM_ORD_DESC      VARCHAR(100) 
+,BLADM_RMKS          VARCHAR(250)
+,BLADM_CREATED_DT    DATETIME
+,BLADM_CREATED_BY    VARCHAR(25)
+,BLADM_LST_UPD_DT    DATETIME
+,BLADM_LST_UPD_BY    VARCHAR(25)
+,BLADM_DELETED_IND   SMALLINT
+)
+
+"Directors Details
+1) Only if entity type is Non Individual.
+2) Also director details will have the same fields as in case of Individual in main master .i.e. rows 1 to 17 except 6."
+
+CREATE TABLE BLACM_BANK_DETAILS
+(BLABD_ID NUMERIC
+,BLABD_BLACM_ID NUMERIC
+,BLABD_BANK_NAME VARCHAR(100)
+,BLABD_BRANCH_NAME VARCHAR(100)
+,BLABD_AC_NO VARCHAR(25)
+,BLABD_AC_TYPE VARCHAR(20)
+,BLABD_CREATED_DT DATETIME
+,BLABD_CREATED_BY VARCHAR(25)
+,BLABD_LST_UPD_DT DATETIME
+,BLABD_LST_UPD_BY VARCHAR(25)
+,BLABD_DELETED_IND  SMALLINT)
+
+
+"Bank Details (option to save multiple)
+1) Bank Name
+2) Bank Branch
+3) Bank A/C no
+4) Bank A/C type"
+
+CREATE TABLE BLACM_DP_DETAILS
+(BLADD_ID NUMERIC
+,BLADD_BLACM_ID NUMERIC
+,BLADD_DP_NAME VARCHAR(100)
+,BLADD_DPID VARCHAR(20)
+,BLADD_DP_AC_NO VARCHAR(25)
+,BLADD_CREATED_DT DATETIME
+,BLADD_CREATED_BY VARCHAR(25)
+,BLADD_LST_UPD_DT DATETIME
+,BLADD_LST_UPD_BY VARCHAR(25)
+,BLADD_DELETED_IND  SMALLINT)
+
+
+"DP Details (option to save multiple)
+1) DP Name
+2) DP ID
+3) Demat A/C No"
+BLACKLISTED_CLIENT_MSTR
+*/
+--begin transaction
+--PR_INS_UPD_BLACM 2,'EDT','A','TP','','','','','NON INDIVIDUAL','ASDFG1234T','','DEFJNJ','DNFSJN','EFDNUJGFNR','DJFND','','','','','67768868','01/01/1900','','','','MMM','HO','E|*~|A|*~|LATESH|*~|LATESH|*~|WANI|*~||*~||*~||*~||*~||*~||*~||*~||*~||*~||*~||*~||*~|1|*~|*|~*','','','*|~*','|*~|',''
+--	1	EDT	A	TP	TP	TP	MR	NON INDIVIDUAL	PANPA1234T	JHHJGHH	HGHJG	HGJHG	HHGHJG	HHGG	HGHG	434534545	1213233	123456	123456788	14/10/2008	SOPAN	12	MMMMM1	QWEQE	SDFSDGDFG DFGFDG FSDH	HO		E|*~|HDFCer|*~|HDFC1ere|*~|676767ere|*~|56|*~|1|*~|*|~*E|*~|ICICI|*~|ICICI1|*~|786767|*~|676767|*~|2|*~|*|~*		*|~*	|*~|	
+--select *  from blacklisted_client_mstr
+--select * from blacm_dir_mstr
+--select * from blacm_bank_details
+--select * from blacm_dp_details
+--rollback
+CREATE PROCEDURE [citrus_usr].[PR_INS_UPD_BLACM](@PA_ID NUMERIC
+                                 ,@PA_ACTION VARCHAR(20)
+                                 ,@PA_BLACM_SALUTATION  VARCHAR(100)
+								,@PA_BLACM_FIRST_NM VARCHAR(50)
+								,@PA_BLACM_MIDDLE_NM VARCHAR(50)
+								,@PA_BLACM_LAST_NM VARCHAR(50)
+								,@PA_BLACM_SUFFIX VARCHAR(10)
+								,@PA_BLACM_ENTITY_TYPE VARCHAR(25)
+								,@PA_BLACM_PAN VARCHAR(20)
+								,@PA_BLACM_ADR_1 VARCHAR(50)
+								,@PA_BLACM_ADR_2 VARCHAR(50)
+								,@PA_BLACM_ADR_3 VARCHAR(50)
+								,@PA_BLACM_CITY VARCHAR(50)
+								,@PA_BLACM_STATE VARCHAR(50)
+								,@PA_BLACM_COUNTRY VARCHAR(50)
+								,@PA_BLACM_PIN VARCHAR(50)
+								,@PA_BLACM_RES_NO VARCHAR(25)
+								,@PA_BLACM_OFF_NO VARCHAR(25)
+								,@PA_BLACM_MOB VARCHAR(25)
+								,@PA_BLACM_DT_OF_ORD VARCHAR(11)
+								,@PA_BLACM_ORD_ISS_AUTH VARCHAR(100)
+								,@PA_BLACM_ORD_REF VARCHAR(100)
+								,@PA_BLACM_BAN_PERIOD CHAR(10)
+								,@PA_BLACM_ORD_DESC VARCHAR(100)
+								,@PA_BLACM_RMKS VARCHAR(100)
+								,@PA_BLACM_MAPIN	varchar(25)
+								,@PA_BLACM_PASSPORT_NO	varchar(25)
+								,@PA_BLACM_VOTERID_NO	varchar(25)
+								,@PA_BLACM_REGS_NO	varchar(25)
+								,@PA_BLACM_OTH_UNIQ_IDTY	varchar(25)
+								,@PA_BLACM_BAN_FRM_DT	varchar(25)
+								,@PA_BLACM_BAN_TO_DT	varchar(25)
+								,@PA_BLACM_NAME_OF_SCRIPT	varchar(1000)
+								,@PA_BLACM_REVOKED_STATUS	varchar(1)
+								,@PA_BLACM_RVK_ORD_DT	varchar(25)
+								,@PA_BLACM_RVK_ORD_ISS_AUTH	varchar(50)
+								,@PA_BLACM_RVK_ORD_REF	varchar(25)
+								,@PA_BLACM_RVK_ORD_DESC varchar(50)
+								,@PA_BLACM_RVK_RMKS	varchar(50)
+								,@PA_BLACM_ORD_EXP_DATE	varchar(25)
+								,@PA_BLACM_PENALTIY_LVLD	varchar(25)
+                                 ,@PA_LOGIN_NAME VARCHAR(25)
+                                 ,@PA_DIRECTOR_DETAILS VARCHAR(8000)
+                                 ,@PA_BANK_DETAILS VARCHAR(8000)
+                                 ,@PA_DP_DETAILS   VARCHAR(8000)
+                                 ,@ROWDELIMITER   CHAR(4) =  '*|~*'      
+                                 ,@COLDELIMITER   CHAR(4)  = '|*~|'      
+                                 ,@PA_MSG         VARCHAR(8000) OUTPUT      
+)
+AS
+BEGIN
+--
+    DECLARE @l_errorstr          VARCHAR(8000)      
+           ,@l_BLACM_id          NUMERIC
+           ,@l_error             BIGINT 
+           ,@L_DIR_COUNTER       BIGINT
+           ,@L_DIR_COUNT         BIGINT
+           
+           ,@L_BANK_COUNTER      BIGINT
+           ,@L_BANK_COUNT        BIGINT
+
+           ,@L_DP_COUNTER        BIGINT
+           ,@L_DP_COUNT          BIGINT
+
+           ,@L_BLADM_ID NUMERIC
+           ,@L_BLABD_ID NUMERIC
+           ,@L_BLADD_ID NUMERIC
+           ,@L_DIR_ACTION CHAR(1)
+           ,@L_BANK_ACTION CHAR(1)
+           ,@L_DP_ACTION CHAR(1)
+ ,@l_DIRECTOR_DETAILS varchar(8000)
+           ,@l_bank_DETAILS varchar(8000)
+           ,@l_dp_DETAILS varchar(8000)
+    SET @L_DIR_COUNTER = 1
+    SET @L_BANK_COUNTER = 1
+    SET @L_DP_COUNTER = 1
+          
+
+
+    IF @PA_ACTION ='INS'
+    BEGIN
+    --
+      BEGIN TRANSACTION
+
+      SELECT @L_BLACM_ID = ISNULL(max(BLACM_ID),0) + 1   FROM BLACKLISTED_CLIENT_MSTR WHERE BLACM_DELETED_IND = 1
+
+
+      INSERT INTO BLACKLISTED_CLIENT_MSTR
+       (BLACM_ID
+							,BLACM_SALUTATION
+							,BLACM_FIRST_NM
+							,BLACM_MIDDLE_NM
+							,BLACM_LAST_NM
+							,BLACM_SUFFIX
+							,BLACM_ENTITY_TYPE
+							,BLACM_PAN
+							,BLACM_ADR_1
+							,BLACM_ADR_2
+							,BLACM_ADR_3
+							,BLACM_CITY
+							,BLACM_STATE
+							,BLACM_COUNTRY
+							,BLACM_PIN
+							,BLACM_RES_NO
+							,BLACM_OFF_NO
+							,BLACM_MOB
+							,BLACM_DT_OF_ORD
+							,BLACM_ORD_ISS_AUTH
+							,BLACM_ORD_REF
+							,BLACM_BAN_PERIOD
+							,BLACM_ORD_DESC
+							,BLACM_RMKS
+							,BLACM_CREATED_DT
+							,BLACM_CREATED_BY
+							,BLACM_LST_UPD_DT
+							,BLACM_LST_UPD_BY
+							,BLACM_DELETED_IND
+                            ,BLACM_MAPIN	
+							,BLACM_PASSPORT_NO	
+							,BLACM_VOTERID_NO	
+							,BLACM_REGS_NO	
+							,BLACM_OTH_UNIQ_IDTY	
+							,BLACM_BAN_FRM_DT	
+							,BLACM_BAN_TO_DT	
+							,BLACM_NAME_OF_SCRIPT	
+							,BLACM_REVOKED_STATUS	
+							,BLACM_RVK_ORD_DT	
+							,BLACM_RVK_ORD_ISS_AUTH	
+							,BLACM_RVK_ORD_REF	
+							,BLACM_RVK_ORD_DESC
+							,BLACM_RVK_RMKS	
+							,BLACM_ORD_EXP_DATE	
+							,BLACM_PENALTIY_LVLD	
+							)VALUES
+       (@L_BLACM_ID 
+       ,@PA_BLACM_SALUTATION  
+							,@PA_BLACM_FIRST_NM 
+							,@PA_BLACM_MIDDLE_NM
+							,@PA_BLACM_LAST_NM
+							,@PA_BLACM_SUFFIX
+							,@PA_BLACM_ENTITY_TYPE
+							,@PA_BLACM_PAN 
+							,@PA_BLACM_ADR_1 
+							,@PA_BLACM_ADR_2 
+							,@PA_BLACM_ADR_3 
+							,@PA_BLACM_CITY 
+							,@PA_BLACM_STATE
+							,@PA_BLACM_COUNTRY 
+							,@PA_BLACM_PIN
+							,@PA_BLACM_RES_NO 
+							,@PA_BLACM_OFF_NO 
+							,@PA_BLACM_MOB 
+							,convert(datetime,@PA_BLACM_DT_OF_ORD,103)
+							,@PA_BLACM_ORD_ISS_AUTH 
+							,@PA_BLACM_ORD_REF 
+							,@PA_BLACM_BAN_PERIOD 
+							,@PA_BLACM_ORD_DESC 
+							,@PA_BLACM_RMKS 
+						   ,GETDATE()
+						   ,@PA_LOGIN_NAME
+						   ,GETDATE()
+						   ,@PA_LOGIN_NAME
+						   ,1
+						   ,@PA_BLACM_MAPIN	
+							,@PA_BLACM_PASSPORT_NO	
+							,@PA_BLACM_VOTERID_NO	
+							,@PA_BLACM_REGS_NO	
+							,@PA_BLACM_OTH_UNIQ_IDTY	
+							,convert(datetime,@PA_BLACM_BAN_FRM_DT,103)	
+							,convert(datetime,@PA_BLACM_BAN_TO_DT,103)	
+							,@PA_BLACM_NAME_OF_SCRIPT	
+							,@PA_BLACM_REVOKED_STATUS	
+							,convert(datetime,@PA_BLACM_RVK_ORD_DT,103)	
+							,@PA_BLACM_RVK_ORD_ISS_AUTH	
+							,@PA_BLACM_RVK_ORD_REF	
+							,@PA_BLACM_RVK_ORD_DESC 
+							,@PA_BLACM_RVK_RMKS	
+							,convert(datetime,@PA_BLACM_ORD_EXP_DATE,103)	
+							,@PA_BLACM_PENALTIY_LVLD	
+                            )
+        
+
+      SET @l_error = @@error      
+	
+   	  --      
+						IF @l_error > 0      
+						BEGIN      
+						--      
+								SET @l_errorstr = 'BLACKLISTED CLIENT DETAILS SUCCESSFULLY INSERTED'
+						--      
+								ROLLBACK TRANSACTION      
+						--      
+						END      
+						ELSE      
+						BEGIN      
+						--      
+   					COMMIT TRANSACTION      
+			 		--
+						END 
+
+      SELECT @L_DIR_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_DIRECTOR_DETAILS ,'*|~*')
+
+     
+      WHILE @L_DIR_COUNTER <=@L_DIR_COUNT
+      BEGIN
+
+      SELECT @L_BLADM_ID = ISNULL(max(BLAdM_ID),0) + 1  FROM BLACM_DIR_MSTR WHERE BLADM_DELETED_IND = 1
+ 
+         select @l_DIRECTOR_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_DIRECTOR_DETAILS ,@L_DIR_COUNTER)
+         INSERT INTO BLACM_DIR_MSTR
+         (BLADM_ID
+									,BLADM_BLACM_ID
+									,BLADM_SALUTATION
+									,BLADM_FIRST_NM
+									,BLADM_MIDDLE_NM
+									,BLADM_LAST_NM
+									,BLADM_SUFFIX
+									,BLADM_PAN
+									,BLADM_ADR_1
+									,BLADM_ADR_2
+									,BLADM_ADR_3
+									,BLADM_CITY
+									,BLADM_STATE
+									,BLADM_COUNTRY
+									,BLADM_PIN
+									,BLADM_RES_NO
+									,BLADM_OFF_NO
+									,BLADM_MOB
+								
+									,BLADM_CREATED_DT
+									,BLADM_CREATED_BY
+									,BLADM_LST_UPD_DT
+									,BLADM_LST_UPD_BY
+									,BLADM_DELETED_IND)
+         VALUES(@L_BLADM_ID 
+         ,@L_BLACM_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,2)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,4)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,5)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,6)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,7)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,8)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,9)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,10)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,11)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,12)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,13)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,14)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,15)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,16)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,17)
+         
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+
+         SET @L_DIR_COUNTER = @L_DIR_COUNTER + 1
+      END
+
+
+      SELECT @L_BANK_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_BANK_DETAILS ,'*|~*')
+
+      WHILE @L_BANK_COUNTER <=@L_BANK_COUNT
+      BEGIN
+     select @l_bank_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_bank_DETAILS ,@L_BANK_COUNTER)
+      SELECT @L_BLABD_ID = ISNULL(max(BLAbd_ID),0) + 1  FROM BLACM_BANK_DETAILS WHERE BLABD_DELETED_IND = 1
+
+         INSERT INTO BLACM_BANK_DETAILS 
+         (BLABD_ID
+									,BLABD_BLACM_ID
+									,BLABD_BANK_NAME
+									,BLABD_BRANCH_NAME
+									,BLABD_AC_NO
+									,BLABD_AC_TYPE
+									,BLABD_CREATED_DT
+									,BLABD_CREATED_BY
+									,BLABD_LST_UPD_DT
+									,BLABD_LST_UPD_BY
+									,BLABD_DELETED_IND)
+         VALUES(@L_BLABD_ID 
+         ,@L_BLACM_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,2)
+         ,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,4)
+									,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,5)
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+
+         SET @L_BANK_COUNTER = @L_BANK_COUNTER + 1
+      END
+
+      SELECT @L_DP_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_DP_DETAILS ,'*|~*')
+
+      WHILE @L_DP_COUNTER <=@L_DP_COUNT
+      BEGIN
+         select @l_dp_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_dp_DETAILS ,@L_DP_COUNTER)
+         SELECT @L_BLADD_ID = ISNULL(max(BLAdd_ID),0) + 1  FROM BLACM_DP_DETAILS WHERE BLADD_DELETED_IND = 1
+
+         INSERT INTO BLACM_DP_DETAILS 
+         (BLADD_ID
+									,BLADD_BLACM_ID
+									,BLADD_DP_NAME
+									,BLADD_DPID
+									,BLADD_DP_AC_NO
+									,BLADD_CREATED_DT
+									,BLADD_CREATED_BY
+									,BLADD_LST_UPD_DT
+									,BLADD_LST_UPD_BY
+									,BLADD_DELETED_IND)
+         VALUES(@L_BLADD_ID 
+         ,@L_BLACM_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,2)
+         ,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,4)
+									,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+
+         SET @L_DP_COUNTER = @L_DP_COUNTER + 1
+      END
+
+      
+    --
+    END
+    ELSE IF @PA_ACTION = 'EDT'
+    BEGIN
+    --
+      BEGIN TRANSACTION
+
+      UPDATE BLACKLISTED_CLIENT_MSTR
+      SET    BLACM_SALUTATION = @PA_BLACM_SALUTATION  
+												,BLACM_FIRST_NM = @PA_BLACM_FIRST_NM 
+												,BLACM_MIDDLE_NM = @PA_BLACM_MIDDLE_NM
+												,BLACM_LAST_NM = @PA_BLACM_LAST_NM
+												,BLACM_SUFFIX = @PA_BLACM_SUFFIX
+												,BLACM_ENTITY_TYPE=@PA_BLACM_ENTITY_TYPE
+												,BLACM_PAN=@PA_BLACM_PAN 
+												,BLACM_ADR_1=	@PA_BLACM_ADR_1 
+												,BLACM_ADR_2= @PA_BLACM_ADR_2 
+												,BLACM_ADR_3=@PA_BLACM_ADR_3 
+												,BLACM_CITY=@PA_BLACM_CITY 
+												,BLACM_STATE=@PA_BLACM_STATE
+												,BLACM_COUNTRY=@PA_BLACM_COUNTRY 
+												,BLACM_PIN=@PA_BLACM_PIN
+												,BLACM_RES_NO=@PA_BLACM_RES_NO 
+												,BLACM_OFF_NO=@PA_BLACM_OFF_NO 
+												,BLACM_MOB=@PA_BLACM_MOB 
+												,BLACM_DT_OF_ORD=convert(datetime,@PA_BLACM_DT_OF_ORD,103)
+												,BLACM_ORD_ISS_AUTH=@PA_BLACM_ORD_ISS_AUTH 
+												,BLACM_ORD_REF=@PA_BLACM_ORD_REF 
+												,BLACM_BAN_PERIOD=@PA_BLACM_BAN_PERIOD 
+												,BLACM_ORD_DESC=@PA_BLACM_ORD_DESC 
+												,BLACM_RMKS=@PA_BLACM_RMKS 
+												,BLACM_LST_UPD_DT=GETDATE()
+												,BLACM_LST_UPD_BY=@PA_LOGIN_NAME 
+                                                ,BLACM_MAPIN	 = @PA_BLACM_MAPIN	
+												,BLACM_PASSPORT_NO	= @PA_BLACM_PASSPORT_NO	
+												,BLACM_VOTERID_NO	= @PA_BLACM_VOTERID_NO	
+												,BLACM_REGS_NO	= @PA_BLACM_REGS_NO	
+												,BLACM_OTH_UNIQ_IDTY=	 @PA_BLACM_OTH_UNIQ_IDTY	
+												,BLACM_BAN_FRM_DT	= convert(datetime,@PA_BLACM_BAN_FRM_DT,103)	
+												,BLACM_BAN_TO_DT =convert(datetime,@PA_BLACM_BAN_TO_DT,103)	
+												,BLACM_NAME_OF_SCRIPT	= @PA_BLACM_NAME_OF_SCRIPT	
+												,BLACM_REVOKED_STATUS=	 @PA_BLACM_REVOKED_STATUS	
+												,BLACM_RVK_ORD_DT=	 convert(datetime,@PA_BLACM_RVK_ORD_DT,103)	
+												,BLACM_RVK_ORD_ISS_AUTH	= @PA_BLACM_RVK_ORD_ISS_AUTH	
+												,BLACM_RVK_ORD_REF =@PA_BLACM_RVK_ORD_REF	
+												,BLACM_RVK_ORD_DESC = @PA_BLACM_RVK_ORD_DESC 
+												,BLACM_RVK_RMKS= @PA_BLACM_RVK_RMKS
+												,BLACM_ORD_EXP_DATE	= convert(datetime,@PA_BLACM_ORD_EXP_DATE,103)	
+												,BLACM_PENALTIY_LVLD	=@PA_BLACM_PENALTIY_LVLD	
+												WHERE BLACM_ID = @PA_ID
+            AND    BLACM_DELETED_IND = 1 
+
+      SET @l_error = @@error      
+	
+   	  --      
+						IF @l_error > 0      
+						BEGIN      
+						--      
+								SET @l_errorstr = 'BLACKLISTED CLIENT DETAILS SUCCESSFULLY EDITED'
+						--      
+								ROLLBACK TRANSACTION      
+						--      
+						END      
+						ELSE      
+						BEGIN      
+						--      
+   					COMMIT TRANSACTION      
+			 		--
+						END 
+      
+      SELECT @L_DIR_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_DIRECTOR_DETAILS ,'*|~*')
+
+      WHILE @L_DIR_COUNTER <=@L_DIR_COUNT
+      BEGIN
+       select @l_DIRECTOR_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_DIRECTOR_DETAILS ,@L_DIR_COUNTER)
+       SELECT @L_DIR_ACTION = CITRUS_USR.FN_SPLITVAL(@PA_DIRECTOR_DETAILS ,1)
+
+       IF @L_DIR_ACTION  = 'A'
+       BEGIN
+         SELECT @L_BLADM_ID = ISNULL(max(BLAdM_ID),0) + 1  FROM BLACM_DIR_MSTR WHERE BLADM_DELETED_IND = 1
+
+         INSERT INTO BLACM_DIR_MSTR
+         (BLADM_ID
+									,BLADM_BLACM_ID
+									,BLADM_SALUTATION
+									,BLADM_FIRST_NM
+									,BLADM_MIDDLE_NM
+									,BLADM_LAST_NM
+									,BLADM_SUFFIX
+									,BLADM_PAN
+									,BLADM_ADR_1
+									,BLADM_ADR_2
+									,BLADM_ADR_3
+									,BLADM_CITY
+									,BLADM_STATE
+									,BLADM_COUNTRY
+									,BLADM_PIN
+									,BLADM_RES_NO
+									,BLADM_OFF_NO
+									,BLADM_MOB
+									
+									,BLADM_CREATED_DT
+									,BLADM_CREATED_BY
+									,BLADM_LST_UPD_DT
+									,BLADM_LST_UPD_BY
+									,BLADM_DELETED_IND)
+         VALUES(@L_BLADM_ID 
+         ,@PA_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,2)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,4)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,5)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,6)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,7)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,8)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,9)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,10)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,11)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,12)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,13)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,14)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,15)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,16)
+									,CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,17)
+      
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+       END
+       ELSE IF @L_DIR_ACTION ='E'
+       BEGIN
+       --
+         UPDATE BLACM_DIR_MSTR
+         SET    BLADM_SALUTATION = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,2)
+												,BLADM_FIRST_NM = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,3)
+												,BLADM_MIDDLE_NM = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,4)
+												,BLADM_LAST_NM = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,5)
+												,BLADM_SUFFIX = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,6)
+												,BLADM_PAN=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,7)
+												,BLADM_ADR_1=	CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,8)
+												,BLADM_ADR_2= CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,9)
+												,BLADM_ADR_3=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,10)
+												,BLADM_CITY=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,11)
+												,BLADM_STATE=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,12)
+												,BLADM_COUNTRY=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,13)
+												,BLADM_PIN=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,14)
+												,BLADM_RES_NO=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,15)
+												,BLADM_OFF_NO=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,16)
+												,BLADM_MOB=CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,17)
+												
+												,BLADM_LST_UPD_DT=GETDATE()
+												,BLADM_LST_UPD_BY=@PA_LOGIN_NAME 
+												WHERE BLADM_BLACM_ID = @PA_ID
+            AND   BLADM_ID = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,18)
+            AND    BLADM_DELETED_IND = 1 
+       --
+       END
+       ELSE IF @L_DIR_ACTION ='D'
+       BEGIN
+       --
+         UPDATE BLACM_DIR_MSTR
+         SET    BLADM_LST_UPD_DT = GETDATE()
+               ,BLADM_LST_UPD_BY = @PA_LOGIN_NAME
+               ,BLADM_DELETED_IND = 0
+         WHERE  BLADM_ID = CITRUS_USR.FN_SPLITVAL(@l_DIRECTOR_DETAILS ,18)
+         AND    BLADM_BLACM_ID = @PA_ID
+         AND    BLADM_DELETED_IND = 1 
+       --
+       END
+        
+
+
+
+       SET @L_DIR_COUNTER = @L_DIR_COUNTER + 1
+      END
+
+
+      SELECT @L_BANK_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_BANK_DETAILS ,'*|~*')
+
+      WHILE @L_BANK_COUNTER <=@L_BANK_COUNT
+      BEGIN
+select @l_bank_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_bank_DETAILS ,@L_BANK_COUNTER)
+      SELECT @L_BANK_ACTION = CITRUS_USR.FN_SPLITVAL(@PA_BANK_DETAILS ,1) 
+ 
+      IF @L_BANK_ACTION ='A'
+      BEGIN 
+         SELECT @L_BLABD_ID = ISNULL(max(BLAbd_ID),0) + 1  FROM BLACM_BANK_DETAILS WHERE BLABD_DELETED_IND = 1
+
+         INSERT INTO BLACM_BANK_DETAILS 
+         (BLABD_ID
+									,BLABD_BLACM_ID
+									,BLABD_BANK_NAME
+									,BLABD_BRANCH_NAME
+									,BLABD_AC_NO
+									,BLABD_AC_TYPE
+									,BLABD_CREATED_DT
+									,BLABD_CREATED_BY
+									,BLABD_LST_UPD_DT
+									,BLABD_LST_UPD_BY
+									,BLABD_DELETED_IND)
+         VALUES(@L_BLABD_ID 
+         ,@PA_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,2)
+         ,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,4)
+									,CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,5)
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+       END
+       ELSE IF @L_BANK_ACTION ='E'
+       BEGIN
+       --
+         UPDATE BLACM_BANK_DETAILS 
+         SET BLABD_BANK_NAME = CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,2)
+												,BLABD_BRANCH_NAME = CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,3)
+												,BLABD_AC_NO = CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,4)
+												,BLABD_AC_TYPE =  CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,5)
+            ,BLABD_LST_UPD_DT = GETDATE()
+            ,BLABD_LST_UPD_BY = @PA_LOGIN_NAME 
+         WHERE BLABD_ID =  CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,6)
+         AND   BLABD_BLACM_ID = @PA_ID
+         AND   BLABD_DELETED_IND = 1 
+       --
+       END
+       ELSE IF @L_BANK_ACTION ='D'
+       BEGIN
+       --
+         UPDATE BLACM_BANK_DETAILS 
+         SET BLABD_LST_UPD_DT = GETDATE()
+            ,BLABD_LST_UPD_BY = @PA_LOGIN_NAME 
+            ,BLABD_DELETED_IND = 0 
+         WHERE BLABD_ID =  CITRUS_USR.FN_SPLITVAL(@l_bank_DETAILS ,6)
+         AND   BLABD_BLACM_ID = @PA_ID
+         AND   BLABD_DELETED_IND = 1 
+       --
+       END
+       
+  
+       SET @L_BANK_COUNTER = @L_BANK_COUNTER + 1
+      END
+
+      SELECT @L_DP_COUNT = CITRUS_USR.UFN_COUNTSTRING(@PA_DP_DETAILS ,'*|~*')
+
+      WHILE @L_DP_COUNTER <=@L_DP_COUNT
+      BEGIN
+
+       SELECT @L_DP_ACTION = CITRUS_USR.FN_SPLITVAL(@PA_DP_DETAILS ,1) 
+       select @l_dp_DETAILS = CITRUS_USR.FN_SPLITVAL_ROW(@PA_dp_DETAILS ,@L_dp_COUNTER)
+
+       IF  @L_DP_ACTION  = 'A'
+       BEGIN
+         SELECT @L_BLADD_ID = ISNULL(max(BLAdd_ID),0) + 1  FROM BLACM_DP_DETAILS WHERE BLADD_DELETED_IND = 1
+
+         INSERT INTO BLACM_DP_DETAILS 
+         (BLADD_ID
+									,BLADD_BLACM_ID
+									,BLADD_DP_NAME
+									,BLADD_DPID
+									,BLADD_DP_AC_NO
+									,BLADD_CREATED_DT
+									,BLADD_CREATED_BY
+									,BLADD_LST_UPD_DT
+									,BLADD_LST_UPD_BY
+									,BLADD_DELETED_IND)
+         VALUES(@L_BLADD_ID 
+         ,@PA_ID
+         ,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,2)
+         ,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,3)
+									,CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,4)
+									,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,GETDATE()
+         ,@PA_LOGIN_NAME
+         ,1
+         ) 
+       END 
+       ELSE IF @L_DP_ACTION ='E'
+       BEGIN
+       --
+         UPDATE BLACM_DP_DETAILS 
+         SET BLADD_DP_NAME = CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,2)
+            ,BLADD_DPID  = CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,3)
+            ,BLADD_DP_AC_NO = CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,4)
+            ,BLADD_LST_UPD_DT = GETDATE()
+            ,BLADD_LST_UPD_BY = @PA_LOGIN_NAME 
+         WHERE BLADD_ID =  CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,5)
+         AND   BLADD_BLACM_ID = @PA_ID
+         AND   BLADD_DELETED_IND = 1 
+       --
+       END
+       ELSE IF @L_DP_ACTION ='D'
+       BEGIN
+       --
+         UPDATE BLACM_DP_DETAILS 
+         SET BLADD_LST_UPD_DT = GETDATE()
+            ,BLADD_LST_UPD_BY = @PA_LOGIN_NAME 
+            ,BLADD_DELETED_IND = 0 
+         WHERE BLADD_ID =  CITRUS_USR.FN_SPLITVAL(@l_dp_DETAILS ,5)
+         AND   BLADD_BLACM_ID = @PA_ID
+         AND   BLADD_DELETED_IND = 1 
+       --
+       END
+       
+
+       SET @L_DP_COUNTER = @L_DP_COUNTER + 1
+      END
+
+
+     
+      
+    --
+    END
+    ELSE IF @PA_ACTION ='DEL'
+    BEGIN
+    --
+      BEGIN TRANSACTION
+
+
+      UPDATE BLACM_DIR_MSTR 
+      SET BLADM_DELETED_IND = 0
+      		 ,BLADM_LST_UPD_DT=GETDATE()
+									,BLADM_LST_UPD_BY=@PA_LOGIN_NAME 
+      WHERE BLADM_DELETED_IND = 1
+      AND   BLADM_BLACM_ID = @PA_ID
+
+      UPDATE BLACM_BANK_DETAILS
+      SET BLABD_DELETED_IND = 0
+      		 ,BLABD_LST_UPD_DT=GETDATE()
+									,BLABD_LST_UPD_BY=@PA_LOGIN_NAME 
+      WHERE BLABD_DELETED_IND = 1
+      AND   BLABD_BLACM_ID = @PA_ID
+
+      UPDATE BLACM_DP_DETAILS
+      SET BLADD_DELETED_IND = 0
+      		 ,BLADD_LST_UPD_DT=GETDATE()
+									,BLADD_LST_UPD_BY=@PA_LOGIN_NAME 
+      WHERE BLADD_DELETED_IND = 1
+      AND   BLADD_BLACM_ID = @PA_ID
+
+
+      UPDATE BLACKLISTED_CLIENT_MSTR 
+      SET BLACM_DELETED_IND = 0
+      		 ,BLACM_LST_UPD_DT=GETDATE()
+									,BLACM_LST_UPD_BY=@PA_LOGIN_NAME 
+      WHERE BLACM_DELETED_IND = 1
+      AND   BLACM_ID = @PA_ID
+
+      
+					 SET @l_error = @@error      
+	
+   	  --      
+						IF @l_error > 0      
+						BEGIN      
+						--      
+								SET @l_errorstr = 'BLACKLISTED CLIENT DETAILS SUCCESSFULLY DELETED'
+						--      
+								ROLLBACK TRANSACTION      
+						--      
+						END      
+						ELSE      
+						BEGIN      
+						--      
+   					COMMIT TRANSACTION      
+			 		--
+						END 
+    --
+    END
+   
+--
+END
+
+GO

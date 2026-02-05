@@ -1,0 +1,19 @@
+-- Object: TABLE citrus_usr.TBL_BROK_MOD
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TBL_BROK_MOD]
+(
+    [SR_NO] INT IDENTITY(1,1) NOT NULL,
+    [PARTYCODE] VARCHAR(10) NULL,
+    [DPID] VARCHAR(16) NULL,
+    [BROKPLAN_OLD] VARCHAR(50) NULL,
+    [BROKPLAN] VARCHAR(50) NULL,
+    [MODIFIED_BY] VARCHAR(20) NULL,
+    [MODIFIED_ON] DATETIME NULL,
+    [DUMMY1] VARCHAR(20) NULL,
+    [DUMMY2] VARCHAR(20) NULL,
+    [DUMMY3] VARCHAR(20) NULL
+);
+
+GO

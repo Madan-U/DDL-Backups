@@ -1,0 +1,3927 @@
+-- Object: PROCEDURE citrus_usr.pr_mig_yn
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+--begin transaction
+
+--select @@trancount
+--pr_mig_yn '1,24,27','CLIENTTYPE',''
+--select * from clienttype
+--pr_mig_yn 'table','client_details','','','','','','','',''
+--rollback transaction
+--select * from branch where migrate_yn = 0
+CREATE       PROCEDURE [citrus_usr].[pr_mig_yn](@pa_id                    VARCHAR(8000)  = '0'
+                         ,@pa_tab                   VARCHAR(100)
+                         ,@pa_SuccessIDListAdd      VARCHAR(8000)
+                         ,@pa_FailureIDListAdd      VARCHAR(8000)
+                         ,@pa_DuplicateIDListAdd    VARCHAR(8000)
+                         ,@pa_SuccessIDListEdit     VARCHAR(8000)
+                         ,@pa_FailureIDListEdit     VARCHAR(8000)
+                         ,@pa_SuccessIDListDelete   VARCHAR(8000)
+                         ,@pa_FailureIDListDelete   VARCHAR(8000)
+                         ,@pa_err                   VARCHAR(250) OUTPUT)
+
+AS
+BEGIN
+--
+
+  DECLARE @l_counter NUMERIC
+         ,@l         NUMERIC
+         ,@l_id      VARCHAR(20)
+         ,@l_var     VARCHAR(50)
+         ,@l_id2     varchar(25)
+
+ set @PA_ID = 'TABLE'
+  --**--
+  --
+  --added by vivek on 6 may 2009
+  
+  --
+  --
+  --
+  --
+--  IF @PA_ID IN ('0','STRING')
+--  BEGIN
+--	  IF @pa_tab = 'ACCOUNT2'
+--	  BEGIN--accounts
+--		--
+--		  IF @pa_SuccessIDListAdd <> ''
+--		  BEGIN--a1
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,','))
+--			  --
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 1
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'I'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a1
+--		  --
+--		  IF @pa_DuplicateIDListAdd <> ''
+--		  BEGIN--a2
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  --set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,','))
+--			  --
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 3
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'I'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a2
+--		  --
+--		  IF @pa_FailureIDListAdd  <> ''
+--		  BEGIN--a3
+--		  --
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd ,',')
+--			 SET @l = 0
+--			 --
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   --set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd ,@l+1,',')
+--			   set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,','))
+--			   --
+--			   UPDATE account_pms  WITH (ROWLOCK)
+--			   SET    e_cmpltd   = 2
+--			   WHERE  sbk_code   = @l_id2
+--			   AND    e_cmpltd   = 0
+--			   AND    edittype   = 'I'
+--			   --
+--			   /*
+--				UPDATE area
+--				SET    migrate_yn = 2
+--				WHERE  ar_id      = @l_id
+--				AND    migrate_yn = 0
+--				AND    ar_changed = 'N'
+--			   */
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--		  --
+--		  END--a3
+--		  --
+--		  IF @pa_SuccessIDListEdit <> ''
+--		  BEGIN--a4
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  --set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,','))
+--			  --
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 1
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'U'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a4
+--		  --
+--		  IF @pa_FailureIDListEdit <> ''
+--		  BEGIN--a5
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  --set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,','))
+--			  /*UPDATE area
+--			  SET    migrate_yn = 2
+--			  WHERE  ar_id   = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    ar_changed = 'M'
+--			  */
+--			  --
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 2
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'U'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a5
+--
+--		  IF @pa_SuccessIDListDelete <> ''
+--		  BEGIN--a6
+--		  --
+--		   SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  --set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,','))
+--			  /*
+--			  UPDATE area
+--			  SET    migrate_yn = 1
+--			  WHERE  ar_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    ar_changed = 'D'
+--			  */
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 1
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'D'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a6
+--		  IF @pa_FailureIDListDelete <> ''
+--		  BEGIN--a7
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  --set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--			  set @l_id2  = CONVERT(VARCHAR(25), citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,','))
+--			  --
+--			  /*
+--			  UPDATE area
+--			  SET    migrate_yn = 2
+--			  WHERE  ar_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    ar_changed = 'D'
+--			  */
+--			  --
+--			  UPDATE account_pms  WITH (ROWLOCK)
+--			  SET    e_cmpltd   = 2
+--			  WHERE  sbk_code   = @l_id2
+--			  AND    e_cmpltd   = 0
+--			  AND    edittype   = 'D'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--a7
+--		--
+--		END--accounts
+--		------------------
+--		ELSE IF @pa_tab = 'BANK2'
+--		BEGIN--bank2
+--		--
+--		  IF @pa_SuccessIDListAdd <> ''
+--		  BEGIN--b1
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  SET @l_id  = CONVERT(NUMERIC, citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,','))
+--			  --
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 1
+--			  WHERE  re_id  = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'N'
+--			  */
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 1
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'I'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b1
+--		  IF @pa_DuplicateIDListAdd <> ''
+--		  BEGIN--b2
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 3
+--			  WHERE  re_id  = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'N'
+--			  */
+--			  --
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 3
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'I'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b2
+--		  --
+--		  IF @pa_FailureIDListAdd <> ''
+--		  BEGIN--b3
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 2
+--			  WHERE  re_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'N'
+--			  */
+--			  --
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 2
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'I'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b3
+--		  --
+--		  IF @pa_SuccessIDListEdit <> ''
+--		  BEGIN--b4
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 1
+--			  WHERE  re_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'M'
+--			  */
+--
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 1
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'U'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b4
+--		  --
+--		  IF @pa_FailureIDListEdit <> ''
+--		  BEGIN--b5
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 2
+--			  WHERE  re_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'M'
+--			  */
+--
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 2
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'U'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b5
+--		  --
+--		  IF @pa_SuccessIDListDelete <> ''
+--		  BEGIN--b6
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 1
+--			  WHERE  re_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'D'
+--			  */
+--			  --
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 1
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'D'
+--			  --
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--b6
+--		  --
+--		  IF @pa_FailureIDListDelete <> ''
+--		  BEGIN--b7
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = CONVERT(NUMERIC,citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,','))
+--
+--			  /*
+--			  UPDATE region
+--			  SET    migrate_yn = 2
+--			  WHERE  re_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    re_changed = 'D'
+--			  */
+--			  --
+--			  UPDATE BANK_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD     = 2
+--			  WHERE  BANK_INFOID  = @l_id
+--			  AND    E_COMLTD     = 0
+--			  AND    EDITTYPE     = 'D'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		 END--b7
+--		--
+--		END--bank2
+--		-------
+--		ELSE IF @pa_tab = 'DP2'
+--		BEGIN--dp2
+--		--
+--		  IF @pa_SuccessIDListAdd <> ''
+--		  BEGIN--d1
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 1
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'N'
+--			  */
+--			  --
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 1
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'I'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d1
+--		  --
+--		  IF @pa_DuplicateIDListAdd <> ''
+--		  BEGIN--d2
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 3
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'N'
+--			  */
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 3
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'I'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--
+--		  --
+--		  END--d2
+--		  IF @pa_FailureIDListAdd <> ''
+--		  BEGIN--d3
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--			SET @l = 0
+--			--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 2
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'N'
+--			  */
+--
+--	  --
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 2
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'I'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d3
+--
+--		  IF @pa_SuccessIDListEdit <> ''
+--		  BEGIN--d4
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 1
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'M'
+--			  */
+--			  --
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 1
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'U'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d4
+--		  IF @pa_FailureIDListEdit <> ''
+--		  BEGIN--d5
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 2
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'M'
+--			  */
+--			  --
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 2
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'U'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d5
+--		  IF @pa_SuccessIDListDelete <> ''
+--		  BEGIN--d6
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 1
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'D'
+--			  */
+--			  --
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 1
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--	  AND    EDITTYPE   = 'D'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d6
+--		  IF @pa_FailureIDListDelete <> ''
+--		  BEGIN--d7
+--		  --
+--			SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--			SET @l = 0
+--
+--			WHILE @l<@l_counter+1
+--			BEGIN
+--			--
+--			  set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			  /*
+--			  UPDATE branches
+--			  SET    migrate_yn = 2
+--			  WHERE  dl_id      = @l_id
+--			  AND    migrate_yn = 0
+--			  AND    dl_changed = 'D'
+--			  */
+--			  UPDATE DP_INFO_SMS  WITH (ROWLOCK)
+--			  SET    E_COMLTD   = 2
+--			  WHERE  DP_INFOID  = @l_id
+--			  AND    E_COMLTD   = 0
+--			  AND    EDITTYPE   = 'D'
+--
+--			  SET @l = @l + 1
+--			--
+--			END
+--		  --
+--		  END--d7
+--		--
+--	  END--dp2
+--	  --**--
+--	  ELSE IF @pa_tab = 'custodian'
+--		 BEGIN
+--		 --
+--
+--		   IF @pa_SuccessIDListAdd <> ''
+--		   BEGIN
+--		   --
+--			 --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 1
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'N'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		   IF @pa_DuplicateIDListAdd <> ''
+--		   BEGIN
+--		   --
+--			 --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--			 --
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 3
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'N'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		   IF @pa_FailureIDListAdd  <> ''
+--			   BEGIN
+--			   --
+--				 --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--				 --
+--
+--				 SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd ,',')
+--				 SET @l = 0
+--
+--				 WHILE @l<@l_counter+1
+--				 BEGIN
+--				 --
+--				   set @l_id2  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd ,@l+1,',')
+--
+--				   UPDATE custodian_mstr
+--				   SET    migrate_yn = 2
+--				   WHERE  custodiancode      = @l_id2
+--				   AND    migrate_yn = 0
+--				   AND    cd_changed = 'N'
+--
+--				   SET @l = @l + 1
+--			  --
+--				 END
+--
+--			   --
+--		   END
+--		   IF @pa_SuccessIDListEdit <> ''
+--		   BEGIN
+--		   --
+--
+--			 --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 1
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'M'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		   IF @pa_FailureIDListEdit <> ''
+--		   BEGIN
+--		   --
+--
+--			 --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 2
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'M'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		   IF @pa_SuccessIDListDelete <> ''
+--		   BEGIN
+--		   --
+--
+--			 --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 1
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'D'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		   IF @pa_FailureIDListDelete <> ''
+--		   BEGIN
+--		   --
+--
+--			 --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--			 SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--			 SET @l = 0
+--
+--			 WHILE @l<@l_counter+1
+--			 BEGIN
+--			 --
+--			   set @l_id2  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			   UPDATE custodian_mstr
+--			   SET    migrate_yn = 2
+--			   WHERE  custodiancode      = @l_id2
+--			   AND    migrate_yn = 0
+--			   AND    cd_changed = 'D'
+--
+--			   SET @l = @l + 1
+--			 --
+--			 END
+--
+--		   --
+--		   END
+--		--
+--	  END
+--	  --
+--	  ELSE IF @pa_tab = 'AREA'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 1
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 3
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd  <> ''
+--			BEGIN
+--			--
+--			  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--			  --
+--
+--			  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd ,',')
+--			  SET @l = 0
+--
+--			  WHILE @l<@l_counter+1
+--			  BEGIN
+--			  --
+--				set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd ,@l+1,',')
+--
+--				UPDATE area
+--				SET    migrate_yn = 2
+--				WHERE  ar_id      = @l_id
+--				AND    migrate_yn = 0
+--				AND    ar_changed = 'N'
+--
+--				SET @l = @l + 1
+--			  --
+--			  END
+--
+--			--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 1
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 2
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 1
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE area
+--			SET    migrate_yn = 2
+--			WHERE  ar_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    ar_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	 --
+--	  END
+--	ELSE IF @pa_tab = 'sbu_master'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 1
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 3
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd  <> ''
+--			BEGIN
+--			--
+--			  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--			  --
+--
+--			  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd ,',')
+--			  SET @l = 0
+--
+--			  WHILE @l<@l_counter+1
+--			  BEGIN
+--			  --
+--				set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd ,@l+1,',')
+--
+--				UPDATE relation_mgr
+--				SET    migrate_yn = 2
+--				WHERE  rm_id      = @l_id
+--				AND    migrate_yn = 0
+--				AND    relm_changed = 'N'
+--
+--				SET @l = @l + 1
+--			  --
+--			  END
+--
+--			--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 1
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 2
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 1
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE relation_mgr
+--			SET    migrate_yn = 2
+--			WHERE  rm_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    relm_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	 --
+--	  END
+--	  ELSE IF @pa_tab = 'REGION'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		 -- SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 1
+--			WHERE  re_id  = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		 -- SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 3
+--			WHERE  re_id  = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		 -- SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 2
+--			WHERE  re_id   = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		 -- SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 1
+--			WHERE  re_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		 -- SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 2
+--			WHERE  re_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		 -- SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 1
+--			WHERE  re_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    re_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		 -- SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE region
+--			SET    migrate_yn = 2
+--			WHERE  re_id      = @l_id
+--		  AND    migrate_yn = 0
+--			AND    re_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'BRANCHES'
+--	  BEGIN
+--	  --
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 1
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 3
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 2
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 1
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 2
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 1
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE branches
+--			SET    migrate_yn = 2
+--			WHERE  dl_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    dl_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'BRANCH'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 1
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 3
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--			BEGIN
+--			--
+--			  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--			  --
+--
+--			  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--			  SET @l = 0
+--
+--			  WHILE @l<@l_counter+1
+--			  BEGIN
+--			  --
+--				set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--				UPDATE branch
+--				SET    migrate_yn = 2
+--				WHERE  br_id      = @l_id
+--				AND    migrate_yn = 0
+--				AND    br_changed = 'N'
+--
+--				SET @l = @l + 1
+--			  --
+--			  END
+--
+--			--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 1
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 2
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 1
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE branch
+--			SET    migrate_yn = 2
+--			WHERE  br_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    br_changed = 'D'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	 --
+--	  END
+--	  ELSE IF @pa_tab = 'SUBBROKERS'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 1
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 3
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 2
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 1
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 2
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 1
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--	  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE subbrokers
+--			SET    migrate_yn = 2
+--			WHERE  sb_id      = @l_id
+--			AND    migrate_yn = 0
+--			AND    sb_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'BANK'
+--	  BEGIN
+--	  --
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 1
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 3
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 2
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 1
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 2
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 1
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE bank
+--			SET    migrate_yn  = 2
+--			WHERE  dpm_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    dpm_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'POBANK'
+--	  BEGIN
+--	  --
+--
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--		   UPDATE pobank
+--		   SET    migrate_yn  = 1
+--		   WHERE  banm_id     = @l_id
+--		   AND    migrate_yn  = 0
+--		   AND    pob_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn  = 3
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn  = 0
+--			AND    pob_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn  = 2
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn  = 0
+--			AND    pob_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn  = 1
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn  = 0
+--			AND    pob_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn  = 2
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn  = 0
+--			AND    pob_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn = 1
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn = 0
+--			AND    pob_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE pobank
+--			SET    migrate_yn  = 2
+--			WHERE  banm_id     = @l_id
+--			AND    migrate_yn  = 0
+--			AND    pob_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'CLIENTSTATUS'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--		   UPDATE clientstatus
+--		   SET    migrate_yn = 1
+--		   WHERE  cls_id     = @l_id
+--		   AND    migrate_yn = 0
+--		   AND    cl_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn  = 3
+--			WHERE  cls_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    cl_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn  = 2
+--			WHERE  cls_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    cl_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn = 1
+--			WHERE  cls_id     = @l_id
+--			AND    migrate_yn = 0
+--			AND    cl_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn = 2
+--			WHERE  cls_id     = @l_id
+--			AND    migrate_yn = 0
+--			AND    cl_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn  = 1
+--			WHERE  cls_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    cl_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE clientstatus
+--			SET    migrate_yn  = 2
+--			WHERE  cls_id      = @l_id
+--			AND    migrate_yn  = 0
+--			AND    cl_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'CLIENT_DETAILS'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 1
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 3
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 1
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 2
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 1
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE client_details
+--			SET    migrate_yn = 2
+--			WHERE  party_code  = @l_id
+--			AND    migrate_yn = 0
+--			AND    cd_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  --
+--	  --
+--	  --
+--	  --
+--	  --
+--	  ELSE IF @pa_tab = 'CLIENT_CONTACT_DETAILS'
+--							  BEGIN
+--							  --
+--
+--								IF @pa_SuccessIDListAdd <> ''
+--								BEGIN
+--								--
+--								  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 1
+--									WHERE  cl_code    = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'N'
+--
+--									SET @l = @l + 1
+--
+--								  --
+--								  END
+--
+--								--
+--								END
+--								IF @pa_DuplicateIDListAdd <> ''
+--								BEGIN
+--								--
+--								  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--								  --
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									SET @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 3
+--									WHERE  cl_code  = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'N'
+--
+--									SET @l = @l + 1
+--								  --
+--								  END
+--
+--								--
+--								END
+--								IF @pa_SuccessIDListEdit <> ''
+--								BEGIN
+--								--
+--
+--								  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 1
+--									WHERE  cl_code  = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'M'
+--
+--									SET @l = @l + 1
+--								  --
+--								  END
+--
+--								--
+--								END
+--								IF @pa_FailureIDListEdit <> ''
+--								BEGIN
+--								--
+--
+--								  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 2
+--									WHERE  cl_code  = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'M'
+--
+--									SET @l = @l + 1
+--								  --
+--								  END
+--
+--								--
+--								END
+--								IF @pa_SuccessIDListDelete <> ''
+--								BEGIN
+--								--
+--
+--								  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 1
+--									WHERE  cl_code  = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'D'
+--
+--
+--									SET @l = @l + 1
+--								  --
+--								  END
+--
+--								--
+--								END
+--								IF @pa_FailureIDListDelete <> ''
+--								BEGIN
+--								--
+--
+--								  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--								  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--								  SET @l = 0
+--
+--								  WHILE @l<@l_counter+1
+--								  BEGIN
+--								  --
+--									SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--									UPDATE client_contact_details
+--									SET    migrate_yn = 2
+--									WHERE  cl_code  = @l_id
+--									AND    migrate_yn = 0
+--									AND    clicd_changed = 'D'
+--
+--
+--									SET @l = @l + 1
+--								  --
+--								  END
+--
+--								--
+--								END
+--
+--							  --
+--							  END
+--         --
+--         --
+--         --
+--         --
+--         --
+--         --
+--	  ELSE IF @pa_tab = 'CLIENT_BROK_DETAILS'
+--	  BEGIN
+--	  --
+--
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn    = 1
+--			WHERE  cl_code       = convert(varchar(20),@l_id  )
+--			AND    migrate_yn    = 0
+--			AND    clibd_changed = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn    = 3
+--			WHERE  cl_code       = convert(varchar(20),@l_id  )
+--			AND    migrate_yn    = 0
+--			AND    clibd_changed    = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn    = 2
+--			WHERE  cl_code       = convert(varchar(20),@l_id  )
+--			AND    migrate_yn    = 0
+--			AND    clibd_changed = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn    = 1
+--			WHERE  cl_code       = convert(varchar(20),@l_id  )
+--			AND    migrate_yn    = 0
+--			AND    clibd_changed    = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn    = 2
+--			WHERE  cl_code       = convert(varchar(20),@l_id  )
+--			AND    migrate_yn    = 0
+--			AND    clibd_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn       = 1
+--			WHERE  cl_code          = convert(varchar(20),@l_id  )
+--			AND    migrate_yn       = 0
+--			AND    clibd_changed    = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE client_brok_details
+--			SET    migrate_yn       = 2
+--			WHERE  cl_code          = convert(varchar(20),@l_id  )
+--			AND    migrate_yn       = 0
+--			AND    clibd_changed    = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'CLIENTTYPE'
+--	  BEGIN
+--	  --
+--
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn    = 1
+--			WHERE  enttm_id      = @l_id
+--			AND    migrate_yn    = 0
+--			AND    ct_changed    = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn    = 3
+--			WHERE  enttm_id      = @l_id
+--			AND    migrate_yn    = 0
+--			AND    ct_changed    = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn    = 2
+--			WHERE  enttm_id      = @l_id
+--			AND    migrate_yn    = 0
+--			AND    ct_changed    = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn = 1
+--			WHERE  enttm_id   = @l_id
+--			AND    migrate_yn = 0
+--			AND    ct_changed    = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn = 2
+--			WHERE  enttm_id   = @l_id
+--			AND    migrate_yn = 0
+--		  AND    ct_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn = 1
+--			WHERE  enttm_id   = @l_id
+--			AND    migrate_yn = 0
+--			AND    ct_changed    = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_id  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE clienttype
+--			SET    migrate_yn = 2
+--			WHERE  enttm_id   = @l_id
+--			AND    migrate_yn = 0
+--			AND    ct_changed = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'MULTIBANKID'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var   = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn       = 1
+--			WHERE  CLTCD            = @l_var
+--			AND    migrate_yn       = 0
+--			AND    cliba_changed    = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn     = 3
+--			WHERE  CLTCD          = @l_var
+--			AND    migrate_yn     = 0
+--			AND    cliba_changed  = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn     = 2
+--			WHERE  CLTCD          = @l_var
+--			AND    migrate_yn     = 0
+--			AND    cliba_changed  = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_var  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn = 1
+--			WHERE  CLTCD      = @l_var
+--			AND    migrate_yn = 0
+--			AND    cliba_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_var  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn = 2
+--			WHERE  CLTCD      = @l_var
+--			AND    migrate_yn = 0
+--			AND    cliba_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn     = 1
+--			WHERE  CLTCD          = @l_var
+--			AND    migrate_yn     = 0
+--			AND    cliba_changed  = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE multibankid
+--			SET    migrate_yn     = 2
+--			WHERE  CLTCD          = @l_var
+--			AND    migrate_yn     = 0
+--			AND    cliba_changed  = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--	  ELSE IF @pa_tab = 'MULTICLTID'
+--	  BEGIN
+--	  --
+--
+--		IF @pa_SuccessIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_SuccessIDListAdd = @pa_SuccessIDListAdd+','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_SuccessIDListAdd,@l+1,',')
+--	  print @l_var
+--			UPDATE multicltid
+--			SET    migrate_yn = 1
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed    = 'N'
+--
+--			SET @l = @l + 1
+--
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_DuplicateIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_DuplicateIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_DuplicateIDListAdd,@l+1,',')
+--
+--			UPDATE multicltid
+--			SET    migrate_yn = 3
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed  = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListAdd <> ''
+--		BEGIN
+--		--
+--		  --SET @pa_DuplicateIDListAdd = @pa_DuplicateIDListAdd + ','
+--		  --
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListAdd,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var  = citrus_usr.fn_splitval_by(@pa_FailureIDListAdd,@l+1,',')
+--
+--			UPDATE multicltid
+--			SET    migrate_yn = 2
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed  = 'N'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_var  = citrus_usr.fn_splitval_by(@pa_SuccessIDListEdit,@l+1,',')
+--
+--			UPDATE multicltid
+--			SET    migrate_yn = 1
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListEdit <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListEdit = @pa_SuccessIDListEdit + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListEdit,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			set @l_var  = citrus_usr.fn_splitval_by(@pa_FailureIDListEdit,@l+1,',')
+--
+--			UPDATE multicltid
+--			SET    migrate_yn = 2
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed = 'M'
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_SuccessIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_SuccessIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var   = citrus_usr.fn_splitval_by(@pa_SuccessIDListDelete,@l+1,',')
+--
+--	   UPDATE multicltid
+--			SET    migrate_yn = 1
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed  = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--		IF @pa_FailureIDListDelete <> ''
+--		BEGIN
+--		--
+--
+--		  --SET @pa_SuccessIDListDelete = @pa_SuccessIDListDelete + ','
+--
+--		  SET @l_counter = citrus_usr.ufn_CountString(@pa_FailureIDListDelete,',')
+--		  SET @l = 0
+--
+--		  WHILE @l<@l_counter+1
+--		  BEGIN
+--		  --
+--			SET @l_var   = citrus_usr.fn_splitval_by(@pa_FailureIDListDelete,@l+1,',')
+--
+--			UPDATE multicltid
+--			SET    migrate_yn = 2
+--			WHERE  Party_Code = @l_var
+--			AND    migrate_yn = 0
+--			AND    clidpa_changed  = 'D'
+--
+--
+--			SET @l = @l + 1
+--		  --
+--		  END
+--
+--		--
+--		END
+--
+--	  --
+--	  END
+--  --
+--  END
+--  IF @PA_ID = 'TABLE'
+--  BEGIN
+--  --
+--     IF @PA_TAB = 'CUSTODIAN'
+--     BEGIN
+--     --
+--        --SELECT * FROM CUSTODIAN_MSTR
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT  DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--       --
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--       UPDATE CUSTODIAN_MSTR SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CD_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--     --
+--     END
+--     IF @PA_TAB = 'AREA'
+--     BEGIN
+--     --
+--        --SELECT * FROM AREA
+--       UPDATE AREA SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'N'
+--       UPDATE AREA SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'N'
+--       UPDATE AREA SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT FAILUREIDADD  FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'N'
+--
+--       UPDATE AREA SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'M'
+--       UPDATE AREA SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'M'
+--       UPDATE AREA SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,AR_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND AR_CHANGED = 'M'
+--     --
+--     END
+--     --
+--     IF @PA_TAB = 'SBU_MASTER'
+--     BEGIN
+--     --
+--        --SELECT * FROM RELATION_MGR
+--       UPDATE relation_mgr SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'N'
+--       UPDATE relation_mgr SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'N'
+--       UPDATE relation_mgr SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'N'
+--
+--       UPDATE relation_mgr SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'M'
+--       UPDATE relation_mgr SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'M'
+--       UPDATE relation_mgr SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,RM_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RELM_CHANGED = 'M'
+--     --
+--     END
+--  --
+--    IF @PA_TAB = 'REGION'
+--     BEGIN
+--     --
+--        --SELECT * FROM REGION
+--       UPDATE REGION SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'N'
+--       UPDATE REGION SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'N'
+--       UPDATE REGION SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT FAILUREIDADD  FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'N'
+--
+--       UPDATE REGION SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'M'
+--       UPDATE REGION SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'M'
+--       UPDATE REGION SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,RE_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND RE_CHANGED = 'M'
+--     --
+--     END
+--    --
+--    IF @PA_TAB = 'BRANCHES'
+--     BEGIN
+--     --
+--        --SELECT * FROM BRANCHES
+--       UPDATE BRANCHES SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'N'
+--       UPDATE BRANCHES SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'N'
+--       UPDATE BRANCHES SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'N'
+--
+--       UPDATE BRANCHES SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'M'
+--       UPDATE BRANCHES SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'M'
+--       UPDATE BRANCHES SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,DL_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DL_CHANGED = 'M'
+--     --
+--     END
+--     --
+--     IF @PA_TAB = 'BRANCH'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM BRANCH
+--	   UPDATE BRANCH SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'N'
+--       UPDATE BRANCH SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'N'
+--	   UPDATE BRANCH SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'N'
+--
+--	   UPDATE BRANCH SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'M'
+--	   UPDATE BRANCH SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'M'
+--	   UPDATE BRANCH SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,BR_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND BR_CHANGED = 'M'
+--	 --
+--	 END
+--	 IF @PA_TAB = 'SUBBROKERS'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM SUBBROKERS
+--	   UPDATE SUBBROKERS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'N'
+--       UPDATE SUBBROKERS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'N'
+--	   UPDATE SUBBROKERS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'N'
+--
+--	   UPDATE SUBBROKERS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'M'
+--	   UPDATE SUBBROKERS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'M'
+--	   UPDATE SUBBROKERS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,SB_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND SB_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'BANK'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM BANK
+--	   UPDATE BANK SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'N'
+--       UPDATE BANK SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'N'
+--	   UPDATE BANK SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'N'
+--
+--	   UPDATE BANK SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'M'
+--	   UPDATE BANK SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'M'
+--	   UPDATE BANK SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,DPM_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND DPM_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'POBANK'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM POBANK
+--	   UPDATE POBANK SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'N'
+--       UPDATE POBANK SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'N'
+--	   UPDATE POBANK SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'N'
+--
+--	   UPDATE POBANK SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'M'
+--	   UPDATE POBANK SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'M'
+--	   UPDATE POBANK SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,BANM_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND POB_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'CLIENT_BROK_DETAILS'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM CLIENT_BROK_DETAILS
+--	   UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'N'
+--       UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'N'
+--	   UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'N'
+--
+--	   UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'M'
+--	   UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'M'
+--	   UPDATE CLIENT_BROK_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBD_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'MULTIBANKID'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM MULTIBANKID
+--	   UPDATE MULTIBANKID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'N'
+--       UPDATE MULTIBANKID SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'N'
+--	   UPDATE MULTIBANKID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'N'
+--
+--	   UPDATE MULTIBANKID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'M'
+--	   UPDATE MULTIBANKID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'M'
+--
+--
+--       UPDATE MULTIBANKID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'D'
+--       UPDATE MULTIBANKID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CLTCD) IN (SELECT FAILUREIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIBA_CHANGED = 'D'
+--
+--
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'CLIENTSTATUS'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM CLIENTSTATUS
+--	   UPDATE CLIENTSTATUS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'N'
+--       UPDATE CLIENTSTATUS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'N'
+--	   UPDATE CLIENTSTATUS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'N'
+--
+--	   UPDATE CLIENTSTATUS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'M'
+--	   UPDATE CLIENTSTATUS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'M'
+--	   UPDATE CLIENTSTATUS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CLS_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CL_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'CLIENT_DETAILS'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM CLIENT_DETAILS
+--	   UPDATE CLIENT_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--       UPDATE CLIENT_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--	   UPDATE CLIENT_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'N'
+--
+--	   UPDATE CLIENT_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--	   UPDATE CLIENT_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--	   UPDATE CLIENT_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CD_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     --
+--     --
+--     --
+--     --
+--     --added by vivek on 03/10/2008
+--					     --
+--					     --
+--					      IF @PA_TAB = 'CLIENT_CONTACT_DETAILS'
+--											 BEGIN
+--											 --
+--												--SELECT * FROM CLIENT_DETAILS
+--											   UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'N'
+--										       UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'N'
+--											   UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'N'
+--
+--											   UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'M'
+--											   UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'M'
+--											   UPDATE CLIENT_CONTACT_DETAILS SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,CL_CODE) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLICD_CHANGED = 'M'
+--											 --
+--	 END
+--	 --
+--	 --
+--	 --
+--	 --
+--	 --
+--	 --
+--     IF @PA_TAB = 'CLIENTTYPE'
+--	 BEGIN
+--	 --
+--		--SELECT * FROM CLIENTTYPE
+--	   UPDATE CLIENTTYPE SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'N'
+--       UPDATE CLIENTTYPE SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'N'
+--	   UPDATE CLIENTTYPE SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'N'
+--
+--	   UPDATE CLIENTTYPE SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'M'
+--	   UPDATE CLIENTTYPE SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'M'
+--	   UPDATE CLIENTTYPE SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,ENTTM_ID) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CT_CHANGED = 'M'
+--	 --
+--	 END
+--     --
+--     IF @PA_TAB = 'MULTICLTID'
+--	 BEGIN
+--	 --
+--		--
+--	   UPDATE MULTICLTID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'N'
+--       UPDATE MULTICLTID SET MIGRATE_YN = 3 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT DUPLICATEIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'N'
+--	   UPDATE MULTICLTID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT FAILUREIDADD FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'N'
+--
+--	   UPDATE MULTICLTID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'M'
+--	   UPDATE MULTICLTID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT FAILUREIDEDIT FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'M'
+--
+--       --
+--       UPDATE MULTICLTID SET MIGRATE_YN = 1 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT SUCCESSIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'D'
+--       UPDATE MULTICLTID SET MIGRATE_YN = 2 WHERE CONVERT(VARCHAR,PARTY_CODE) IN (SELECT FAILUREIDDELETE FROM VW_DATAMIGRATIONSTATUS WHERE TABLENAME = @PA_TAB) AND MIGRATE_YN = 0 AND CLIDPA_CHANGED = 'D'
+--
+--
+--	 --
+--	 END
+--     --
+----  END
+----
+END
+
+GO

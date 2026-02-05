@@ -1,0 +1,11 @@
+-- Object: TABLE citrus_usr.entity_fr1
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[entity_fr1]
+(
+    [member_no] VARCHAR(50) NULL,
+    [member_name] VARCHAR(100) NULL
+);
+
+GO

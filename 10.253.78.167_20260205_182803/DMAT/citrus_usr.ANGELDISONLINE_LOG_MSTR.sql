@@ -1,0 +1,14 @@
+-- Object: TABLE citrus_usr.ANGELDISONLINE_LOG_MSTR
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ANGELDISONLINE_LOG_MSTR]
+(
+    [ALM_INTREFNO] VARCHAR(80) NULL,
+    [ALM_ACTION] VARCHAR(800) NULL,
+    [ALM_SVALUE] VARCHAR(100) NULL,
+    [ALM_SCR] VARCHAR(100) NULL,
+    [ALM_CREATED_DT] DATETIME NULL
+);
+
+GO
