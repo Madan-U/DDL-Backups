@@ -1,0 +1,10 @@
+-- Object: VIEW citrus_usr.VW_POAOPTCLIENT
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE VIEW VW_POAOPTCLIENT
+AS
+SELECT DISTINCT BOID,MASTERPOAID,HOLDERNUM,POASTATUS FROM DPS8_PC5 WHERE TYPEOFTRANS IN ('','2','1')
+
+GO

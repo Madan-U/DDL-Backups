@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.chai_mak
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[chai_mak]
+(
+    [CHAI_ID] NUMERIC(10, 0) NULL,
+    [CHAI_SLAB_NO] VARCHAR(20) NULL,
+    [CHAI_ISIN_CD] VARCHAR(20) NULL,
+    [CHAI_REMARKS] VARCHAR(250) NULL,
+    [CHAI_CREATED_BY] VARCHAR(25) NULL,
+    [CHAI_CREATED_DT] DATETIME NULL,
+    [CHAI_LST_UPD_BY] VARCHAR(25) NULL,
+    [CHAI_LST_UPD_DT] DATETIME NULL,
+    [CHAI_DELETED_IND] SMALLINT NULL
+);
+
+GO

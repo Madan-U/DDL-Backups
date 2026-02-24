@@ -1,0 +1,11 @@
+-- Object: TABLE citrus_usr.unfrezee19112019
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[unfrezee19112019]
+(
+    [dpam_id] NUMERIC(10, 0) NOT NULL,
+    [dpam_sba_no] VARCHAR(20) NOT NULL
+);
+
+GO

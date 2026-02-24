@@ -1,0 +1,23 @@
+-- Object: PROCEDURE citrus_usr.PR_AUTO_LOGIN_DISABLED
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+
+--begin tran
+--Exec PR_AUTO_LOGIN_DISABLED ''
+--rollback
+CREATE PROCEDURE [citrus_usr].[PR_AUTO_LOGIN_DISABLED]
+(@LOGIN_NAMES VARCHAR(20)
+)
+AS
+BEGIN
+
+UPDATE citrus_usr.LOGIN_NAMES SET LOGN_STATUS='D',LOGN_LST_UPD_DT=GETDATE(),LOGN_LST_UPD_BY='HRM'
+FROM VW_DEACTIVATION_DETAILS, citrus_usr.LOGIN_NAMES WHERE LOGN_NAME=EMP_NO
+AND LOGN_DELETED_IND=1
+AND LOGN_STATUS='A'
+and convert(varchar(11),GETDATE(),109)=convert(varchar(11),convert(datetime,SEPARATIONDATE),109)
+
+END
+
+GO

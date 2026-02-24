@@ -1,0 +1,73 @@
+-- Object: FUNCTION citrus_usr.fn_getca_desc_bak15062017
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+create function [citrus_usr].[fn_getca_desc_bak15062017] (@pa_id varchar(10),@pa_cd varchar(100))
+returns varchar(50)
+as
+begin 
+return  'CA-' + case when @pa_id ='1' then  	'Bonus'
+when @pa_id ='2' then 	'Rearrangement'
+when @pa_id ='3' then 	'Rights'
+when @pa_id ='4' then 	'Dividend'
+when @pa_id ='5' then 	'Interim Dividend'
+when @pa_id ='6' then 	'Interest Payment'
+when @pa_id ='7' then 	'Call'
+when @pa_id ='8' then 	'Merger'
+when @pa_id ='9' then 	'Conversion'
+when @pa_id ='10' then 	'Split'
+when @pa_id ='11' then 	'Non-Paripassu To Paripassu'
+when @pa_id ='12' then 	'Redemption'
+when @pa_id ='13' then 	'ESOP'
+when @pa_id ='14' then 	'CP Allotment'
+when @pa_id ='15' then 	'CP Redemption'
+when @pa_id ='16' then 	'Preferencial Allotment'
+when @pa_id ='17' then 	'Debts Allotment'
+when @pa_id ='18' then 	'Debts Redemption'
+when @pa_id ='19' then 	'Warrants Allotment'
+when @pa_id ='20' then 	'Warrants Redemption'
+when @pa_id ='21' then 	'Rights Issue'
+when @pa_id ='22' then 	'Forfeiture'
+when @pa_id ='23' then 	'Reissue Forfeited Shares'
+when @pa_id ='24' then 	'Option Cases Bonus'
+when @pa_id ='25' then 	'Option Cases Split'
+when @pa_id ='26' then 	'Buyback'
+when @pa_id ='27' then 	'Extinguishment'
+when @pa_id ='28' then 	'Debit Escrow Account'
+when @pa_id ='29' then 	'Rectification'
+when @pa_id ='30' then 	'Mutual Fund Allotment'
+when @pa_id ='31' then 	'PTC Allotment'
+when @pa_id ='32' then 	'Pref Shares Allotment'
+when @pa_id ='33' then 	'Commodities Revalidation'
+when @pa_id ='34' then 	'CD Allotment'
+when @pa_id ='35' then 	'Shares against Fractions'
+when @pa_id ='36' then 	'AGM'
+when @pa_id ='37' then 	'EGM'
+when @pa_id ='38' then 	'Option Cases Merger'
+when @pa_id ='39' then 	'FCCB Conversion'
+when @pa_id ='40' then 	'Lock-in of Securities'
+when @pa_id ='41' then 	'Commodity Extinguishment'
+when @pa_id ='42' then 	'GSec Allotment'
+when @pa_id ='43' then 	'GSec Extinguishment'
+when @pa_id ='44' then 	'Mutual Fund Repurchase'
+when @pa_id ='45' then 	'MF Allotment'
+when @pa_id ='46' then 	'MF DIV REINV Allotment'
+when @pa_id ='47' then 	'MF Extinguishment'
+when @pa_id ='48' then 	'MF Demat of SOA'
+when @pa_id ='49' then 	'QIP/QIB allotment'
+when @pa_id ='50' then 	'Option Cases Schemes'
+when @pa_id ='51' then 	'Consolidation'
+when @pa_id ='52' then 	'Capital Reduction'
+when @pa_id ='53' then 	'Option Cases Consolidation'
+when @pa_id ='54' then 	'Transfer of lock in shares'
+when @pa_id ='55' then 	'Account Shifting Inactive ISIN'
+when @pa_id ='57' then 	'Commodities Revalidation Multiple ISINs'
+when @pa_id ='58' then 	'Commodities IPO Multiple ISINs'
+when @pa_id ='59' then 	'Transmission of Lockin Shares'
+when @pa_id ='60' then 	'SIP Allotment'
+when @pa_id ='61' then 	'Transfer on Listing Approval'
+when @pa_id ='99' then 	'Others' else @pa_cd end 
+
+end
+
+GO

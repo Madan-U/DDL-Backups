@@ -1,0 +1,12 @@
+-- Object: VIEW citrus_usr.VW_AREA
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+
+
+
+CREATE VIEW [citrus_usr].[VW_AREA]
+AS 
+SELECT * FROM AngelNseCM.msajag.dbo.AREA
+
+GO

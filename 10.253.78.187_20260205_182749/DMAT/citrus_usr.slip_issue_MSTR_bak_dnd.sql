@@ -1,0 +1,35 @@
+-- Object: TABLE citrus_usr.slip_issue_MSTR_bak_dnd
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[slip_issue_MSTR_bak_dnd]
+(
+    [SLIIM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_TRATM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_SERIES_TYPE] VARCHAR(20) NULL,
+    [SLIIM_ENTM_ID] NUMERIC(10, 0) NOT NULL,
+    [SLIIM_DPAM_ACCT_NO] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_FR] VARCHAR(20) NULL,
+    [SLIIM_SLIP_NO_TO] VARCHAR(20) NULL,
+    [SLIIM_LOOSE_Y_N] SMALLINT NULL,
+    [SLIIM_CREATED_BY] VARCHAR(20) NOT NULL,
+    [SLIIM_CREATED_DT] DATETIME NOT NULL,
+    [SLIIM_LST_UPD_BY] VARCHAR(20) NOT NULL,
+    [SLIIM_LST_UPD_DT] DATETIME NOT NULL,
+    [SLIIM_DELETED_IND] SMALLINT NOT NULL,
+    [sliim_dpm_id] NUMERIC(10, 0) NULL,
+    [sliim_no_used] NUMERIC(10, 0) NULL,
+    [sliim_all_used] NUMERIC(10, 0) NULL,
+    [sliim_dt] DATETIME NULL,
+    [sliim_book_name] VARCHAR(100) NULL,
+    [sliim_rmks] VARCHAR(1000) NULL,
+    [sliim_gen_id] VARCHAR(20) NULL,
+    [sliim_gen_date] DATETIME NULL,
+    [SLIIM_SUCCESS_FLAG] CHAR(1) NULL,
+    [SLIIM_ERROR_CODE] VARCHAR(240) NULL,
+    [SLIIM_EXPIRY_DATE] DATETIME NULL,
+    [type] VARCHAR(200) NULL,
+    [dt] DATETIME NOT NULL
+);
+
+GO

@@ -1,0 +1,114 @@
+-- Object: PROCEDURE citrus_usr.pr_dump_client_BKP_03JUL2025_SRE_38346
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE proc [citrus_usr].[pr_dump_client_BKP_03JUL2025_SRE_38346](@pa_id varchar(1))        
+as        
+    
+declare @holddate varchar(11)    
+set @holddate= ( select TOP 1 HLD_HOLD_DATE FROM HOLDINGDATA WITH(NOLOCK))    
+
+--Declare @Time time    
+    
+--Set @Time=CONVERT(Time,getdate(),116)
+
+
+--IF (@Time< ='14:45:00.000000')
+
+    select *  into #Synergy_Client_Master from Synergy_Client_Master WITH(NOLOCK) WHERE 1=2    
+	    
+	insert into #Synergy_Client_Master        
+	select * from  Synergy_Client_Master_fordump        
+	    
+	    
+	TRUNCATE TABLE Synergy_Client_Master    
+	insert into Synergy_Client_Master        
+	select * from  #Synergy_Client_Master        
+
+	
+	    
+	Delete from dbo.synergy_holding where HLD_HOLD_DATE = @holddate    
+	    
+	INSERT INTO dbo.synergy_holding      
+	    
+	SELECT * FROM HOLDINGDATA    --5639639 --5651832
+
+
+
+ 
+
+
+   Begin 
+		BEGIN         
+		TRUNCATE TABLE TBL_CLIENT_MASTER_TMP
+     
+		INSERT INTO  TBL_CLIENT_MASTER_TMP        
+		SELECT  * FROM  TBL_CLIENT_MASTER_FORDUMP  
+
+      
+		IF (SELECT COUNT(*) FROM TBL_CLIENT_MASTER_TMP )>1
+			BEGIN 
+  
+			BEGIN TRAN 
+				TRUNCATE TABLE TBL_CLIENT_MASTER    
+    
+				INSERT INTO  TBL_CLIENT_MASTER        
+				SELECT  * FROM  TBL_CLIENT_MASTER_TMP     
+      
+		    	
+			COMMIT	
+			 
+				SELECT  BOID,PRIPHNUM,PRI_EMAIL,SMART_FLAG  INTO #TEST                                                                           
+				FROM DPS8_PC1  WHERE PRI_EMAIL <>'' OR SMART_FLAG ='Y'
+
+				DELETE FROM #TEST WHERE LEN(PRI_EMAIL)>50
+
+				CREATE INDEX #T ON #TEST(BOID) INCLUDE(PRIPHNUM,PRI_EMAIL)
+
+ 
+				UPDATE T SET FIRST_HOLD_MOBILE=RIGHT(PRIPHNUM,10),EMAIL_ADD =PRI_EMAIL  FROM TBL_CLIENT_MASTER  T,#TEST S
+				WHERE T.CLIENT_CODE =S.BOID
+				AND (  ISNULL(FIRST_HOLD_MOBILE,'')<>PRIPHNUM OR EMAIL_ADD<>PRI_EMAIL)
+
+
+				UPDATE T SET FIRST_SMS_FLAG= SMART_FLAG  FROM TBL_CLIENT_MASTER  T,#TEST S
+				WHERE T.CLIENT_CODE =S.BOID
+				AND FIRST_HOLD_MOBILE=PRIPHNUM 
+
+
+
+				SELECT CLIENT_CODE,MAX(POA_DATE_FROM) AS POA_DATE_FROM INTO #POA_DATE
+				FROM TBL_CLIENT_POA WITH(NOLOCK) WHERE MASTER_POA ='2203320300000013' 
+				GROUP  BY CLIENT_CODE
+               
+			   SELECT * INTO #POA  FROM (
+               SELECT T.CLIENT_CODE,MAX(T.POA_DATE_FROM) AS POA_DATE_FROM,POA_STATUS 
+			   FROM TBL_CLIENT_POA T WITH(NOLOCK) ,#POA_DATE P WITH(NOLOCK) WHERE MASTER_POA ='2203320300000013'
+			   AND T.CLIENT_CODE =P.CLIENT_CODE AND T.POA_DATE_FROM =P.POA_DATE_FROM  
+         	    GROUP  BY T.CLIENT_CODE,POA_STATUS )A WHERE POA_STATUS <>'A'
+
+				UPDATE T SET POA_VER=NULL
+				FROM TBL_CLIENT_MASTER  T,#POA S
+				WHERE T.CLIENT_CODE =S.CLIENT_CODE
+			 
+				 SELECT CLIENT_CODE,POA_VER INTO #P FROM TBL_CLIENT_MASTER C WHERE POA_VER=2
+				AND NOT EXISTS (SELECT CLIENT_CODE FROM TBL_CLIENT_POA T
+				WHERE T.CLIENT_CODE=C.CLIENT_CODE AND MASTER_POA='2203320300000013')
+				AND STATUS ='ACTIVE'
+
+				UPDATE C SET POA_VER ='' FROM TBL_CLIENT_MASTER C WHERE POA_VER=2
+				AND  EXISTS (SELECT CLIENT_CODE FROM #P T
+				WHERE T.CLIENT_CODE=C.CLIENT_CODE )
+				AND STATUS ='ACTIVE'
+
+
+ 
+ 
+     
+		   END  
+	 END
+    
+     END
+
+GO

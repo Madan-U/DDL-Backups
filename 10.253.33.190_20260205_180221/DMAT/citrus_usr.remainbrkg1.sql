@@ -1,0 +1,11 @@
+-- Object: TABLE citrus_usr.remainbrkg1
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[remainbrkg1]
+(
+    [cm_cd] NVARCHAR(50) NULL,
+    [cm_chgsscheme] NVARCHAR(50) NULL
+);
+
+GO

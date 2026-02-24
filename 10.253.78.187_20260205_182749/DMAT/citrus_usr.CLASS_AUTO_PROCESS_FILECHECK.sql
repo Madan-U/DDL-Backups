@@ -1,0 +1,40 @@
+-- Object: PROCEDURE citrus_usr.CLASS_AUTO_PROCESS_FILECHECK
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE PROC [citrus_usr].[CLASS_AUTO_PROCESS_FILECHECK]  
+(  
+ @FILENAME VARCHAR(500),  
+ @ISEXISTS INT OUTPUT  
+)  
+  
+AS  
+  
+DECLARE @SQL VARCHAR(500)  
+  
+CREATE TABLE #TOCHECK  
+(  
+ FILLER1 VARCHAR(500)  
+)  
+  
+SET @SQL = 'INSERT INTO #TOCHECK '  
+SET @SQL = @SQL + 'exec XP_CMDSHELL ''dir "' + @FILENAME + '" /s/t/b'''  
+EXEC (@SQL)  
+--PRINT @SQL  
+  
+--SELECT ISNULL(FILLER1,'') FROM #TOCHECK  
+--print @FILENAME  
+--select * from #TOCHECK  
+IF (SELECT ISNULL(COUNT(1),0) FROM #TOCHECK  
+WHERE ISNULL(FILLER1,'') = @FILENAME) > 0   
+BEGIN  
+  SET @ISEXISTS = 1  
+END   
+ELSE  
+BEGIN  
+  SET @ISEXISTS = 0  
+END   
+  
+--select @ISEXISTS
+
+GO

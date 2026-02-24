@@ -1,0 +1,14 @@
+-- Object: TABLE citrus_usr.CDSL_TRX_SEND_DTLS_MSTR
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[CDSL_TRX_SEND_DTLS_MSTR]
+(
+    [CTDM_DPID] VARCHAR(100) NULL,
+    [CTDM_REQID] VARCHAR(100) NULL,
+    [CTDM_VERSION] VARCHAR(100) NULL,
+    [CTDM_TRANSDTLS] VARCHAR(8000) NULL,
+    [CTDM_TRANSDTLSSTR] VARCHAR(8000) NULL
+);
+
+GO

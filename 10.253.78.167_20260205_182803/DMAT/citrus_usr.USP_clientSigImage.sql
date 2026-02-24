@@ -1,0 +1,12 @@
+-- Object: VIEW citrus_usr.USP_clientSigImage
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE view USP_clientSigImage
+as
+SELECT DISTINCT DPAM_SBA_NO,ACCD_BINARY_IMAGE  FROM CITRUS_USR.DP_ACCT_MSTR  with(nolock) , CITRUS_USR.ACCOUNT_DOCUMENTS with(nolock)
+WHERE DPAM_ID=ACCD_CLISBA_ID AND DPAM_DELETED_IND=1 AND ACCD_DELETED_IND=1
+AND DPAM_STAM_CD='ACTIVE'
+AND ACCD_ACCDOCM_DOC_ID='12'
+
+GO

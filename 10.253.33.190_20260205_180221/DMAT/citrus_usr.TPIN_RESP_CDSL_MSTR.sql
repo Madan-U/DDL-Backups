@@ -1,0 +1,15 @@
+-- Object: TABLE citrus_usr.TPIN_RESP_CDSL_MSTR
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TPIN_RESP_CDSL_MSTR]
+(
+    [TPCM_FULLSTR] VARCHAR(8000) NULL,
+    [TPCM_REQID] VARCHAR(100) NULL,
+    [TPCM_RESID] VARCHAR(100) NULL,
+    [TPCM_REQTIME] VARCHAR(100) NULL,
+    [TPCM_STATUS] VARCHAR(100) NULL,
+    [TPCM_ERRORCODE] VARCHAR(100) NULL
+);
+
+GO

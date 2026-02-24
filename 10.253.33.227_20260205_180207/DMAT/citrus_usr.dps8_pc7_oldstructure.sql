@@ -1,0 +1,56 @@
+-- Object: TABLE citrus_usr.dps8_pc7_oldstructure
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[dps8_pc7_oldstructure]
+(
+    [PurposeCode7] VARCHAR(100) NULL,
+    [TypeOfTrans] VARCHAR(100) NULL,
+    [Title] CHAR(10) NULL,
+    [Name] CHAR(100) NULL,
+    [MiddleName] CHAR(20) NULL,
+    [SearchName] CHAR(20) NULL,
+    [Suffix] CHAR(10) NULL,
+    [FthName] CHAR(50) NULL,
+    [Addr1] CHAR(30) NULL,
+    [Addr2] CHAR(30) NULL,
+    [Addr3] CHAR(30) NULL,
+    [City] CHAR(25) NULL,
+    [State] CHAR(25) NULL,
+    [Country] CHAR(25) NULL,
+    [PinCode] CHAR(10) NULL,
+    [PriPhInd] CHAR(1) NULL,
+    [PriPhNum] CHAR(17) NULL,
+    [AltPhInd] CHAR(1) NULL,
+    [AltPhNum] CHAR(17) NULL,
+    [AddPhones] CHAR(100) NULL,
+    [Fax] CHAR(17) NULL,
+    [PANGIR] CHAR(25) NULL,
+    [ItCircle] CHAR(15) NULL,
+    [EMailid] CHAR(50) NULL,
+    [DateOfSetup] VARCHAR(20) NULL,
+    [DateOfBirth] VARCHAR(20) NULL,
+    [UsrTxt1] CHAR(50) NULL,
+    [UsrTxt2] CHAR(50) NULL,
+    [UsrFld3] VARCHAR(100) NULL,
+    [Email] CHAR(50) NULL,
+    [UnqIdNum] CHAR(15) NULL,
+    [Filler1] CHAR(25) NULL,
+    [Filler2] CHAR(25) NULL,
+    [Filler3] CHAR(25) NULL,
+    [Filler4] CHAR(25) NULL,
+    [Filler5] CHAR(25) NULL,
+    [Filler6] CHAR(25) NULL,
+    [Filler7] CHAR(25) NULL,
+    [Filler8] CHAR(25) NULL,
+    [Filler9] CHAR(25) NULL,
+    [Filler10] CHAR(25) NULL,
+    [BOId] CHAR(16) NULL,
+    [TransSystemDate] VARCHAR(50) NULL,
+    [RES_SEC_FLg] CHAR(1) NULL,
+    [NOM_Sr_No] CHAR(2) NULL,
+    [rel_WITH_BO] CHAR(2) NULL,
+    [perc_OF_SHARES] VARCHAR(10) NULL
+);
+
+GO

@@ -1,0 +1,22 @@
+-- Object: PROCEDURE citrus_usr.pr_rpt_common_file_upload_bak_20180201
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+
+  
+CREATE PROCEDURE [citrus_usr].[pr_rpt_common_file_upload_bak_20180201]  
+(  
+@pa_action varchar(50),  
+@pa_output varchar(8000) output  
+)  
+AS  
+BEGIN  
+   
+if @pa_action = 'FILETYPE'  
+begin  
+ select distinct comm_text,comm_value from common_file_type  
+end  
+  
+END
+
+GO

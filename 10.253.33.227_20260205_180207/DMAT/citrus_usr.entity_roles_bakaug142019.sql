@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.entity_roles_bakaug142019
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[entity_roles_bakaug142019]
+(
+    [ENTRO_LOGN_NAME] VARCHAR(20) NOT NULL,
+    [ENTRO_LOGN_FROM_DT] DATETIME NOT NULL,
+    [ENTRO_ROL_ID] NUMERIC(10, 0) NOT NULL,
+    [ENTRO_CREATED_BY] VARCHAR(25) NOT NULL,
+    [ENTRO_CREATED_DT] DATETIME NOT NULL,
+    [ENTRO_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [ENTRO_LST_UPD_DT] DATETIME NOT NULL,
+    [ENTRO_DELETED_IND] SMALLINT NOT NULL
+);
+
+GO

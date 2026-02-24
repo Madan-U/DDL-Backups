@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.FILEGEN_FORANGELID_ledger_MIMANSA
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[FILEGEN_FORANGELID_ledger_MIMANSA]
+(
+    [BOID] VARCHAR(200) NULL,
+    [VOUCHERDATE] VARCHAR(20) NULL,
+    [NARRATION] VARCHAR(MAX) NULL,
+    [CLOSINGBAL] MONEY NULL,
+    [CREDITDEBIT_FLAG] VARCHAR(10) NULL,
+    [AMOUNT] MONEY NULL,
+    [VALUE] MONEY NULL
+);
+
+GO

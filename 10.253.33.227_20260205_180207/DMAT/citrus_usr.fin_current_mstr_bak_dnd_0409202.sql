@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.fin_current_mstr_bak_dnd_0409202
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[fin_current_mstr_bak_dnd_0409202]
+(
+    [FINH_START_DT] DATETIME NULL,
+    [FINH_END_DT] DATETIME NULL,
+    [FINH_STATUS] CHAR(1) NULL,
+    [FINH_CREATED_BY] VARCHAR(50) NULL,
+    [FINH_CREATED_DT] DATETIME NULL,
+    [FINH_LST_UPD_BY] VARCHAR(50) NULL,
+    [FINH_LST_UPD_DT] DATETIME NULL,
+    [FINH_DELETED_IND] INT NULL
+);
+
+GO

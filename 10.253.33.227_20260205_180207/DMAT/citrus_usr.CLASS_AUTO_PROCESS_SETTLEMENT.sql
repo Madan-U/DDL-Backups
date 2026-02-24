@@ -1,0 +1,584 @@
+-- Object: PROCEDURE citrus_usr.CLASS_AUTO_PROCESS_SETTLEMENT
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+
+
+CREATE PROCEDURE [citrus_usr].[CLASS_AUTO_PROCESS_SETTLEMENT]          
+(           
+ @PROCESS_DATE VARCHAR(11)          
+)          
+AS          
+          
+-- EXEC CLASS_AUTO_PROCESS_SETTLEMENT 'JUN  3 2015'          
+SET @PROCESS_DATE = LEFT(GETDATE(),11)          
+          
+DECLARE @SNO     NUMERIC(18,0),          
+  @EXCHANGE    VARCHAR(3),          
+  @SEGMENT    VARCHAR(7),          
+  @BUSINESS_DATE   VARCHAR(11),          
+  @PROCESS_FOR   VARCHAR(30),          
+  @INTERNAL_PROCESS_ID INT,          
+  @FILE_DWLOAD_LOCATION VARCHAR(200),          
+  @FILE_DWLOAD_NAME  VARCHAR(200),          
+  @FILE_DWLOAD_NAME_TEMP VARCHAR(200),          
+  @FILE_DWLOAD_MAP_DRIVE VARCHAR(100),          
+  @FILE_DWLOAD_USERID  VARCHAR(100),          
+  @FILE_DWLOAD_PWD  VARCHAR(100),          
+  @PROCESS_FILE_PATH  VARCHAR(200),          
+  @PROCESS_FILE_NAME  VARCHAR(200),          
+  @PROCESS_FILE_NAME_NEW VARCHAR(200),          
+  @PROCESS_FILE_MOVE_PATH VARCHAR(200),          
+  @PROCESS_SP_NAME  VARCHAR(8000),          
+  @PROCESS_CHECK_QUERY VARCHAR(MAX),          
+  @PROCESS_HALTED_REASON VARCHAR(500),          
+  @FILE_INTERNET_LOCATION VARCHAR(500),          
+  @FILE_INTERNAL_ISS_PATH VARCHAR(500),          
+  @PROCESS_CURSOR   CURSOR,          
+  @IS_FILE_BASED   VARCHAR(1),          
+  @PROCESS_ID    INT,          
+  @SUB_PROCESS_ID   INT,          
+  @ISEXISTS    INT,          
+  @ERRFLAG    INT,          
+  @CMD     VARCHAR(8000),          
+  @TIME     VARCHAR(8),          
+  @CHKFLAG    INT,          
+  @MYOUTPUT    VARCHAR(MAX),          
+  @OTHER_DBDETAILS  VARCHAR(200),           
+  @OTHER_PROCESS_FOR  VARCHAR(200),           
+  @SETT_NO    VARCHAR(20),           
+  @SETT_TYPE    VARCHAR(20),          
+  @FLD_FILEDATE   DATETIME,          
+  @FLD_FILENAME   VARCHAR(200)          
+          
+SET NOCOUNT ON          
+SET @ERRFLAG = 0          
+SET @CHKFLAG = 1          
+  
+EXEC CLASS_AUTO_PROCESS_LISNER    
+ 
+OPEN SYMMETRIC KEY   KEY4CERTAUTOPROCESS          
+     DECRYPTION BY   CERTIFICATE CERTAUTOPROCESS           
+  
+SET @PROCESS_CURSOR = CURSOR FOR            
+          
+SELECT            
+DISTINCT D.SNO, D.EXCHANGE, D.SEGMENT, BUSINESS_DATE, D.PROCESS_ID, D.INTERNAL_PROCESS_ID, D.PROCESS_FOR,           
+PROCESS_FILE_PATH = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.PROCESS_FILE_PATH),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+PROCESS_FILE_NAME = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.PROCESS_FILE_NAME),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+PROCESS_FILE_MOVE_PATH = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.PROCESS_FILE_MOVE_PATH),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+PROCESS_SP_NAME = REPLACE(REPLACE(REPLACE(CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',PROCESS_SP_NAME),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),'<FILENAME>',          
+       '''' + CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.PROCESS_FILE_PATH),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))) +           
+       CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.PROCESS_FILE_NAME),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))) + ''''),          
+       '<SNO>',D.SNO),'<SUBPROCESSID>',D.SUB_PROCESS_ID),          
+PROCESS_CHECK_QUERY = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',PROCESS_CHECK_QUERY),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+IS_FILE_BASED,          
+FILE_DWLOAD_LOCATION = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.FILE_DWLOAD_LOCATION),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+FILE_DWLOAD_NAME = CITRUS_USR.FN_CLASS_AUTO_PROCESS_REPLACE(CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',M.FILE_DWLOAD_NAME),BUSINESS_DATE,MEMBERCODE,D.SETT_NO,LTRIM(RTRIM(D.SETT_TYPE))),          
+FILE_DWLOAD_MAP_DRIVE, FILE_DWLOAD_USERID=CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',FILE_DWLOAD_USERID), FILE_DWLOAD_PWD=CITRUS_USR.FN_DATA_DECRYPT('MKTTECH.IN',FILE_DWLOAD_PWD),          
+FILE_INTERNET_LOCATION, FILE_INTERNAL_ISS_PATH, SUB_PROCESS_ID, OTHER_DBDETAILS, OTHER_PROCESS_FOR, D.SETT_NO, D.SETT_TYPE          
+FROM TBL_AUTO_PROCESS_DETAIL D (NOLOCK),           
+     TBL_AUTO_PROCESS_MASTER M (NOLOCK),           
+  (SELECT '' MEMBERCODE) O          
+WHERE PROCESS_DATE = LEFT(GETDATE(),11)          
+AND D.PROCESS_FOR = M.PROCESS_FOR          
+AND D.INTERNAL_PROCESS_ID = M.INTERNAL_PROCESS_ID          
+AND D.PROCESS_STATUS = 0          
+AND (D.PROCESS_START_DATE <= GETDATE() + D.WAIT_PERIOD          
+OR D.PROCESS_START_DATE <= GETDATE())          
+AND (D.PROCESS_END_DATE + D.WAIT_PERIOD >= GETDATE()           
+OR D.PROCESS_END_DATE >= GETDATE())          
+AND D.IS_DEPEND_ON = ''          
+AND IS_FILE_BASED <> ''   
+  
+ORDER BY D.SNO          
+          
+OPEN @PROCESS_CURSOR          
+FETCH NEXT FROM @PROCESS_CURSOR INTO @SNO, @EXCHANGE, @SEGMENT, @BUSINESS_DATE, @PROCESS_ID, @INTERNAL_PROCESS_ID, @PROCESS_FOR, @PROCESS_FILE_PATH,           
+          @PROCESS_FILE_NAME, @PROCESS_FILE_MOVE_PATH, @PROCESS_SP_NAME, @PROCESS_CHECK_QUERY,           
+          @IS_FILE_BASED, @FILE_DWLOAD_LOCATION, @FILE_DWLOAD_NAME, @FILE_DWLOAD_MAP_DRIVE,          
+          @FILE_DWLOAD_USERID, @FILE_DWLOAD_PWD, @FILE_INTERNET_LOCATION, @FILE_INTERNAL_ISS_PATH, @SUB_PROCESS_ID,          
+          @OTHER_DBDETAILS, @OTHER_PROCESS_FOR, @SETT_NO, @SETT_TYPE          
+WHILE @@FETCH_STATUS = 0          
+BEGIN          
+/*           
+ SELECT @SNO, @EXCHANGE, @SEGMENT, @BUSINESS_DATE, @PROCESS_ID, @INTERNAL_PROCESS_ID, @PROCESS_FOR, @PROCESS_FILE_PATH,           
+          @PROCESS_FILE_NAME, @PROCESS_FILE_MOVE_PATH, @PROCESS_SP_NAME, @PROCESS_CHECK_QUERY,           
+          @IS_FILE_BASED, @FILE_DWLOAD_LOCATION, @FILE_DWLOAD_NAME, @FILE_DWLOAD_MAP_DRIVE,          
+          @FILE_DWLOAD_USERID, @FILE_DWLOAD_PWD, @FILE_INTERNET_LOCATION, @FILE_INTERNAL_ISS_PATH, @SUB_PROCESS_ID,          
+          @OTHER_DBDETAILS, @OTHER_PROCESS_FOR, @SETT_NO, @SETT_TYPE          
+*/       
+ SET @PROCESS_FILE_NAME_NEW = ''          
+ SET @FLD_FILENAME = ''          
+          
+ SELECT @CHKFLAG = ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL (NOLOCK)          
+ WHERE PROCESS_DATE = @PROCESS_DATE           
+ AND EXCHANGE = @EXCHANGE AND SEGMENT = @SEGMENT          
+ AND PROCESS_FOR = @PROCESS_FOR          
+ AND PROCESS_STATUS NOT IN (0, 100)          
+ IF @CHKFLAG = 1           
+ BEGIN          
+  SET @PROCESS_HALTED_REASON = 'CAN NOT START THE NEW PROCESS AS THE OLD PROCESS IS NOT YET COMPLETED.'          
+ END           
+          
+ IF @CHKFLAG = 0           
+ BEGIN          
+  SELECT @CHKFLAG = ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL (NOLOCK)          
+  WHERE PROCESS_DATE = @PROCESS_DATE           
+  AND EXCHANGE = @EXCHANGE AND SEGMENT = @SEGMENT          
+  AND INTERNAL_PROCESS_ID = (CASE WHEN @INTERNAL_PROCESS_ID = 0           
+          THEN -1           
+          ELSE @INTERNAL_PROCESS_ID           
+           END)          
+  AND PROCESS_STATUS NOT IN (0, 100)          
+  IF @CHKFLAG = 1           
+  BEGIN          
+   SET @PROCESS_HALTED_REASON = 'CAN NOT START THE NEW PROCESS AS THE OLD PROCESS IS NOT YET COMPLETED.'          
+  END           
+ END          
+             
+ IF @CHKFLAG = 0           
+ BEGIN          
+  IF (SELECT ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL (NOLOCK)          
+   WHERE SNO = @SNO          
+   AND PROCESS_STATUS = 0) = 0          
+  BEGIN          
+   SET @CHKFLAG = -1           
+  END          
+ END          
+ IF @CHKFLAG = 0           
+ BEGIN          
+  SET @ISEXISTS = 0           
+  IF (@IS_FILE_BASED = 'L' OR @IS_FILE_BASED = 'F' OR @IS_FILE_BASED = 'I') AND @SUB_PROCESS_ID = 0          
+  BEGIN          
+   IF @FILE_DWLOAD_LOCATION <> ''          
+   BEGIN          
+    IF @IS_FILE_BASED = 'I'       
+    BEGIN          
+     SET @PROCESS_FILE_NAME_NEW = @FILE_INTERNAL_ISS_PATH + @FILE_INTERNET_LOCATION + '&FILENAME=' + @FILE_DWLOAD_NAME          
+     EXEC HTTP_REQUEST @PROCESS_FILE_NAME_NEW, @MYOUTPUT           
+    END          
+              
+    IF @IS_FILE_BASED = 'L' OR @IS_FILE_BASED = 'I'          
+    BEGIN      
+     SET @CMD = 'EXEC XP_CMDSHELL ''MKDIR "' + @PROCESS_FILE_PATH + '"'', NO_OUTPUT'          
+     EXEC (@CMD)          
+     --print @CMD -- here only  
+     IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+     BEGIN          
+      SET @CMD = 'EXEC XP_CMDSHELL ''NET USE ' + @FILE_DWLOAD_MAP_DRIVE + ' "' + @FILE_DWLOAD_LOCATION + '" /USER:' + @FILE_DWLOAD_USERID + ' ' + @FILE_DWLOAD_PWD + ' /PERSISTENT:Y'' , NO_OUTPUT'          
+      EXEC (@CMD)          
+     END           
+     IF @FILE_DWLOAD_NAME LIKE '%*%'          
+     BEGIN          
+      SET @PROCESS_SP_NAME = REPLACE(@PROCESS_SP_NAME,@PROCESS_FILE_NAME,'#')          
+     
+      IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+      BEGIN          
+       SET @PROCESS_FILE_NAME_NEW = @FILE_DWLOAD_MAP_DRIVE + '\' + @FILE_DWLOAD_NAME          
+      END          
+      ELSE          
+      BEGIN          
+       SET @PROCESS_FILE_NAME_NEW = @FILE_DWLOAD_LOCATION + '\' + @FILE_DWLOAD_NAME          
+      END          
+    
+     
+      EXEC CLASS_AUTO_PROCESS_FILE @PROCESS_FILE_NAME_NEW, @BUSINESS_DATE, @FLD_FILEDATE OUTPUT, @FLD_FILENAME OUTPUT               
+  
+      --SELECT @FLD_FILEDATE, @FLD_FILENAME  
+  
+      SET @FILE_DWLOAD_NAME = @FLD_FILENAME       
+      --print @FILE_DWLOAD_NAME  
+      IF @FILE_DWLOAD_NAME <> ''          
+      BEGIN          
+       IF @PROCESS_FILE_NAME NOT LIKE '%#%'           
+       BEGIN          
+        SET @PROCESS_FILE_NAME = @FLD_FILENAME          
+       END          
+       ELSE          
+       BEGIN            
+        SET @PROCESS_FILE_NAME = LEFT(@FLD_FILENAME, LEN(@FILE_DWLOAD_NAME)-LEN(CITRUS_USR.PIECE(@PROCESS_FILE_NAME,'#',1))) + CITRUS_USR.PIECE(@PROCESS_FILE_NAME,'#',2)          
+       END          
+       SET @PROCESS_SP_NAME = REPLACE(@PROCESS_SP_NAME,'#',@PROCESS_FILE_NAME)           
+                    
+      END          
+      ELSE          
+      BEGIN          
+       SET @PROCESS_FILE_NAME = ''          
+      END          
+     END          
+       
+     IF @FILE_DWLOAD_NAME <> ''          
+     BEGIN          
+      IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+      BEGIN          
+     
+       SET @CMD = 'EXEC XP_CMDSHELL ''COPY "' + @FILE_DWLOAD_MAP_DRIVE + '\' + @FILE_DWLOAD_NAME + '" "' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + '"'', NO_OUTPUT'          
+         
+      END          
+      ELSE          
+      BEGIN          
+    
+       SET @CMD = 'EXEC XP_CMDSHELL ''COPY "' + @FILE_DWLOAD_LOCATION + '\' + @FILE_DWLOAD_NAME + '" "' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + '"'', NO_OUTPUT'          
+       --PRINT @CMD          
+       EXEC (@CMD)          
+      END          
+      IF @IS_FILE_BASED = 'I'          
+      BEGIN          
+       SET @CMD = 'EXEC XP_CMDSHELL ''DEL "' + @FILE_DWLOAD_MAP_DRIVE + '\' + @FILE_DWLOAD_NAME + '"'', NO_OUTPUT '          
+       EXEC (@CMD)          
+      END          
+      IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+      BEGIN          
+       SET @CMD = 'EXEC XP_CMDSHELL ''NET USE "' + @FILE_DWLOAD_MAP_DRIVE + '" /DELETE'', NO_OUTPUT'          
+       EXEC (@CMD)          
+      END          
+     END           
+    END      
+        
+    ELSE          
+    
+    IF @IS_FILE_BASED = 'F'          
+    BEGIN      
+  
+     SET @CMD = 'EXEC XP_CMDSHELL ''MKDIR "' + @PROCESS_FILE_PATH + '"'', NO_OUTPUT'          
+     EXEC (@CMD)          
+     --SELECT @FILE_DWLOAD_LOCATION, @PROCESS_FILE_PATH, @FILE_DWLOAD_NAME, @FILE_DWLOAD_USERID, @FILE_DWLOAD_PWD, @FILE_DWLOAD_MAP_DRIVE          
+     SET @FILE_DWLOAD_NAME_TEMP = @FILE_DWLOAD_NAME + '_1'          
+     SELECT  @CMD = 'ECHO '+ 'OPEN ' + @FILE_DWLOAD_LOCATION+ ' > ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+     SELECT  @CMD = 'ECHO '+ @FILE_DWLOAD_USERID+ '>> ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+     SELECT  @CMD = 'ECHO '+ @FILE_DWLOAD_PWD+ '>> ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+          SELECT  @CMD = 'ECHO '+ 'DIR ' + @FILE_DWLOAD_MAP_DRIVE + @FILE_DWLOAD_NAME + ' >> ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+     SELECT  @CMD = 'ECHO '+ 'GET ' + @FILE_DWLOAD_MAP_DRIVE + @FILE_DWLOAD_NAME + ' ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + ' >> ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP     
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+     SELECT  @CMD = 'ECHO '+ 'QUIT'+ ' >> ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     -- EXECUTING STEPS FROM WORKING FILE          
+     EXEC MASTER..XP_CMDSHELL @CMD, NO_OUTPUT          
+          
+     CREATE TABLE #FILELIST                 
+     (           
+      FILENAMELIST VARCHAR(MAX)          
+     )           
+          
+     SELECT  @CMD = 'FTP -S:' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP          
+     -- EXECUTING FINAL STEP          
+     INSERT INTO #FILELIST          
+     EXEC MASTER..XP_CMDSHELL @CMD--, NO_OUTPUT          
+          
+     DELETE FROM #FILELIST          
+     WHERE FILENAMELIST IS  NULL          
+          
+     DELETE FROM #FILELIST          
+     WHERE FILENAMELIST NOT LIKE '%' + @FILE_DWLOAD_NAME + '%'          
+          
+     DELETE FROM #FILELIST          
+     WHERE FILENAMELIST LIKE 'DIR%'          
+          
+     DELETE FROM #FILELIST          
+     WHERE FILENAMELIST LIKE 'GET%'          
+          
+     UPDATE #FILELIST SET FILENAMELIST = REPLACE(FILENAMELIST,' ','#')          
+          
+     SET @FLD_FILEDATE = '1900-01-01'          
+          
+     SELECT @FLD_FILEDATE = CONVERT(DATETIME,LTRIM(RTRIM(DBO.PIECE(FILENAMELIST,'#',1))),1)          
+     FROM #FILELIST          
+          
+     IF LEFT(@FLD_FILEDATE,11) <> @BUSINESS_DATE          
+     BEGIN          
+      SET @CMD = 'EXEC XP_CMDSHELL ''DEL "' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + '"''--, NO_OUTPUT '          
+      EXEC (@CMD)       
+--print   @CMD   
+     END          
+     SET @CMD = 'EXEC XP_CMDSHELL ''DEL "' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME_TEMP + '"'', NO_OUTPUT '          
+     EXEC (@CMD)          
+          
+     DROP TABLE #FILELIST          
+    END          
+   END          
+  
+   IF @PROCESS_FILE_NAME <> ''          
+   BEGIN          
+    SET @PROCESS_FILE_NAME_NEW = @PROCESS_FILE_PATH + @PROCESS_FILE_NAME          
+    IF CITRUS_USR.CHECKZIPFILE(@FILE_DWLOAD_NAME) > 0          
+    BEGIN          
+     SET @CMD = 'EXEC XP_CMDSHELL ''"C:\PROGRAM FILES (X86)\WINZIP\WZUNZIP.EXE" -YB -O ' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + ' ' + @PROCESS_FILE_PATH + ''', NO_OUTPUT'          
+     EXEC (@CMD)          
+  
+  IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+      BEGIN            
+  SET @CMD = 'EXEC XP_CMDSHELL ''DEL "' + @PROCESS_FILE_PATH + @FILE_DWLOAD_NAME + '"'', NO_OUTPUT '          
+  EXEC (@CMD)  
+       
+  end   
+    END          
+   END          
+    
+   --print @PROCESS_FILE_NAME_NEW  
+  
+   EXEC CLASS_AUTO_PROCESS_FILECHECK @PROCESS_FILE_NAME_NEW, @ISEXISTS OUTPUT          
+   --print @ISEXISTS   
+   IF @ISEXISTS = 0           
+   BEGIN          
+   
+
+   
+    UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = 'FILE NOT AVAILABLE IN THE SPECIFIED LOCATION.',          
+    PROCESS_STARTED_DATE = GETDATE(), PROCESS_ENDED_DATE = GETDATE()          
+    WHERE SNO = @SNO          
+   END          
+   ELSE          
+   BEGIN             
+    SET @ERRFLAG = 0     
+	--print @PROCESS_SP_NAME
+	     
+    UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_STATUS = 99, PROCESS_STARTED_DATE = GETDATE(), PROCESS_FILE_NAME = CITRUS_USR.FN_DATA_ENCRYPT('MKTTECH.IN',ISNULL(@PROCESS_FILE_NAME_NEW,''))          
+    WHERE SNO = @SNO          
+    BEGIN          
+    
+    IF @INTERNAL_PROCESS_ID <= 1000  
+    begin
+     BEGIN TRAN          
+    end
+      BEGIN TRY          
+       SET @CMD = @PROCESS_SP_NAME         
+       EXEC (@CMD)                 
+       --print @CMD
+      END TRY          
+      BEGIN CATCH    
+      IF @INTERNAL_PROCESS_ID <= 1000                   
+	   BEGIN       
+       ROLLBACK TRAN   
+       END
+              
+       UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = ERROR_MESSAGE(),          
+       PROCESS_STATUS = 0          
+       WHERE SNO = @SNO          
+       SET @ERRFLAG = 1          
+      END CATCH          
+                
+     SET @CMD = 'EXEC XP_CMDSHELL ''MKDIR "' + @PROCESS_FILE_MOVE_PATH + '"'', NO_OUTPUT'          
+     EXEC (@CMD)          
+     SELECT @TIME = REPLACE(CONVERT(VARCHAR,GETDATE(),108),':','')          
+     IF LEN(@PROCESS_FILE_MOVE_PATH) > 0           
+     BEGIN          
+      SET @CMD = 'EXEC XP_CMDSHELL ''MOVE "' + @PROCESS_FILE_NAME_NEW + '" "' + @PROCESS_FILE_MOVE_PATH + @PROCESS_FILE_NAME + @TIME + '"'', NO_OUTPUT'          
+  EXEC (@CMD)   
+  
+     END          
+     ELSE          
+     BEGIN          
+  IF @FILE_DWLOAD_MAP_DRIVE <> ''          
+      BEGIN    
+      SET @CMD = 'EXEC XP_CMDSHELL ''DEL "' + @PROCESS_FILE_NAME_NEW + '"'', NO_OUTPUT'    
+   EXEC (@CMD)         
+ END          
+ end  
+              
+          
+     IF @ERRFLAG = 0       
+  BEGIN           
+      INSERT INTO TBL_AUTO_PROCESS_FILE SELECT @FLD_FILENAME, @FLD_FILEDATE, GETDATE()    
+   WHERE NOT EXISTS (SELECT FLD_FILENAME FROM TBL_AUTO_PROCESS_FILE F    
+   WHERE CONVERT(VARCHAR,F.FLD_FILEDATE,109) LIKE @BUSINESS_DATE + '%'    
+   AND @FLD_FILEDATE = F.FLD_FILEDATE )    
+       
+      INSERT INTO TBL_AUTO_PROCESS_FILE_PATH SELECT @FLD_FILENAME, @FLD_FILEDATE, GETDATE(),@FILE_DWLOAD_LOCATION +'\'+@FLD_FILENAME  
+   WHERE NOT EXISTS (SELECT FLD_FILENAME FROM TBL_AUTO_PROCESS_FILE_PATH F    
+   WHERE CONVERT(VARCHAR,F.FLD_FILEDATE,109) LIKE @BUSINESS_DATE + '%'    
+   AND @FLD_FILEDATE = F.FLD_FILEDATE AND F.FLD_FILEPATH LIKE @FILE_DWLOAD_LOCATION + '\'+ @FLD_FILENAME + '%')      
+  IF @INTERNAL_PROCESS_ID <= 1000                   
+   BEGIN 
+     COMMIT TRAN          
+   END       
+      IF LEN(@PROCESS_CHECK_QUERY) > 0           
+      BEGIN          
+       SET @CMD = ' IF (SELECT ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL '          
+       SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS <> 98) > 0 '          
+       SET @CMD = @CMD + ' BEGIN '          
+       SET @CMD = @CMD + 'DECLARE @RECCNT NUMERIC(18,0), @MSG VARCHAR(500) SELECT @RECCNT = FLAG, @MSG = MSG ' + @PROCESS_CHECK_QUERY + ''          
+       SET @CMD = @CMD + ' IF (@RECCNT) > 0 '          
+       SET @CMD = @CMD + ' BEGIN '          
+       SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = @MSG, PROCESS_STATUS_ALERT_INTERVAL = ''00:00:00'','          
+       SET @CMD = @CMD + '  PROCESS_STATUS = 100, PROCESS_ENDED_DATE = GETDATE(), PROCESS_STATUS_ALERT = 1, PROCESS_STATUS_ALERT_COUNT = 0 '          
+       SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 99 '          
+                 
+       SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#'+CONVERT(VARCHAR,@PROCESS_ID)+','',''''), '          
+       SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+       SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+       SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+		SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#'+CONVERT(VARCHAR,@PROCESS_ID)+',%'''          
+                 
+       IF @OTHER_DBDETAILS <> ''          
+       BEGIN          
+        SET @CMD = @CMD + '  UPDATE ' + @OTHER_DBDETAILS + '.TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#0,'','''') , '          
+        SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+        SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+        SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+        SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#0,%'''          
+        SET @CMD = @CMD + '  AND SETT_NO = ''' + @SETT_NO + ''' AND SETT_TYPE = ''' + @SETT_TYPE + ''' AND PROCESS_FOR = ''' + @OTHER_PROCESS_FOR + ''''          
+       END          
+       SET @CMD = @CMD + ' END '          
+       SET @CMD = @CMD + ' ELSE '           
+       SET @CMD = @CMD + ' BEGIN '           
+       SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET '          
+       SET @CMD = @CMD + '  PROCESS_HALTED_REASON = @MSG,'          
+       SET @CMD = @CMD + '  PROCESS_STATUS = 0, PROCESS_ENDED_DATE = GETDATE() '          
+       SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 99 '          
+       SET @CMD = @CMD + ' END '   
+       SET @CMD = @CMD + ' END '       
+       EXEC (@CMD)    
+--print @CMD          
+      END          
+      ELSE          
+      BEGIN          
+       SET @CMD = ' IF (SELECT ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL '          
+       SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 100) > 0 '          
+       SET @CMD = @CMD + ' BEGIN '          
+          
+       SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#'+CONVERT(VARCHAR,@PROCESS_ID)+','',''''), '          
+       SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+       SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+       SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+       SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#'+CONVERT(VARCHAR,@PROCESS_ID)+',%'''          
+       IF @OTHER_DBDETAILS <> ''          
+       BEGIN          
+        SET @CMD = @CMD + '  UPDATE ' + @OTHER_DBDETAILS + '.TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#0,'','''') , '          
+        SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+        SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+        SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+        SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#0,%'''          
+        SET @CMD = @CMD + '  AND SETT_NO = ''' + @SETT_NO + ''' AND SETT_TYPE = ''' + @SETT_TYPE + ''' AND PROCESS_FOR = ''' + @OTHER_PROCESS_FOR + ''''          
+       END          
+       SET @CMD = @CMD + ' END '          
+       EXEC (@CMD)          
+--print @CMD  
+      END          
+           end  
+    END          
+   END          
+  END          
+ ELSE          
+  BEGIN          
+   SET @ERRFLAG = 0          
+   UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_STATUS = 99, PROCESS_STARTED_DATE = GETDATE(), PROCESS_FILE_NAME = CITRUS_USR.FN_DATA_ENCRYPT('MKTTECH.IN',ISNULL(@PROCESS_FILE_NAME_NEW,''))          
+   WHERE SNO = @SNO           
+   
+   IF @INTERNAL_PROCESS_ID <= 1000                   
+   BEGIN  
+   BEGIN TRAN  
+   end          
+    BEGIN TRY          
+     SET @CMD = @PROCESS_SP_NAME           
+     --PRINT @CMD          
+     EXEC (@CMD)          
+    END TRY          
+    BEGIN CATCH      
+     IF @INTERNAL_PROCESS_ID <= 1000                   
+ BEGIN     
+     ROLLBACK TRAN          
+End     
+--PRINT ERROR_MESSAGE()          
+     UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = ERROR_MESSAGE(),          
+     PROCESS_STATUS = 0          
+     WHERE SNO = @SNO          
+     SET @ERRFLAG = 1          
+    END CATCH          
+   IF @ERRFLAG = 0                
+   BEGIN        
+    IF @INTERNAL_PROCESS_ID <= 1000                   
+    BEGIN   
+    COMMIT TRAN          
+    END      
+    IF LEN(@PROCESS_CHECK_QUERY) > 0           
+	BEGIN          
+		SET @CMD = ' IF (SELECT ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL '          
+		SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS <> 98) > 0 '          
+		SET @CMD = @CMD + ' BEGIN '          
+	 SET @CMD = @CMD + 'DECLARE @RECCNT NUMERIC(18,0), @MSG VARCHAR(500) SELECT @RECCNT = FLAG, @MSG = MSG ' + @PROCESS_CHECK_QUERY + ''          
+     SET @CMD = @CMD + ' IF (@RECCNT) > 0 '          
+     SET @CMD = @CMD + ' BEGIN '          
+     SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = @MSG, PROCESS_STATUS_ALERT_INTERVAL = ''00:00:00'','          
+     SET @CMD = @CMD + '  PROCESS_STATUS = 100, PROCESS_ENDED_DATE = GETDATE(), PROCESS_STATUS_ALERT = 1, PROCESS_STATUS_ALERT_COUNT = 0 '          
+     SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 99 '          
+          
+     SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#'+CONVERT(VARCHAR,@PROCESS_ID)+','',''''), '          
+     SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+     SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+     SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+     SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#'+CONVERT(VARCHAR,@PROCESS_ID)+',%'''          
+     IF @OTHER_DBDETAILS <> ''          
+     BEGIN          
+      SET @CMD = @CMD + '  UPDATE ' + @OTHER_DBDETAILS + '.TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#0,'','''') , '          
+      SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+      SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+      SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+      SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#0,%'''          
+      SET @CMD = @CMD + '  AND SETT_NO = ''' + @SETT_NO + ''' AND SETT_TYPE = ''' + @SETT_TYPE + ''' AND PROCESS_FOR = ''' + @OTHER_PROCESS_FOR + ''''          
+     END          
+          
+     SET @CMD = @CMD + ' END '          
+     SET @CMD = @CMD + ' ELSE '           
+     SET @CMD = @CMD + ' BEGIN '           
+     SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET '         
+     SET @CMD = @CMD + '  PROCESS_HALTED_REASON = @MSG,'          
+     SET @CMD = @CMD + '  PROCESS_STATUS = 0, PROCESS_ENDED_DATE = GETDATE() '          
+     SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 99 '          
+     SET @CMD = @CMD + ' END '          
+     SET @CMD = @CMD + ' END '
+     EXEC (@CMD)          
+    END          
+    ELSE          
+    BEGIN          
+     SET @CMD = ' IF (SELECT ISNULL(COUNT(1),0) FROM TBL_AUTO_PROCESS_DETAIL '          
+     SET @CMD = @CMD + '  WHERE SNO = ' + CONVERT(VARCHAR,@SNO) + ' AND PROCESS_STATUS = 100) > 0 '          
+     SET @CMD = @CMD + ' BEGIN '          
+          
+     SET @CMD = @CMD + '  UPDATE TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#'+CONVERT(VARCHAR,@PROCESS_ID)+','',''''), '          
+     SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+     SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+     SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+     SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#'+CONVERT(VARCHAR,@PROCESS_ID)+',%'''          
+     IF @OTHER_DBDETAILS <> ''          
+     BEGIN          
+      SET @CMD = @CMD + '  UPDATE ' + @OTHER_DBDETAILS + '.TBL_AUTO_PROCESS_DETAIL SET IS_DEPEND_ON = REPLACE(IS_DEPEND_ON,''#0,'','''') , '          
+      SET @CMD = @CMD + '  PROCESS_START_DATE = GETDATE() + '' 00:01:00'', '          
+      SET @CMD = @CMD + '  PROCESS_END_DATE = (CASE WHEN PROCESS_END_DATE > (GETDATE() + '' 00:01:00'' + APPROX_END_TIME) THEN PROCESS_END_DATE '           
+      SET @CMD = @CMD + '  ELSE GETDATE() + '' 00:01:00'' + APPROX_END_TIME END)'          
+      SET @CMD = @CMD + '  WHERE PROCESS_DATE = ''' + @PROCESS_DATE + ''' AND IS_DEPEND_ON LIKE ' + '''%#0,%'''          
+      SET @CMD = @CMD + '  AND SETT_NO = ''' + @SETT_NO + ''' AND SETT_TYPE = ''' + @SETT_TYPE + ''' AND PROCESS_FOR = ''' + @OTHER_PROCESS_FOR + ''''          
+     END          
+     SET @CMD = @CMD + ' END '          
+     EXEC (@CMD)          
+    END    
+    --END      
+   END          
+  END          
+ END          
+ ELSE          
+ BEGIN          
+  IF @CHKFLAG = 1           
+  BEGIN          
+   UPDATE TBL_AUTO_PROCESS_DETAIL SET PROCESS_HALTED_REASON = @PROCESS_HALTED_REASON,          
+   PROCESS_STARTED_DATE = GETDATE(), PROCESS_ENDED_DATE = GETDATE()          
+   WHERE SNO = @SNO AND PROCESS_STATUS = 0          
+  END          
+ END          
+ FETCH NEXT FROM @PROCESS_CURSOR INTO @SNO, @EXCHANGE, @SEGMENT, @BUSINESS_DATE, @PROCESS_ID, @INTERNAL_PROCESS_ID, @PROCESS_FOR, @PROCESS_FILE_PATH,           
+              @PROCESS_FILE_NAME, @PROCESS_FILE_MOVE_PATH, @PROCESS_SP_NAME, @PROCESS_CHECK_QUERY,          
+           @IS_FILE_BASED, @FILE_DWLOAD_LOCATION, @FILE_DWLOAD_NAME, @FILE_DWLOAD_MAP_DRIVE,          
+           @FILE_DWLOAD_USERID, @FILE_DWLOAD_PWD, @FILE_INTERNET_LOCATION, @FILE_INTERNAL_ISS_PATH, @SUB_PROCESS_ID,          
+              @OTHER_DBDETAILS, @OTHER_PROCESS_FOR, @SETT_NO, @SETT_TYPE          
+END          
+CLOSE @PROCESS_CURSOR          
+DEALLOCATE @PROCESS_CURSOR          
+          
+CLOSE SYMMETRIC KEY   KEY4CERTAUTOPROCESS;          
+          
+EXEC CLASS_AUTO_PROCESS_ALERT
+
+GO

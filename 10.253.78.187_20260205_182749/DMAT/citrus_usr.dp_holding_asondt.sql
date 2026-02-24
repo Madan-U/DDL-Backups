@@ -1,0 +1,29 @@
+-- Object: TABLE citrus_usr.dp_holding_asondt
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[dp_holding_asondt]
+(
+    [dphmcd_dpm_id] NUMERIC(18, 0) NULL,
+    [dpam_sba_no] VARCHAR(20) NOT NULL,
+    [dphmcd_dpam_id] NUMERIC(10, 0) NULL,
+    [dphmcd_isin] VARCHAR(20) NULL,
+    [DPHMCD_CURR_QTY] NUMERIC(38, 5) NULL,
+    [DPHMCD_FREE_QTY] NUMERIC(38, 5) NULL,
+    [DPHMCD_FREEZE_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_PLEDGE_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_DEMAT_PND_VER_QTY] NUMERIC(38, 5) NULL,
+    [DPHMCD_REMAT_PND_CONF_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_DEMAT_PND_CONF_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_SAFE_KEEPING_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_LOCKIN_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_ELIMINATION_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_EARMARK_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_AVAIL_LEND_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_LEND_QTY] NUMERIC(38, 3) NULL,
+    [DPHMCD_BORROW_QTY] NUMERIC(38, 3) NULL,
+    [dphmcd_holding_dt] DATETIME NULL,
+    [dphmcd_cntr_settm_id] VARCHAR(1) NOT NULL
+);
+
+GO

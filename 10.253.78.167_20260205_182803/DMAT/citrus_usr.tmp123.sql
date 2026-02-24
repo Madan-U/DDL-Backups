@@ -1,0 +1,33 @@
+-- Object: TABLE citrus_usr.tmp123
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[tmp123]
+(
+    [DPAM_SBA_NAME] VARCHAR(150) NULL,
+    [DPAM_SBA_NO] VARCHAR(120) NULL,
+    [DPHMCD_ISIN] VARCHAR(20) NOT NULL,
+    [ISIN_NAME] VARCHAR(8000) NULL,
+    [a] NUMERIC(18, 3) NULL,
+    [VALUATION] NUMERIC(38, 6) NOT NULL,
+    [c] NUMERIC(18, 3) NOT NULL,
+    [d] NUMERIC(18, 3) NOT NULL,
+    [e] NUMERIC(18, 3) NOT NULL,
+    [f] NUMERIC(18, 3) NOT NULL,
+    [g] NUMERIC(18, 3) NOT NULL,
+    [h] NUMERIC(18, 3) NOT NULL,
+    [i] NUMERIC(18, 3) NOT NULL,
+    [j] NUMERIC(19, 3) NULL,
+    [k] NUMERIC(18, 3) NOT NULL,
+    [DPHMCD_EARMARK_QTY11] NUMERIC(18, 3) NOT NULL,
+    [l] NUMERIC(18, 3) NOT NULL,
+    [m] NUMERIC(18, 3) NOT NULL,
+    [n] NUMERIC(18, 3) NOT NULL,
+    [DPAM_ID] BIGINT NULL,
+    [HOLDING_DT] VARCHAR(11) NULL,
+    [CMP] NUMERIC(18, 3) NOT NULL,
+    [ratedate] DATETIME NULL,
+    [tradingid] VARCHAR(100) NULL
+);
+
+GO

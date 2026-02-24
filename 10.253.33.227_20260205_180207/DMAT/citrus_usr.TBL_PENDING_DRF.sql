@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.TBL_PENDING_DRF
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TBL_PENDING_DRF]
+(
+    [SRNO] NUMERIC(18, 0) IDENTITY(1,1) NOT NULL,
+    [COMPNM] VARCHAR(100) NULL,
+    [ISIN] VARCHAR(15) NULL,
+    [REQ] NUMERIC(18, 0) NULL,
+    [TOT_PEND_REQ] NUMERIC(18, 0) NULL,
+    [PEND_REQ_30] NUMERIC(18, 5) NULL,
+    [CREATED_DT] DATETIME NULL,
+    [CREATED_BY] VARCHAR(20) NULL
+);
+
+GO

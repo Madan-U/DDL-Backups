@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.INDIVIDUAL_ALIAS
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[INDIVIDUAL_ALIAS]
+(
+    [QUALITY] VARCHAR(MAX) NULL,
+    [ALIAS_NAME] VARCHAR(MAX) NULL,
+    [DATE_OF_BIRTH] VARCHAR(MAX) NULL,
+    [CITY_OF_BIRTH] VARCHAR(MAX) NULL,
+    [NOTE] VARCHAR(MAX) NULL,
+    [COUNTRY_OF_BIRTH] VARCHAR(MAX) NULL,
+    [INDIVIDUAL_Id] NUMERIC(18, 0) NULL
+);
+
+GO

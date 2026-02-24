@@ -1,0 +1,21 @@
+-- Object: TABLE citrus_usr.bo_bill_inv_mapping
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[bo_bill_inv_mapping]
+(
+    [billmonth] INT NULL,
+    [billyear] INT NULL,
+    [boid] VARCHAR(16) NULL,
+    [inv_no] VARCHAR(50) NULL,
+    [CN_FLG] VARCHAR(1) NOT NULL,
+    [Return_flg] VARCHAR(1) NOT NULL,
+    [Created_by] VARCHAR(16) NULL,
+    [created_dt] DATETIME NOT NULL,
+    [lst_upd_by] VARCHAR(16) NULL,
+    [lst_upd_dt] DATETIME NOT NULL,
+    [deleted_ind] INT NOT NULL,
+    [dpm_id] NUMERIC(18, 0) NULL
+);
+
+GO

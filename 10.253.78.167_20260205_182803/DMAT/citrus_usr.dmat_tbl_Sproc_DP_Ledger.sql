@@ -1,0 +1,15 @@
+-- Object: VIEW citrus_usr.dmat_tbl_Sproc_DP_Ledger
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE view  [citrus_usr].[dmat_tbl_Sproc_DP_Ledger]
+as
+select dpcode
+,convert(varchar(11),CONVERT(datetime, date, 112),103) date
+,Particular
+,debit
+,credit
+,balance
+,holdingdate from monthlyledgerdata
+
+GO

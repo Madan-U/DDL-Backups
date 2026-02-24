@@ -1,0 +1,12 @@
+-- Object: TABLE dbo.Statusof_trx
+-- Server: 10.253.33.227 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[Statusof_trx]
+(
+    [sx_code] CHAR(2) NOT NULL,
+    [sx_description] VARCHAR(35) NOT NULL,
+    [sx_trxtype] CHAR(3) NULL
+);
+
+GO

@@ -1,0 +1,29 @@
+-- Object: TABLE citrus_usr.bank_addresses_dtls
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[bank_addresses_dtls]
+(
+    [TMPBA_DP_BANK] VARCHAR(30) NULL,
+    [TMPBA_DP_BR] VARCHAR(30) NULL,
+    [TMPBA_DP_BANK_ADD1] VARCHAR(30) NULL,
+    [TMPBA_DP_BANK_ADD2] VARCHAR(30) NULL,
+    [TMPBA_DP_BANK_ADD3] VARCHAR(30) NULL,
+    [TMPBA_DP_BANK_CITY] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_STATE] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_CNTRY] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_ZIP] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_PH1] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_PH2] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_FAX] VARCHAR(25) NULL,
+    [TMPBA_DP_BANK_EMAIL] VARCHAR(80) NULL,
+    [TMPBA_DP_BANK_CONNAME] VARCHAR(100) NULL,
+    [TMPBA_DP_BANK_CONDESG] VARCHAR(40) NULL,
+    [created_by] VARCHAR(100) NULL,
+    [created_dt] DATETIME NULL,
+    [lst_upd_by] VARCHAR(100) NULL,
+    [ldt_upd_dt] DATETIME NULL,
+    [deleted_ind] SMALLINT NULL
+);
+
+GO

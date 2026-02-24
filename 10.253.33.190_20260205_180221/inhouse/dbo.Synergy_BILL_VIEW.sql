@@ -1,0 +1,17 @@
+-- Object: TABLE dbo.Synergy_BILL_VIEW
+-- Server: 10.253.33.190 | DB: inhouse
+--------------------------------------------------
+
+CREATE TABLE [dbo].[Synergy_BILL_VIEW]
+(
+    [CLIENT_CODE] VARCHAR(16) NULL,
+    [BENEF_ACCNO] VARCHAR(40) NULL,
+    [TRADING_ID] VARCHAR(10) NULL,
+    [TEMPLATE_CODE] VARCHAR(10) NULL,
+    [BILL_AMOUNT] VARCHAR(800) NULL,
+    [SERV_TAX] VARCHAR(800) NULL,
+    [TOTAL_AMOUNT] VARCHAR(800) NULL,
+    [DPM_CHARGES] VARCHAR(800) NULL
+);
+
+GO

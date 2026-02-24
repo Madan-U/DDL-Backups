@@ -1,0 +1,9 @@
+-- Object: VIEW citrus_usr.VIEW_EDP_RGESS_CLIENT_LIST
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+CREATE VIEW [citrus_usr].[VIEW_EDP_RGESS_CLIENT_LIST]
+AS
+SELECT BOID,DPAM_BBO_CODE FROM DPS8_PC1,DP_ACCT_MSTR WHERE BOID = DPAM_SBA_NO AND  ANNLREP ='Y'
+
+GO

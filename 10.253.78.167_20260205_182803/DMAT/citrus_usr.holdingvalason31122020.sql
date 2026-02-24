@@ -1,0 +1,11 @@
+-- Object: TABLE citrus_usr.holdingvalason31122020
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[holdingvalason31122020]
+(
+    [boid] VARCHAR(20) NOT NULL,
+    [VAlue] NUMERIC(38, 9) NULL
+);
+
+GO

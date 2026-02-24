@@ -1,0 +1,19 @@
+-- Object: TABLE citrus_usr.TMP_JV_MSTR
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TMP_JV_MSTR]
+(
+    [TMPJV_SR_NO] NUMERIC(18, 0) NULL,
+    [TMPJV_DPAM_ID] NUMERIC(18, 0) NULL,
+    [TMPJV_DPM_ID] NUMERIC(18, 0) NULL,
+    [TMPJV_TODATE] DATETIME NULL,
+    [TMPJV_ACCT_NO] VARCHAR(50) NULL,
+    [TMPJV_CREDIT] MONEY NULL,
+    [TMPJV_DEBIT] MONEY NULL,
+    [TMPJV_VTYPE] CHAR(2) NULL,
+    [TMPJV_NARRATION] CHAR(500) NULL,
+    [TMPJV_FILLER1] VARCHAR(50) NULL
+);
+
+GO

@@ -1,0 +1,15 @@
+-- Object: TABLE citrus_usr.dps8_pc20_bak_08082025
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[dps8_pc20_bak_08082025]
+(
+    [PURPOSECODE20] VARCHAR(10) NULL,
+    [Registeredyn] CHAR(1) NULL,
+    [Ex_id] NUMERIC(18, 0) NULL,
+    [CM_ID] CHAR(8) NULL,
+    [BOId] VARCHAR(16) NULL,
+    [TransSystemDate] VARCHAR(50) NULL
+);
+
+GO

@@ -1,0 +1,32 @@
+-- Object: PROCEDURE dbo.USP_GET_HOLDDATE
+-- Server: 10.253.33.190 | DB: inhouse
+--------------------------------------------------
+
+CREATE PROC USP_GET_HOLDDATE          
+@MODE CHAR(1), @HOLD_DATE VARCHAR(11), @HOLD_DATE_NEW VARCHAR(11) OUTPUT          
+AS            
+          
+DECLARE @HOLD_DATE_TEMP VARCHAR(11)          
+SET @HOLD_DATE_TEMP =@HOLD_DATE          
+        
+IF @MODE = 'H'          
+BEGIN          
+ IF LTRIM(RTRIM(@HOLD_DATE_TEMP)) = ''            
+ BEGIN            
+   SELECT @HOLD_DATE_NEW = MAX(HLD_HOLD_DATE) FROM DBO.SYNERGY_HOLDING WITH (NOLOCK)            
+   WHERE HLD_HOLD_DATE <= CONVERT(VARCHAR(11),CONVERT(DATETIME,GETDATE(),103),120)            
+ END            
+ ELSE            
+ BEGIN            
+   SELECT @HOLD_DATE_NEW = MAX(HLD_HOLD_DATE) FROM DBO.SYNERGY_HOLDING WITH (NOLOCK)            
+   WHERE HLD_HOLD_DATE <= CONVERT(VARCHAR(11),CONVERT(DATETIME,@HOLD_DATE_TEMP,103),120)            
+ END            
+END        
+        
+ELSE         
+BEGIN        
+ SELECT @HOLD_DATE_NEW = MAX(HLD_HOLD_DATE) FROM DBO.SYNERGY_HOLDING WITH (NOLOCK)        
+ WHERE HLD_HOLD_DATE <= @HOLD_DATE_TEMP        
+END
+
+GO

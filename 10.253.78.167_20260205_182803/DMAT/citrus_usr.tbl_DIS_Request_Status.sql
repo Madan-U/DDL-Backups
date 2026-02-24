@@ -1,0 +1,56 @@
+-- Object: TABLE citrus_usr.tbl_DIS_Request_Status
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[tbl_DIS_Request_Status]
+(
+    [inst_id] VARCHAR(200) NOT NULL,
+    [REQUESTDATE] VARCHAR(200) NOT NULL,
+    [EXECUTIONDATE] VARCHAR(200) NOT NULL,
+    [trans_descp] VARCHAR(200) NOT NULL,
+    [SLIPNO] VARCHAR(200) NOT NULL,
+    [ACCOUNTNO] VARCHAR(200) NOT NULL,
+    [ACCOUNTNAME] VARCHAR(200) NOT NULL,
+    [QUANTITY] VARCHAR(200) NOT NULL,
+    [DUAL_CHECKER] VARCHAR(200) NULL,
+    [mkr] VARCHAR(200) NOT NULL,
+    [mkr_dt] VARCHAR(200) NOT NULL,
+    [ORDBY] VARCHAR(200) NOT NULL,
+    [ISIN_NAME] VARCHAR(200) NOT NULL,
+    [ISIN] VARCHAR(200) NOT NULL,
+    [dptdc_request_dt] VARCHAR(200) NOT NULL,
+    [Amt_charged] VARCHAR(200) NOT NULL,
+    [outstand_amt] FLOAT NOT NULL,
+    [mkt_type] VARCHAR(200) NULL,
+    [other_mkt_type] VARCHAR(200) NULL,
+    [settlementno] VARCHAR(200) NULL,
+    [othersettmno] VARCHAR(200) NULL,
+    [cmbp] VARCHAR(200) NULL,
+    [counter_account] VARCHAR(200) NULL,
+    [counter_dpid] VARCHAR(200) NULL,
+    [Status1] VARCHAR(200) NOT NULL,
+    [auth_rmks] VARCHAR(200) NULL,
+    [checker1] VARCHAR(200) NOT NULL,
+    [checker1_dt] VARCHAR(200) NOT NULL,
+    [checker2] VARCHAR(200) NULL,
+    [checker2_dt] VARCHAR(200) NULL,
+    [slip_reco] VARCHAR(200) NULL,
+    [image_scan] VARCHAR(200) NULL,
+    [scan_dt] VARCHAR(200) NULL,
+    [dptdc_rmks] VARCHAR(200) NULL,
+    [backoffice_code] VARCHAR(200) NULL,
+    [reason] VARCHAR(200) NULL,
+    [recon_datetime] VARCHAR(200) NULL,
+    [batchno] VARCHAR(200) NULL,
+    [RejectionDate] VARCHAR(200) NULL,
+    [courier] VARCHAR(200) NULL,
+    [podno] VARCHAR(200) NULL,
+    [dispdate] VARCHAR(200) NULL,
+    [Rate] VARCHAR(200) NULL,
+    [Valuation] VARCHAR(200) NOT NULL,
+    [Net_Available] DECIMAL(18, 5) NULL,
+    [Status] VARCHAR(7) NOT NULL,
+    [entryon] DATETIME NOT NULL
+);
+
+GO

@@ -1,0 +1,110 @@
+-- Object: FUNCTION citrus_usr.fn_get_high_val_bak16012011
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+create function [citrus_usr].[fn_get_high_val_bak16012011](@l_isin varchar(16),@l_qty numeric(18,3),@pa_validation varchar(50),@pa_acct_no varchar(16),@pa_request_date datetime)  
+returns char(1)  
+as  
+begin  
+--  
+  declare @l_yn char(1)  
+  declare @l_rate numeric(18,5)  
+		, @l_max_high_val numeric(18,5)  
+
+  if len(@pa_acct_no) <> 16 
+  begin
+	  
+	  IF @pa_validation = 'HIGH_VALUE'  
+	  begin  
+	  --  
+		Select @l_max_high_val = bitrm_bit_location from bitmap_ref_mstr where bitrm_parent_cd = 'HIGH_VAL_NSDL'    and bitrm_deleted_ind = 1  
+	     
+		select top 1 @l_rate = clopm_nsdl_rt from CLOSING_LAST_NSDL   where clopm_isin_cd = @l_isin order by 1 desc    
+	       
+		set @l_yn =  case when @l_qty * @l_rate >= @l_max_high_val then 'Y' ELSE 'N' END  
+	  --  
+	  end   
+	  IF @pa_validation = 'DORMANT'  
+	  begin  
+	  --  
+IF (LEFT(@PA_ACCT_NO,2)='IN')
+BEGIN 
+
+                IF EXISTS(
+                SELECT TOP 1 NSDHM_DPAM_ID FROM NSDL_HOLDING_DTLS,ACCOUNT_PROPERTIES 
+                WHERE ACCP_VALUE = @PA_ACCT_NO
+				AND NSDHM_BEN_ACCT_NO = ACCP_ACCT_NO
+				AND NSDHM_TRANSACTION_DT >= DATEADD(M,-6,@PA_REQUEST_DATE) AND NSDHM_TRANSACTION_DT <= @PA_REQUEST_DATE
+                AND ACCP_DELETED_IND=1
+                )
+				BEGIN
+					 SET @L_YN =  'N'  
+				END
+				ELSE
+				BEGIN
+					 SET @L_YN =  'Y'  
+				END
+
+END
+ELSE
+BEGIN 
+                IF EXISTS(SELECT TOP 1 NSDHM_DPAM_ID FROM NSDL_HOLDING_DTLS 
+				WHERE NSDHM_BEN_ACCT_NO = @PA_ACCT_NO
+				AND NSDHM_TRANSACTION_DT >= DATEADD(M,-6,@PA_REQUEST_DATE) AND NSDHM_TRANSACTION_DT <= @PA_REQUEST_DATE)
+				BEGIN
+					 SET @L_YN =  'N'  
+				END
+				ELSE
+				BEGIN
+					 SET @L_YN =  'Y'  
+				END
+
+END
+
+  
+	  --  
+	  end   
+  end   
+  else
+  begin
+  --
+	  IF @pa_validation = 'HIGH_VALUE'  
+		  begin  
+		  --  
+			Select @l_max_high_val = bitrm_bit_location from bitmap_ref_mstr where bitrm_parent_cd = 'HIGH_VAL_CDSL'    and bitrm_deleted_ind = 1  
+		     
+			select top 1 @l_rate = CLOPM_CDSL_RT from CLOSING_LAST_CDSL   where CLOPM_ISIN_CD = @l_isin order by 1 desc    
+		       
+			set @l_yn =  case when @l_qty * @l_rate >= @l_max_high_val then 'Y' ELSE 'N' END  
+		  --  
+		  end   
+		  IF @pa_validation = 'DORMANT'  
+		  begin  
+		  -- 
+                declare @l_act_dt datetime 
+                 select distinct @l_act_dt = convert(datetime,accp_value,103) 
+			      from account_properties ,dp_acct_mstr 
+			      where accp_accpm_prop_cd = 'BILL_START_DT' and dpam_id = accp_clisba_id and right(dpam_sba_no,8) =right(@pa_acct_no,8)   
+				if exists(SELECT TOP 1 cdshm_dpam_id FROM CDSL_HOLDING_DTLS 
+				WHERE CDSHM_BEN_ACCT_NO = @pa_acct_no
+				and CDSHM_TRAS_DT >= DATEADD(m,-6,@pa_request_date) and CDSHM_TRAS_DT <= @pa_request_date)
+                 or (abs(datediff(m,@l_act_dt,@pa_request_date))<=6)
+				begin
+					 set @l_yn =  'N'  
+				end
+				else
+				begin
+					set @l_yn =  'Y'  
+				end
+
+
+		  --  
+		  end  
+  --
+  end
+  
+  return @l_yn  
+--  
+end
+
+GO

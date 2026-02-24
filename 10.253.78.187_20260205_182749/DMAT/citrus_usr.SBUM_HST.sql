@@ -1,0 +1,22 @@
+-- Object: TABLE citrus_usr.SBUM_HST
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[SBUM_HST]
+(
+    [SBUM_ID] NUMERIC(10, 0) NOT NULL,
+    [SBUM_CD] VARCHAR(20) NOT NULL,
+    [SBUM_DESC] VARCHAR(200) NULL,
+    [SBUM_RMKS] VARCHAR(250) NULL,
+    [SBUM_CREATED_BY] VARCHAR(25) NOT NULL,
+    [SBUM_CREATED_DT] DATETIME NOT NULL,
+    [SBUM_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [SBUM_LST_UPD_DT] DATETIME NOT NULL,
+    [SBUM_DELETED_IND] SMALLINT NOT NULL,
+    [SBUM_ACTION] VARCHAR(20) NOT NULL,
+    [sbum_start_no] VARCHAR(20) NULL,
+    [sbum_end_no] VARCHAR(20) NULL,
+    [sbum_cur_no] VARCHAR(20) NULL
+);
+
+GO

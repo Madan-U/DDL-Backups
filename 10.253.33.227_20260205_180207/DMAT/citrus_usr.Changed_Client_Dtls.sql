@@ -1,0 +1,21 @@
+-- Object: TABLE citrus_usr.Changed_Client_Dtls
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[Changed_Client_Dtls]
+(
+    [CCD_ID] NUMERIC(10, 0) NOT NULL,
+    [CCD_CLISBA_ID] VARCHAR(20) NOT NULL,
+    [CCD_CLI_NAME] VARCHAR(100) NOT NULL,
+    [CCD_CLI_ADDR] VARCHAR(300) NULL,
+    [CCD_CLI_PHNO] VARCHAR(20) NULL,
+    [CCD_CLI_MOBILE] VARCHAR(12) NULL,
+    [CCD_CLI_EMAIL] VARCHAR(50) NULL,
+    [CCD_CLI_BNKACNO] VARCHAR(50) NULL,
+    [CCD_CLI_BNKMICR] VARCHAR(50) NULL,
+    [CCD_CLI_BNKACTYP] VARCHAR(50) NULL,
+    [CCD_CLI_BNKNAME] VARCHAR(100) NULL,
+    [CCD_CLI_CHNGDATE] DATETIME NULL
+);
+
+GO

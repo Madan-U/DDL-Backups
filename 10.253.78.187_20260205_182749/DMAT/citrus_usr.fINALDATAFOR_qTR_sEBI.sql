@@ -1,0 +1,19 @@
+-- Object: TABLE citrus_usr.fINALDATAFOR_qTR_sEBI
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[fINALDATAFOR_qTR_sEBI]
+(
+    [YEAR] NUMERIC(18, 0) NULL,
+    [MONTH] NUMERIC(18, 0) NULL,
+    [QTR] NUMERIC(18, 0) NULL,
+    [DPID] VARCHAR(16) NULL,
+    [NAME] VARCHAR(1000) NULL,
+    [AMCCHARGE] NUMERIC(18, 3) NULL,
+    [NOOFACCT] NUMERIC(18, 0) NULL,
+    [TRXCHARGE] NUMERIC(18, 3) NULL,
+    [NOOFTRX] NUMERIC(18, 0) NULL,
+    [OTHERS] VARCHAR(1000) NULL
+);
+
+GO

@@ -1,0 +1,10 @@
+-- Object: VIEW dbo.ANG_USED_SLIPS
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+
+CREATE VIEW [dbo].[ANG_USED_SLIPS] 
+AS 
+SELECT * FROM [ABCSOORACLEMDLW].SYNERGY.DBO.ORAVIEWSYNERGY_USED_SLIPS  WITH (NOLOCK)
+
+GO

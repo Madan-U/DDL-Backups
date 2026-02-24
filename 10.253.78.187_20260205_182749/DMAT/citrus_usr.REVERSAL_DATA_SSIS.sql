@@ -1,0 +1,15 @@
+-- Object: TABLE citrus_usr.REVERSAL_DATA_SSIS
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[REVERSAL_DATA_SSIS]
+(
+    [NISE_PARTY_CODE] VARCHAR(10) NULL,
+    [CLIENT_CODE] VARCHAR(16) NULL,
+    [FIRST_HOLD_NAME] VARCHAR(100) NULL,
+    [STATUS] VARCHAR(40) NULL,
+    [TEMPLATE_CODE] VARCHAR(21) NULL,
+    [ACTIVE_DATE] DATETIME NULL
+);
+
+GO

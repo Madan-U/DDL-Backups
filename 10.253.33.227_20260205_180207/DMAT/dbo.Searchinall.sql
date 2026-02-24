@@ -1,0 +1,53 @@
+-- Object: PROCEDURE dbo.Searchinall
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE PROCEDURE [dbo].[Searchinall] 
+(@STRFIND AS VARCHAR(MAX))
+AS
+
+
+
+BEGIN
+    SET NOCOUNT ON; 
+    --TO FIND STRING IN ALL PROCEDURES        
+    BEGIN
+        SELECT OBJECT_NAME(OBJECT_ID) SP_NAME
+              ,OBJECT_DEFINITION(OBJECT_ID) SP_DEFINITION
+        FROM   SYS.PROCEDURES
+        WHERE  OBJECT_DEFINITION(OBJECT_ID) LIKE '%'+@STRFIND+'%'
+    END 
+
+    --TO FIND STRING IN ALL VIEWS        
+    BEGIN
+        SELECT OBJECT_NAME(OBJECT_ID) VIEW_NAME
+              ,OBJECT_DEFINITION(OBJECT_ID) VIEW_DEFINITION
+        FROM   SYS.VIEWS
+        WHERE  OBJECT_DEFINITION(OBJECT_ID) LIKE '%'+@STRFIND+'%'
+    END 
+
+    --TO FIND STRING IN ALL FUNCTION        
+    BEGIN
+        SELECT ROUTINE_NAME           FUNCTION_NAME
+              ,ROUTINE_DEFINITION     FUNCTION_DEFINITION
+        FROM   INFORMATION_SCHEMA.ROUTINES
+        WHERE  ROUTINE_DEFINITION LIKE '%'+@STRFIND+'%'
+               AND ROUTINE_TYPE = 'FUNCTION'
+        ORDER BY
+               ROUTINE_NAME
+    END
+
+    --TO FIND STRING IN ALL TABLES OF DATABASE.    
+    BEGIN
+        SELECT T.NAME      AS TABLE_NAME
+              ,C.NAME      AS COLUMN_NAME
+        FROM   SYS.TABLES  AS T
+               INNER JOIN SYS.COLUMNS C
+                    ON  T.OBJECT_ID = C.OBJECT_ID
+        WHERE  C.NAME LIKE '%'+@STRFIND+'%'
+        ORDER BY
+               TABLE_NAME
+    END
+END
+
+GO

@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.ROL_HST
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ROL_HST]
+(
+    [ROL_ID] DECIMAL(10, 0) NOT NULL,
+    [ROL_CD] VARCHAR(200) NULL,
+    [ROL_DESC] VARCHAR(200) NULL,
+    [ROL_CREATED_BY] VARCHAR(25) NOT NULL,
+    [ROL_CREATED_DT] DATETIME NOT NULL,
+    [ROL_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [ROL_LST_UPD_DT] DATETIME NOT NULL,
+    [ROL_DELETED_IND] SMALLINT NULL,
+    [ROL_ACTION] VARCHAR(20) NOT NULL
+);
+
+GO

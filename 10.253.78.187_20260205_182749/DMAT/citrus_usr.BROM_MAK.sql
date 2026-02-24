@@ -1,0 +1,17 @@
+-- Object: TABLE citrus_usr.BROM_MAK
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[BROM_MAK]
+(
+    [BROM_ID] NUMERIC(10, 0) NULL,
+    [BROM_DESC] VARCHAR(200) NULL,
+    [BROM_EXCPM_ID] NUMERIC(10, 0) NULL,
+    [BROM_CREATED_BY] VARCHAR(25) NULL,
+    [BROM_CREATED_DT] DATETIME NULL,
+    [BROM_LST_UPD_BY] VARCHAR(25) NULL,
+    [BROM_LST_UPD_DT] DATETIME NULL,
+    [BROM_DELETED_IND] SMALLINT NULL
+);
+
+GO

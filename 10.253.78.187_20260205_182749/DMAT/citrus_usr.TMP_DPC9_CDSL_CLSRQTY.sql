@@ -1,0 +1,13 @@
+-- Object: TABLE citrus_usr.TMP_DPC9_CDSL_CLSRQTY
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[TMP_DPC9_CDSL_CLSRQTY]
+(
+    [TMPDPC9_CLSR_BOID] VARCHAR(16) NULL,
+    [TMPDPC9_CLSR_ISIN] VARCHAR(12) NULL,
+    [TMPDPC9_CLSR_TRX_DT] DATETIME NULL,
+    [TMPDPC9_CLSR_QTY] NUMERIC(18, 9) NULL
+);
+
+GO

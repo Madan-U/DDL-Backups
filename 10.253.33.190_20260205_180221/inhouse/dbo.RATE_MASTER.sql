@@ -1,0 +1,10 @@
+-- Object: VIEW dbo.RATE_MASTER
+-- Server: 10.253.33.190 | DB: inhouse
+--------------------------------------------------
+
+CREATE VIEW [dbo].[RATE_MASTER]
+AS
+SELECT RM_ISIN_CODE = ISIN, RM_TRX_DATE = CONVERT(VARCHAR, RATE_DATE, 112), RM_RATE = CLOSE_PRICE
+FROM VW_ISIN_RATE_MASTER WITH (NOLOCK)
+
+GO

@@ -1,0 +1,457 @@
+-- Object: PROCEDURE citrus_usr.PR_MAK_ENT_SLIP_ISSUE_MSTR
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE PROCEDURE [citrus_usr].[PR_MAK_ENT_SLIP_ISSUE_MSTR](@PA_ID             VARCHAR(8000)  
+																																											,@PA_ACTION         VARCHAR(20)  
+																																											,@PA_LOGIN_NAME     VARCHAR(20)  
+																																											,@PA_ENTM_ID        INTEGER  
+																																											,@PA_DPM_ID         VARCHAR(20)
+																																											,@PA_DPAM_SBA_NO    VARCHAR(20) 
+																																											,@PA_SERIES_TYPE    VARCHAR(20)  
+																																											,@PA_FROM_NO     	 BIGINT 
+																																											,@PA_TO_NO		 BIGINT  
+																																											,@PA_CHK_YN         INT 
+																																											,@ROWDELIMITER      CHAR(4) =  '*|~*'  
+																																											,@COLDELIMITER      CHAR(4) = '|*~|'  
+																																											,@PA_ERRMSG         VARCHAR(8000) OUTPUT  
+                                                                                                         )  
+AS  
+BEGIN
+DECLARE   @@L_ENTSBIM_ID       BIGINT
+     	, @L_ERROR             BIGINT
+	, @T_ERRORSTR  	       VARCHAR(8000)
+        , @DELIMETER           VARCHAR(10)  
+        , @REMAININGSTRING     VARCHAR(8000)  
+        , @CURRSTRING          VARCHAR(8000)  
+        , @FOUNDAT             INTEGER  
+        , @DELIMETERLENGTH     INT 
+        , @L_DP_ID             numeric(10,0) 
+
+	  SET @DELIMETER       = '%'+ @ROWDELIMITER + '%'  
+	  SET @DELIMETERLENGTH = LEN(@ROWDELIMITER)  
+	  SET @REMAININGSTRING = @PA_ID  
+	  --  
+	  WHILE @REMAININGSTRING <> ''  
+	  BEGIN  
+	    --  
+	  	SET @FOUNDAT = 0  
+	    	SET @FOUNDAT =  PATINDEX('%'+@DELIMETER+'%',@REMAININGSTRING)  
+	  
+		IF @FOUNDAT > 0  
+		BEGIN  
+		--  
+			SET @CURRSTRING      = SUBSTRING(@REMAININGSTRING, 0,@FOUNDAT)  
+			SET @REMAININGSTRING = SUBSTRING(@REMAININGSTRING, @FOUNDAT+@DELIMETERLENGTH,LEN(@REMAININGSTRING)- @FOUNDAT+@DELIMETERLENGTH)  
+		--  
+		END  
+		ELSE  
+		BEGIN  
+		--  
+			SET @CURRSTRING      = @REMAININGSTRING  
+			SET @REMAININGSTRING = ''  
+		--  
+		END  
+		IF @CURRSTRING <> ''  
+		BEGIN  
+		 
+		 SELECT @L_DP_ID = DPM_ID FROM DP_MSTR WHERE DPM_DPID = @PA_DPM_ID AND DPM_DELETED_IND = 1   
+		 
+			IF @PA_ACTION = 'INS'  --ACTION TYPE = INS BEGINS HERE  
+			BEGIN  
+			--  
+			        IF @PA_CHK_YN = 0 -- MAKER CHECKER FUNCTIONALITY IS NOT REQD STARTS HERE
+			        BEGIN  
+						SELECT @@L_ENTSBIM_ID = ISNULL(MAX(ENTSBIM_ID),0)+1 FROM ENTITY_SLIP_BOOK_ISSUE_MSTR WITH(NOLOCK) 
+						
+		    IF EXISTS(SELECT ENTSBIM_ID FROM ENTITY_SLIP_BOOK_ISSUE_MSTR WITH(NOLOCK) WHERE ENTSBIM_SERIES_TYPE = @PA_SERIES_TYPE AND ((@PA_FROM_NO BETWEEN ENTSBIM_FROM_NO AND ENTSBIM_TO_NO) OR (@PA_TO_NO BETWEEN ENTSBIM_FROM_NO AND ENTSBIM_TO_NO)) AND ENTSBIM_DELETED_IND = 1)
+						BEGIN
+											SELECT @T_ERRORSTR      = 'ERROR '+ isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+					 END
+					 ELSE
+					 BEGIN
+					 
+						  INSERT INTO ENTITY_SLIP_BOOK_ISSUE_MSTR(ENTSBIM_ID,ENTSBIM_ENTM_ID,ENTSBIM_DPAM_SBA_NO,ENTSBIM_DPM_ID,ENTSBIM_SERIES_TYPE,ENTSBIM_FROM_NO,ENTSBIM_TO_NO,ENTSBIM_CREATED_BY,ENTSBIM_CREATED_DT,ENTSBIM_LST_UPD_BY,ENTSBIM_LST_UPD_DT,ENTSBIM_DELETED_IND)
+						  VALUES(@@L_ENTSBIM_ID,@PA_ENTM_ID,@PA_DPAM_SBA_NO,@L_DP_ID,@PA_SERIES_TYPE,@PA_FROM_NO,@PA_TO_NO,@PA_LOGIN_NAME,GETDATE(),@PA_LOGIN_NAME,GETDATE(),1)
+						  
+						END  
+						
+						SET @L_ERROR = @@ERROR
+						
+						IF @L_ERROR > 0  
+		    BEGIN
+		    --
+							 --SELECT @T_ERRORSTR = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+CONVERT(VARCHAR,@PA_ENTM_ID)+@COLDELIMITER+@PA_DPAM_SBA_NO+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,@PA_DPM_ID),'')+@COLDELIMITER+@PA_SERIES_TYPE+@COLDELIMITER+CONVERT(VARCHAR,@PA_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,@PA_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER 
+							 IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+								BEGIN
+								--
+										SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+								--
+								END
+								ELSE
+								BEGIN
+								--
+										SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+								--
+        END
+						--	
+						END  
+		
+				END		-- MAKER CHECKER FUNCTIONALITY IS NOT REQD ENDS HERE
+		
+			        IF @PA_CHK_YN = 1 -- IF MAKER IS INSERTING  
+			        BEGIN  
+		
+					SELECT @@L_ENTSBIM_ID = ISNULL(MAX(ENTSBIM_ID),0)+1 FROM ENTSBIM_MAK WITH(NOLOCK) 
+			
+					SELECT @PA_ID = ISNULL(MAX(ENTSBIM_ID),0)+1 FROM ENTITY_SLIP_BOOK_ISSUE_MSTR WITH(NOLOCK)  
+			
+					IF @PA_ID > @@L_ENTSBIM_ID 
+					BEGIN
+						SET @@L_ENTSBIM_ID = @PA_ID
+					END
+		
+					INSERT INTO ENTSBIM_MAK(ENTSBIM_ID,ENTSBIM_ENTM_ID,ENTSBIM_DPAM_SBA_NO,ENTSBIM_DPM_ID,ENTSBIM_SERIES_TYPE,ENTSBIM_FROM_NO,ENTSBIM_TO_NO,ENTSBIM_CREATED_BY,ENTSBIM_CREATED_DT,ENTSBIM_LST_UPD_BY,ENTSBIM_LST_UPD_DT,ENTSBIM_DELETED_IND)
+					VALUES(@@L_ENTSBIM_ID,@PA_ENTM_ID,@PA_DPAM_SBA_NO,@L_DP_ID,@PA_SERIES_TYPE,@PA_FROM_NO,@PA_TO_NO,@PA_LOGIN_NAME,GETDATE(),@PA_LOGIN_NAME,GETDATE(),0)
+		
+		
+					SET @L_ERROR = @@ERROR
+					
+					IF @L_ERROR > 0  
+		 	 BEGIN
+		 	 --
+						--SELECT @T_ERRORSTR = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+CONVERT(VARCHAR,@PA_ENTM_ID)+@COLDELIMITER+@PA_DPAM_SBA_NO+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,@PA_DPM_ID),'')+@COLDELIMITER+@PA_SERIES_TYPE+@COLDELIMITER+CONVERT(VARCHAR,@PA_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,@PA_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER 
+						IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+						--
+						END
+						ELSE
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+						--
+      END
+					--	
+					END  
+		
+				END
+		
+		
+			--
+			END			--ACTION TYPE = INS ENDS HERE
+
+		       IF @PA_ACTION = 'APP'    --ACTION TYPE = APP STARTS HERE  
+		       BEGIN--APP  
+				
+			   	IF EXISTS(SELECT ENTSBIM_ID FROM ENTITY_SLIP_BOOK_ISSUE_MSTR WITH (NOLOCK) WHERE ENTSBIM_ID = CONVERT(INT, @CURRSTRING) AND ENTSBIM_DELETED_IND = 1)  
+				BEGIN
+					BEGIN TRANSACTION
+
+					UPDATE ESBIM WITH(ROWLOCK)  
+					SET	 ESBIM.ENTSBIM_ENTM_ID     = ESBIMM.ENTSBIM_ENTM_ID  
+						,ESBIM.ENTSBIM_DPAM_SBA_NO = ESBIMM.ENTSBIM_DPAM_SBA_NO  
+						,ESBIM.ENTSBIM_DPM_ID  	   = ESBIMM.ENTSBIM_DPM_ID  
+						,ESBIM.ENTSBIM_SERIES_TYPE = ESBIMM.ENTSBIM_SERIES_TYPE  
+						,ESBIM.ENTSBIM_FROM_NO     = ESBIMM.ENTSBIM_FROM_NO  
+						,ESBIM.ENTSBIM_TO_NO   	   = ESBIMM.ENTSBIM_TO_NO
+						,ESBIM.ENTSBIM_LST_UPD_BY      = @PA_LOGIN_NAME
+						,ESBIM.ENTSBIM_LST_UPD_DT      = GETDATE()
+					FROM    ENTITY_SLIP_BOOK_ISSUE_MSTR ESBIM,  
+						ENTSBIM_MAK  ESBIMM  
+					WHERE   ESBIM.ENTSBIM_ID           = CONVERT(INT,@CURRSTRING)  
+					AND     ESBIMM.ENTSBIM_DELETED_IND = 0  
+					AND     ESBIM.ENTSBIM_DELETED_IND  = 1  
+					AND     ESBIMM.ENTSBIM_CREATED_BY <> @PA_LOGIN_NAME  
+				
+				        SET @L_ERROR = @@ERROR  
+				          --  
+				        IF @L_ERROR > 0  
+				        BEGIN  
+				          --  
+						--SELECT @T_ERRORSTR         = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_ENTM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_DPAM_SBA_NO,'')+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_DPM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_SERIES_TYPE,'')+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER  
+						--FROM   ENTSBIM_MAK WITH(NOLOCK)  
+						--WHERE  ENTSBIM_ID          = CONVERT(INT,@CURRSTRING)  
+						--AND    ENTSBIM_DELETED_IND = 0  
+						IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+						--
+						END
+						ELSE
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+						--
+      END
+						
+						ROLLBACK TRANSACTION  
+				          --  
+				        END
+					ELSE
+					BEGIN
+						COMMIT TRANSACTION
+						
+						
+						UPDATE ENTSBIM_MAK 
+						SET    ENTSBIM_DELETED_IND = 1  
+						WHERE  ENTSBIM_ID          = CONVERT(INT,@CURRSTRING)  
+						AND    ENTSBIM_DELETED_IND = 0
+					END  
+
+				END
+				ELSE
+				BEGIN
+				 begin transaction
+				 
+				 IF EXISTS(SELECT ENTSBIM.ENTSBIM_ID FROM ENTITY_SLIP_BOOK_ISSUE_MSTR ENTSBIM, ENTSBIM_MAK ENTSBIMM WITH(NOLOCK) WHERE ENTSBIM.ENTSBIM_SERIES_TYPE =  ENTSBIMM.ENTSBIM_SERIES_TYPE AND ((ENTSBIM.ENTSBIM_FROM_NO BETWEEN ENTSBIMM.ENTSBIM_FROM_NO AND ENTSBIMM.ENTSBIM_TO_NO) OR (ENTSBIM.ENTSBIM_TO_NO BETWEEN ENTSBIMM.ENTSBIM_FROM_NO AND ENTSBIMM.ENTSBIM_TO_NO)) AND ENTSBIM.ENTSBIM_DELETED_IND = 1 and ENTSBIMM.ENTSBIM_ID = CONVERT(INT,@CURRSTRING))
+					BEGIN
+										SELECT @T_ERRORSTR      = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+									
+					END
+				 ELSE
+				 BEGIN
+				 
+							INSERT INTO ENTITY_SLIP_BOOK_ISSUE_MSTR(ENTSBIM_ID,ENTSBIM_ENTM_ID,ENTSBIM_DPAM_SBA_NO,ENTSBIM_DPM_ID,ENTSBIM_SERIES_TYPE,ENTSBIM_FROM_NO,ENTSBIM_TO_NO,ENTSBIM_CREATED_BY,ENTSBIM_CREATED_DT,ENTSBIM_LST_UPD_BY,ENTSBIM_LST_UPD_DT,ENTSBIM_DELETED_IND)
+							SELECT ENTSBIM_ID,ENTSBIM_ENTM_ID,ENTSBIM_DPAM_SBA_NO,ENTSBIM_DPM_ID,ENTSBIM_SERIES_TYPE,ENTSBIM_FROM_NO,ENTSBIM_TO_NO,ENTSBIM_CREATED_BY,ENTSBIM_CREATED_DT,@PA_LOGIN_NAME,GETDATE(),1
+							FROM   ENTSBIM_MAK WITH(NOLOCK)
+							WHERE  ENTSBIM_ID    	   = CONVERT(INT,@CURRSTRING)  
+							AND    ENTSBIM_DELETED_IND = 0 
+					
+		
+		
+					SET @L_ERROR = @@ERROR
+					
+					IF @L_ERROR > 0  
+		 			BEGIN
+						--SELECT @T_ERRORSTR         = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_ENTM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_DPAM_SBA_NO,'')+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_DPM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_SERIES_TYPE,'')+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER  
+						--FROM   ENTSBIM_MAK WITH(NOLOCK)  
+						--WHERE  ENTSBIM_ID          = CONVERT(INT,@CURRSTRING)  
+						--AND    ENTSBIM_DELETED_IND = 0
+						IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+						--
+						END
+						ELSE
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+						--
+      END
+
+						ROLLBACK TRANSACTION 
+					END
+					ELSE
+					BEGIN
+						COMMIT TRANSACTION
+						
+						UPDATE ENTSBIM_MAK 
+						SET    ENTSBIM_DELETED_IND = 1  
+						WHERE  ENTSBIM_ID          = CONVERT(INT,@CURRSTRING)  
+						AND    ENTSBIM_DELETED_IND = 0
+						
+					END 
+					
+					END		
+					
+				END
+
+		       END		       --ACTION TYPE = APP ENDS HERE
+		       IF @PA_ACTION ='REJ'    --ACTION TYPE = REJ BEGINS HERE  
+     		       BEGIN
+
+				BEGIN TRANSACTION
+
+				UPDATE ENTSBIM_MAK WITH(ROWLOCK)  
+				SET	 ENTSBIM_DELETED_IND  = 3  
+					,ENTSBIM_LST_UPD_BY   = @PA_LOGIN_NAME
+					,ENTSBIM_LST_UPD_DT   = GETDATE()
+				FROM    ENTSBIM_MAK  
+				WHERE   ENTSBIM_ID            = CONVERT(INT,@CURRSTRING)  
+				AND     ENTSBIM_DELETED_IND   = 0  
+				AND     ENTSBIM_CREATED_BY   <> @PA_LOGIN_NAME  
+
+				SET @L_ERROR = @@ERROR
+				IF @L_ERROR > 0  
+		 		BEGIN
+		 		
+		 		IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+					BEGIN
+					--
+							SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+					--
+					END
+					ELSE
+					BEGIN
+					--
+							SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+					--
+     END
+					--SELECT @T_ERRORSTR         = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_ENTM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_DPAM_SBA_NO,'')+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,ENTSBIM_DPM_ID),'')+@COLDELIMITER+ISNULL(ENTSBIM_SERIES_TYPE,'')+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,ENTSBIM_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER  
+					--FROM   ENTSBIM_MAK WITH(NOLOCK)  
+					--WHERE  ENTSBIM_ID          = CONVERT(INT,@CURRSTRING)  
+					--AND    ENTSBIM_DELETED_IND = 0
+
+					ROLLBACK TRANSACTION
+				END
+				ELSE
+				BEGIN
+					COMMIT TRANSACTION
+				END
+
+		      END		     --ACTION TYPE = REJ ENDS HERE  
+
+		      IF @PA_ACTION = 'DEL'  --ACTION TYPE = DEL BEGINS HERE  
+		      BEGIN  
+		     
+				BEGIN TRANSACTION 
+
+				UPDATE ENTITY_SLIP_BOOK_ISSUE_MSTR WITH(ROWLOCK)  
+				SET	 ENTSBIM_DELETED_IND = 0  
+					,ENTSBIM_LST_UPD_BY  = @PA_LOGIN_NAME
+					,ENTSBIM_LST_UPD_DT  = GETDATE()
+				FROM    ENTITY_SLIP_BOOK_ISSUE_MSTR  
+				WHERE   ENTSBIM_ID           = CONVERT(INT,@CURRSTRING)  
+				AND     ENTSBIM_DELETED_IND  = 1  
+				--AND     ENTSBIM_CREATED_BY  <> @PA_LOGIN_NAME  
+				
+				SET @L_ERROR = @@ERROR
+				IF @L_ERROR > 0  
+		 		BEGIN
+		 		
+		 		IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+					BEGIN
+					--
+							SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+					--
+					END
+					ELSE
+					BEGIN
+					--
+							SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+					--
+     END
+
+					ROLLBACK TRANSACTION
+				END
+				ELSE
+				BEGIN
+					COMMIT TRANSACTION
+				END
+		 
+  		     END		--ACTION TYPE = DEL BEGINS HERE
+
+		     IF @PA_ACTION ='EDT'  --ACTION TYPE = EDT BEGINS HERE  
+		     BEGIN
+				IF @PA_CHK_YN = 0 -- IF NO MAKER CHECKER  
+       				BEGIN
+					BEGIN TRANSACTION
+
+					UPDATE ENTITY_SLIP_BOOK_ISSUE_MSTR WITH(ROWLOCK)  
+					SET	 ENTSBIM_ENTM_ID  	= @PA_ENTM_ID  
+						,ENTSBIM_DPAM_SBA_NO    = @PA_DPAM_SBA_NO  
+						,ENTSBIM_DPM_ID  	= @L_DP_ID  
+						,ENTSBIM_SERIES_TYPE    = @PA_SERIES_TYPE  
+						,ENTSBIM_FROM_NO   	= @PA_FROM_NO  
+						,ENTSBIM_TO_NO   	= @PA_TO_NO
+						,ENTSBIM_LST_UPD_BY   	= @PA_LOGIN_NAME
+						,ENTSBIM_LST_UPD_DT   	= GETDATE()
+					WHERE   ENTSBIM_ID      	= CONVERT(INT,@CURRSTRING)  
+					AND     ENTSBIM_DELETED_IND   	= 1
+
+  
+					SET @L_ERROR = @@ERROR
+					IF @L_ERROR > 0  
+			 		BEGIN
+			 		IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+						--
+						END
+						ELSE
+						BEGIN
+						--
+								SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+						--
+      END
+						
+						
+						ROLLBACK TRANSACTION
+					END
+					ELSE
+					BEGIN
+						COMMIT TRANSACTION
+					END
+					
+
+
+				END
+
+				IF @PA_CHK_YN = 1 -- IF MAKER OR CHEKER IS EDITING  
+				BEGIN
+					BEGIN TRANSACTION
+					UPDATE ENTSBIM_MAK    WITH(ROWLOCK)  
+				        SET    ENTSBIM_DELETED_IND  = 2  
+				              ,ENTSBIM_LST_UPD_BY   = @PA_LOGIN_NAME  
+				              ,ENTSBIM_LST_UPD_DT   = GETDATE()  
+				        WHERE  ENTSBIM_ID           = CONVERT(INT,@CURRSTRING)  
+				        AND    ENTSBIM_DELETED_IND  = 0  
+
+
+					SET @L_ERROR = @@ERROR
+					IF @L_ERROR > 0  
+			 		BEGIN
+						SELECT @T_ERRORSTR = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+CONVERT(VARCHAR,@PA_ENTM_ID)+@COLDELIMITER+@PA_DPAM_SBA_NO+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,@PA_DPM_ID),'')+@COLDELIMITER+@PA_SERIES_TYPE+@COLDELIMITER+CONVERT(VARCHAR,@PA_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,@PA_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER 
+						ROLLBACK TRANSACTION
+					END
+					ELSE
+					BEGIN
+
+						INSERT INTO ENTSBIM_MAK(ENTSBIM_ID,ENTSBIM_ENTM_ID,ENTSBIM_DPAM_SBA_NO,ENTSBIM_DPM_ID,ENTSBIM_SERIES_TYPE,ENTSBIM_FROM_NO,ENTSBIM_TO_NO,ENTSBIM_CREATED_BY,ENTSBIM_CREATED_DT,ENTSBIM_LST_UPD_BY,ENTSBIM_LST_UPD_DT,ENTSBIM_DELETED_IND)
+						VALUES(CONVERT(INT,@CURRSTRING),@PA_ENTM_ID,@PA_DPAM_SBA_NO,@L_DP_ID,@PA_SERIES_TYPE,@PA_FROM_NO,@PA_TO_NO,@PA_LOGIN_NAME,GETDATE(),@PA_LOGIN_NAME,GETDATE(),0)
+						
+						SET @L_ERROR = @@ERROR
+						IF @L_ERROR > 0  
+				 		BEGIN
+							--SELECT @T_ERRORSTR = ISNULL(@T_ERRORSTR,'')+@CURRSTRING+@COLDELIMITER+CONVERT(VARCHAR,@PA_ENTM_ID)+@COLDELIMITER+@PA_DPAM_SBA_NO+@COLDELIMITER+ISNULL(CONVERT(VARCHAR,@L_DP_ID),'')+@COLDELIMITER+@PA_SERIES_TYPE+@COLDELIMITER+CONVERT(VARCHAR,@PA_FROM_NO)+@COLDELIMITER+CONVERT(VARCHAR,@PA_TO_NO)+@COLDELIMITER+isnull(CONVERT(VARCHAR,@l_error),'')+@ROWDELIMITER 
+							IF EXISTS(SELECT Err_Description FROM tblerror WHERE Err_Code = @l_error)
+							BEGIN
+							--
+									SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ': '+ Err_Description FROM tblerror WHERE Err_Code = isnull(CONVERT(VARCHAR,@l_error),'')
+							--
+							END
+							ELSE
+							BEGIN
+							--
+									SELECT @t_errorstr = 'ERROR '+isnull(CONVERT(VARCHAR,@l_error),'') + ' Can not process, Please contact your administrator!'
+							--
+       END
+       
+							ROLLBACK TRANSACTION
+						END
+						ELSE
+						BEGIN
+							COMMIT TRANSACTION
+						END
+		
+					END
+
+				END  -- IF MAKER OR CHEKER IS EDITING ENDS HERE
+				  
+
+		     END		   --ACTION TYPE = EDT ENDS HERE
+
+ 		END  -- END OF CURRSTRING CONDITION
+	    -- 
+	    SET @PA_ERRMSG = @T_ERRORSTR  
+	    --  
+	END  -- END OF LOOP
+
+END
+
+GO

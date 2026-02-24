@@ -1,0 +1,762 @@
+-- Object: PROCEDURE citrus_usr.PR_RPT_RECOSTATEMENT_BANK_aaj
+-- Server: 10.253.33.190 | DB: DMAT
+--------------------------------------------------
+
+--SELECT -14333.87 - (-1282429.00)+1303627.00
+--SELECT * FROM FINANCIAL_YR_MSTR
+--select 22069.13-(-3977.00)+65313.00
+--DROP TABLE #ACLIST
+--PR_RPT_RECOSTATEMENT_BANK_aaj 3,2,'OCT 14 2010','BC02',''
+CREATE PROCEDURE [citrus_usr].[PR_RPT_RECOSTATEMENT_BANK_aaj]
+(
+@PA_DPM_ID NUMERIC
+,@PA_FINID CHAR(2)
+,@PA_DT DATETIME
+,@PA_BANKCD VARCHAR(20)
+,@PA_ACTION VARCHAR(50)
+)
+AS
+BEGIN 
+CREATE TABLE #ACLIST(DPAM_ID BIGINT,DPAM_SBA_NO VARCHAR(16),DPAM_SBA_NAME VARCHAR(150),EFF_FROM DATETIME,EFF_TO DATETIME,ACCT_TYPE VARCHAR(2))
+         
+INSERT INTO #ACLIST SELECT DPAM_ID,DPAM_SBA_NO,DPAM_SBA_NAME,EFF_FROM,EFF_TO,ACCT_TYPE FROM
+ CITRUS_USR.FN_GL_ACCT_LIST(3 ,1,0)		
+
+IF EXISTS(SELECT OBJECT_NAME(ID) FROM SYSOBJECTS WHERE XTYPE = 'U' AND OBJECT_NAME(ID) = 'TEMP_LED')
+BEGIN 
+	DROP TABLE TEMP_LED
+END
+IF EXISTS(SELECT OBJECT_NAME(ID) FROM SYSOBJECTS WHERE XTYPE = 'U' AND OBJECT_NAME(ID) = 'TEMP_LED_MOU')
+BEGIN 
+
+	DROP TABLE TEMP_LED_MOU
+END
+DECLARE @SQL1 VARCHAR(8000)
+DECLARE @SQL2 VARCHAR(8000)
+declare @fromdt datetime
+declare @todt datetime
+declare @finset int
+set @finset = convert(int,@PA_FINID)-1
+select @fromdt = FIN_START_DT from financial_yr_mstr where fin_id=convert(numeric,@PA_FINID) and fin_deleted_ind=1
+select @todt = FIN_end_DT from financial_yr_mstr where fin_id=convert(numeric,@PA_FINID) and fin_deleted_ind=1
+SET @SQL1 = ''
+SET @SQL2 = ''
+SET @SQL1 = 'SELECT * INTO TEMP_LED FROM LEDGER' + @PA_FINID
+SET @SQL2 = 'SELECT * INTO TEMP_LED_MOU FROM LEDGER' + convert(varchar,@finset) + ' where ldg_deleted_ind=1 and ldg_voucher_type in (''1'',''2'')'  -- TO GET BACK YEAR ENTRY IN CURRENT ONE (which are reconcile in current year)
+PRINT @SQL2
+EXEC(@SQL1)
+EXEC(@SQL2)
+
+
+IF @PA_ACTION = ''
+BEGIN
+SELECT CASE WHEN  SUM(LDG_AMOUNT)>0 THEN abs(SUM(LDG_AMOUNT))
+ELSE 0 END CREDIT ,CASE WHEN  SUM(LDG_AMOUNT)<0 THEN abs(SUM(LDG_AMOUNT))
+ELSE 0 END DEBIT ,'Balance as per our books' AS DESCR ,'1' nos
+ FROM TEMP_LED , #ACLIST ACCOUNT  WHERE LDG_DPM_ID = @PA_DPM_ID  
+AND LDG_VOUCHER_DT >= 'APR  1 2010'
+ AND LDG_VOUCHER_DT <= @PA_DT AND ISNULL(LDG_TRANS_TYPE,'') <> 'O' 
+AND LDG_ACCOUNT_ID = ACCOUNT.DPAM_ID  AND LDG_ACCOUNT_TYPE = ACCOUNT.ACCT_TYPE  
+AND DPAM_SBA_NO = @PA_BANKCD AND LDG_ACCOUNT_TYPE IN ('B','C')  AND LDG_DELETED_IND = 1
+UNION
+
+
+(
+select abs(sum(rec.DEBIT)),abs(sum(rec.credit)),rec.DESCR ,'2' nos from 
+( -- 2nd
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Less Cheques deposited but not cleared'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+UNION
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Less Cheques deposited but not cleared'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join fin_account_mstr c on ldg_account_id = FINA_ACC_ID
+-- left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+
+---last year entry
+union
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Less Cheques deposited but not cleared'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  
+ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+ LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+UNION
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Less Cheques deposited but not cleared'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  
+ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join fin_account_mstr c on ldg_account_id = FINA_ACC_ID
+-- left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+--last year entry
+
+) rec -- 2nd
+group by rec.DESCR
+)
+--10431
+
+UNION
+
+-- ADD
+(
+select abs(sum(payment.DEBIT)),abs(sum(payment.credit)),payment.DESCR ,'3' nos from 
+(--2nd
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Add Cheques issued but not presented for'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+union
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Add Cheques issued but not presented for'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join fin_account_mstr  on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+
+---last year entry
+union
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Add Cheques issued but not presented for'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+union
+select 
+CASE WHEN SUM(A.LDG_AMOUNT)>0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END DEBIT,
+CASE WHEN SUM(A.LDG_AMOUNT)<0 THEN SUM(A.LDG_AMOUNT) ELSE 0 END CREDIT
+,'Add Cheques issued but not presented for'AS DESCR
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join fin_account_mstr  on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+
+---last year entry
+
+) payment -- 2nd
+group by payment.DESCR
+
+)
+
+UNION
+
+-- for unreco payment
+select isnull(abs(sum(t.AUTOM_DEBIt)),0),isnull(abs(sum(t.AUTOM_CREDIT)),0),t.descr,'4'nos
+from
+(
+SELECT  AUTOM_DEBIT,
+ AUTOM_CREDIT
+,'Less Cheques debited by bank' AS DESCR
+ FROM AUTORECO_MSTR 
+WHERE AUTOM_TRNSDT BETWEEN 'APR  1 2010' AND @PA_DT
+AND isnull(AUTOM_DEBIT,0)<>0 and isnull(AUTOM_CREDIT,0)=0
+and ISNULL(abs(AUTOM_CHQNO),'') not in 
+(
+SELECT DISTINCT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED 
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+union
+SELECT DISTINCT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED_MOU 
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+)
+)
+t
+group by t.DESCR
+-- for unreco payment
+union 
+
+-- for unreco receipt
+
+select isnull(abs(sum(t.AUTOM_DEBIt)),0),isnull(abs(sum(t.AUTOM_CREDIT)),0),t.descr ,'5' nos
+from
+(
+SELECT  AUTOM_DEBIT,
+ AUTOM_CREDIT
+,'Add Cheques credited by bank' AS DESCR
+ FROM AUTORECO_MSTR 
+WHERE AUTOM_TRNSDT BETWEEN 'APR  1 2010' AND @PA_DT
+AND isnull(AUTOM_CREDIT,0)<>0 and isnull(AUTOM_DEBIT,0)=0
+and ISNULL(abs(AUTOM_CHQNO),'') not in 
+(
+SELECT DISTINCT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED 
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+union
+SELECT DISTINCT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED_MOU
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+)
+)
+t
+group by t.DESCR
+order by nos
+-- for unreco receipt
+
+---3089461.87
+END
+
+IF @PA_ACTION = 'RECIEPTDETAILS'
+BEGIN
+
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(C.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(C.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join fin_account_mstr C on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2')
+
+-- last year entry
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2') 
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(C.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(C.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('2') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join fin_account_mstr C on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('2')
+
+-- last year entry
+order by ord , a.LDG_VOUCHER_TYPE,  a.LDG_VOUCHER_NO 
+
+END
+
+IF @PA_ACTION = 'PAYMENTDETAILS'
+BEGIN
+
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(c.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(c.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED b left outer join fin_account_mstr  c on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+
+-- last year entry
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+union
+select DISTINCT A.LDG_VOUCHER_TYPE
+,A.LDG_VOUCHER_DT
+,A.LDG_VOUCHER_NO 
+,A.LDG_NARRATION
+,b.LDG_INSTRUMENT_NO CHEQUENOS
+,isnull(c.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(c.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+,CASE WHEN A.LDG_AMOUNT<0 THEN abs(A.LDG_AMOUNT) ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN abs(A.LDG_AMOUNT) ELSE  0 END CREDIT
+,A.ACCTNO
+,A.ord
+
+from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+FROM TEMP_LED_MOU b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and 
+LDG_VOUCHER_TYPE  in  ('1') 
+AND LDG_VOUCHER_DT BETWEEN 'APR  1 2009' AND @PA_DT
+AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+AND LDG_DPM_ID = DPM_ID  
+AND DEFAULT_DP=DPM_EXCSM_ID 
+and ldg_deleted_ind = 1 
+AND FINA_ACC_TYPE='B'
+aND DPM_ID = @PA_DPM_ID
+and FINA_ACC_CODE = @PA_BANKCD
+) A , TEMP_LED_MOU b left outer join fin_account_mstr  c on ldg_account_id = FINA_ACC_ID 
+--left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+where b.ldg_voucher_no = a.ldg_voucher_no
+and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+and   b.LDG_VOUCHER_TYPE  in  ('1') 
+-- last year entry
+
+order by ord , a.LDG_VOUCHER_TYPE,  a.LDG_VOUCHER_NO 
+END
+
+IF @PA_ACTION = 'BANKPAYMENTDETAILSUNMARK'
+BEGIN
+
+--select DISTINCT A.LDG_VOUCHER_TYPE
+--,A.LDG_VOUCHER_DT
+--,A.LDG_VOUCHER_NO 
+--,A.LDG_NARRATION
+--,b.LDG_INSTRUMENT_NO CHEQUENOS
+--,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+--,CASE WHEN A.LDG_AMOUNT<0 THEN A.LDG_AMOUNT ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN A.LDG_AMOUNT ELSE  0 END CREDIT
+--,A.ACCTNO
+--,A.ord
+--
+--from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+--,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+--FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+--AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+--AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+--AND LDG_DPM_ID = DPM_ID  
+--AND DEFAULT_DP=DPM_EXCSM_ID 
+--and ldg_deleted_ind = 1 
+--AND FINA_ACC_TYPE='B'
+--aND DPM_ID = @PA_DPM_ID
+--and FINA_ACC_CODE = @PA_BANKCD
+--) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+--,AUTORECO_MSTR
+--where b.ldg_voucher_no = a.ldg_voucher_no
+--and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+--and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+--and   b.LDG_VOUCHER_TYPE  in  ('1') 
+--and   isnull(b.LDG_INSTRUMENT_NO,'')=isnull(AUTOM_CHQNO,'')
+--union
+--select DISTINCT A.LDG_VOUCHER_TYPE
+--,A.LDG_VOUCHER_DT
+--,A.LDG_VOUCHER_NO 
+--,A.LDG_NARRATION
+--,b.LDG_INSTRUMENT_NO CHEQUENOS
+--,isnull(c.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(c.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+--,CASE WHEN A.LDG_AMOUNT<0 THEN A.LDG_AMOUNT ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN A.LDG_AMOUNT ELSE  0 END CREDIT
+--,A.ACCTNO
+--,A.ord
+
+--from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+--,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+--FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('1') 
+--AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+--AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+--AND LDG_DPM_ID = DPM_ID  
+--AND DEFAULT_DP=DPM_EXCSM_ID 
+--and ldg_deleted_ind = 1 
+--AND FINA_ACC_TYPE='B'
+--aND DPM_ID = @PA_DPM_ID
+--and FINA_ACC_CODE = @PA_BANKCD
+--) A , TEMP_LED b left outer join fin_account_mstr  c on ldg_account_id = FINA_ACC_ID 
+--,AUTORECO_MSTR
+----left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+--where b.ldg_voucher_no = a.ldg_voucher_no
+--and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+--and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+--and   b.LDG_VOUCHER_TYPE  in  ('1') 
+--and   isnull(b.LDG_INSTRUMENT_NO,'')=isnull(AUTOM_CHQNO,'')
+--order by ord , a.LDG_VOUCHER_TYPE,  a.LDG_VOUCHER_NO 
+
+SELECT 'RECEIPT' LDG_VOUCHER_TYPE,convert(varchar(11),AUTOM_TRNSDT,103) LDG_VOUCHER_DT 
+,'' LDG_VOUCHER_NO
+,ISNULL(AUTOM_NARRATION,'') LDG_NARRATION
+,ISNULL(AUTOM_CHQNO,'') CHEQUENOS
+,'' DPAM_SBA_NO
+,'' DPAM_SBA_NAME
+,AUTOM_DEBIT DEBIT
+, AUTOM_CREDIT CREDIT
+,'' ACCTNO
+,AUTOM_SNO ord
+FROM AUTORECO_MSTR 
+WHERE AUTOM_TRNSDT BETWEEN 'APR  1 2010' AND @PA_DT
+AND isnull(AUTOM_DEBIT,0)<>0 and isnull(AUTOM_CREDIT,0)=0
+and ISNULL(abs(AUTOM_CHQNO),'') not in (SELECT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED 
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+union
+SELECT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED_mou
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+)
+
+order by ord
+
+END
+
+IF @PA_ACTION = 'BANKRECEIPTDETAILSUNMARK'
+BEGIN
+
+--select DISTINCT A.LDG_VOUCHER_TYPE
+--,A.LDG_VOUCHER_DT
+--,A.LDG_VOUCHER_NO 
+--,A.LDG_NARRATION
+--,b.LDG_INSTRUMENT_NO CHEQUENOS
+--,isnull(DPAM_SBA_NO ,'') DPAM_SBA_NO, isnull(DPAM_SBA_NAME ,'') DPAM_SBA_NAME
+--,CASE WHEN A.LDG_AMOUNT<0 THEN A.LDG_AMOUNT ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN A.LDG_AMOUNT ELSE  0 END CREDIT
+--,A.ACCTNO
+--,A.ord
+--
+--from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+--,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+--FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+--AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+--AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+--AND LDG_DPM_ID = DPM_ID  
+--AND DEFAULT_DP=DPM_EXCSM_ID 
+--and ldg_deleted_ind = 1 
+--AND FINA_ACC_TYPE='B'
+--aND DPM_ID = @PA_DPM_ID
+--and FINA_ACC_CODE = @PA_BANKCD
+--) A , TEMP_LED b left outer join dp_acct_mstr  on ldg_account_id = dpam_id left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+--,AUTORECO_MSTR
+--where b.ldg_voucher_no = a.ldg_voucher_no
+--and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+--and   b.ldg_account_type in ('P') and ldg_deleted_ind = 1
+--and   b.LDG_VOUCHER_TYPE  in  ('2') 
+--and   isnull(b.LDG_INSTRUMENT_NO,'')=isnull(AUTOM_CHQNO,'')
+--union
+--select DISTINCT A.LDG_VOUCHER_TYPE
+--,A.LDG_VOUCHER_DT
+--,A.LDG_VOUCHER_NO 
+--,A.LDG_NARRATION
+--,b.LDG_INSTRUMENT_NO CHEQUENOS
+--,isnull(C.FINA_ACC_CODE ,'') DPAM_SBA_NO, isnull(C.FINA_ACC_NAME ,'') DPAM_SBA_NAME
+--,CASE WHEN A.LDG_AMOUNT<0 THEN A.LDG_AMOUNT ELSE  0 END DEBIT,CASE WHEN A.LDG_AMOUNT>0 THEN A.LDG_AMOUNT ELSE  0 END CREDIT
+--,A.ACCTNO
+--,A.ord
+
+--from (SELECT LDG_VOUCHER_TYPE , CONVERT(VARCHAR(11),LDG_VOUCHER_DT,103) LDG_VOUCHER_DT,LDG_VOUCHER_NO 
+--,LDG_NARRATION , LDG_INSTRUMENT_NO,FINA_ACC_NAME, LDG_AMOUNT , FINA_ACC_CODE ACCTNO , LDG_VOUCHER_DT ord  
+--FROM TEMP_LED b ,FIN_ACCOUNT_MSTR,DP_MSTR where  ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') = '1900-01-01 00:00:00.000' and LDG_VOUCHER_TYPE  in  ('2') 
+--AND LDG_VOUCHER_DT BETWEEN 'APR  1 2010' AND @PA_DT
+--AND LDG_ACCOUNT_ID=FINA_ACC_ID  
+--AND LDG_DPM_ID = DPM_ID  
+--AND DEFAULT_DP=DPM_EXCSM_ID 
+--and ldg_deleted_ind = 1 
+--AND FINA_ACC_TYPE='B'
+--aND DPM_ID = @PA_DPM_ID
+--and FINA_ACC_CODE = @PA_BANKCD
+--) A , TEMP_LED b left outer join fin_account_mstr C on ldg_account_id = FINA_ACC_ID 
+--,AUTORECO_MSTR
+----left outer join client_bank_accts on cliba_clisba_id = dpam_id and cliba_deleted_ind = 1 left outer join bank_mstr on banm_id = cliba_banm_id and banm_deleted_ind = 1  
+--where b.ldg_voucher_no = a.ldg_voucher_no
+--and   b.LDG_VOUCHER_TYPE = a.LDG_VOUCHER_TYPE
+--and   b.ldg_account_type in ('C','G') and ldg_deleted_ind = 1
+--and   b.LDG_VOUCHER_TYPE  in  ('2')
+--and  isnull( b.LDG_INSTRUMENT_NO,'')=isnull(AUTOM_CHQNO,'')
+--order by ord , a.LDG_VOUCHER_TYPE,  a.LDG_VOUCHER_NO 
+
+
+
+SELECT 'RECEIPT' LDG_VOUCHER_TYPE,convert(varchar(11),AUTOM_TRNSDT,103) LDG_VOUCHER_DT 
+,'' LDG_VOUCHER_NO
+,ISNULL(AUTOM_NARRATION,'') LDG_NARRATION
+,ISNULL(AUTOM_CHQNO,'') CHEQUENOS
+,'' DPAM_SBA_NO
+,'' DPAM_SBA_NAME
+,AUTOM_DEBIT DEBIT
+, AUTOM_CREDIT CREDIT
+,'' ACCTNO
+,AUTOM_SNO ord
+FROM AUTORECO_MSTR 
+WHERE AUTOM_TRNSDT BETWEEN 'APR  1 2010' AND @PA_DT
+AND isnull(AUTOM_CREDIT,0)<>0 and isnull(AUTOM_DEBIT,0)=0
+
+and ISNULL(abs(AUTOM_CHQNO),'') not in (
+SELECT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED 
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+union
+sELECT abs(LDG_INSTRUMENT_NO) FROM TEMP_LED_MOU
+WHERE LDG_INSTRUMENT_NO IS NOT NULL AND LDG_INSTRUMENT_NO <> '' 
+and ISNULL(LDG_BANK_CL_DATE,'1900-01-01 00:00:00.000') <> '1900-01-01 00:00:00.000'
+AND LDG_DELETED_IND = 1 and isnumeric(LDG_INSTRUMENT_NO)=1
+
+)
+
+order by ord
+
+END
+
+END
+
+GO

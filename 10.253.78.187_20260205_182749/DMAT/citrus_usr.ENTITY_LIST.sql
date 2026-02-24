@@ -1,0 +1,18 @@
+-- Object: TABLE citrus_usr.ENTITY_LIST
+-- Server: 10.253.78.187 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ENTITY_LIST]
+(
+    [ENTM_ID] NUMERIC(10, 0) NOT NULL,
+    [ENTM_INS_UPD_DEL] VARCHAR(1) NOT NULL,
+    [ENTM_TAB] VARCHAR(50) NOT NULL,
+    [ENTM_CREATED_BY] VARCHAR(25) NULL,
+    [ENTM_CREATED_DT] DATETIME NULL,
+    [ENTM_LST_UPD_BY] VARCHAR(25) NULL,
+    [ENTM_LST_UPD_DT] DATETIME NULL,
+    [ENTM_DELETED_IND] SMALLINT NULL,
+    [entm_status] INT NOT NULL
+);
+
+GO

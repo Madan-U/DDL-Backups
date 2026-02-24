@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.ANGEL_BSDA_IMPORT_MSTR
+-- Server: 10.253.33.227 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[ANGEL_BSDA_IMPORT_MSTR]
+(
+    [BOID] VARCHAR(16) NULL,
+    [BILLMONTH] DATETIME NULL,
+    [FILLER1] VARCHAR(50) NULL,
+    [FILLER2] VARCHAR(50) NULL,
+    [FILLER3] VARCHAR(50) NULL,
+    [FILLER4] VARCHAR(50) NULL,
+    [FILLER5] VARCHAR(50) NULL
+);
+
+GO

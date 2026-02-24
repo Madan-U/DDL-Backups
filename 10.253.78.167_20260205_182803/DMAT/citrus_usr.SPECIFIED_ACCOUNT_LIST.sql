@@ -1,0 +1,16 @@
+-- Object: TABLE citrus_usr.SPECIFIED_ACCOUNT_LIST
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[SPECIFIED_ACCOUNT_LIST]
+(
+    [CM_BEN] VARCHAR(10) NULL,
+    [ACCOUNT] VARCHAR(100) NULL,
+    [CREATED_BY] VARCHAR(100) NULL,
+    [CREATED_DT] DATETIME NULL,
+    [LST_UPD_BY] VARCHAR(100) NULL,
+    [LST_UPD_dt] DATETIME NULL,
+    [DELETED_IND] SMALLINT NULL
+);
+
+GO

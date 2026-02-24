@@ -1,0 +1,23 @@
+-- Object: TABLE citrus_usr.screens_bak_dnd
+-- Server: 10.253.78.167 | DB: DMAT
+--------------------------------------------------
+
+CREATE TABLE [citrus_usr].[screens_bak_dnd]
+(
+    [SCR_ID] NUMERIC(10, 0) NOT NULL,
+    [SCR_CD] VARCHAR(20) NOT NULL,
+    [SCR_NAME] VARCHAR(100) NULL,
+    [SCR_DESC] VARCHAR(200) NULL,
+    [SCR_PARENT_ID] NUMERIC(10, 0) NULL,
+    [SCR_URL] VARCHAR(500) NULL,
+    [SCR_CHECKER_YN] SMALLINT NOT NULL,
+    [SCR_ORD_BY] NUMERIC(2, 0) NULL,
+    [SCR_CREATED_BY] VARCHAR(25) NOT NULL,
+    [SCR_CREATED_DT] DATETIME NOT NULL,
+    [SCR_LST_UPD_BY] VARCHAR(25) NOT NULL,
+    [SCR_LST_UPD_DT] DATETIME NOT NULL,
+    [SCR_DELETED_IND] SMALLINT NOT NULL,
+    [scr_dp] INT NULL
+);
+
+GO
