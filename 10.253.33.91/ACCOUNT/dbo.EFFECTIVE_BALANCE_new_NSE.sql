@@ -1,0 +1,71 @@
+-- Object: PROCEDURE dbo.EFFECTIVE_BALANCE_new_NSE
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+
+create proc [dbo].[EFFECTIVE_BALANCE_new_NSE]
+
+
+
+
+
+
+
+ (  
+
+
+
+
+
+
+
+@TODATE   VARCHAR (11)  
+
+
+
+
+
+
+
+) AS BEGIN   
+
+
+
+
+
+SELECT CLTCODE ,SUM(CASE WHEN DRCR='D' THEN VAMT ELSE VAMT*-1 END) BAL INTO #BAL4
+
+FROM LEDGER WHERE VDT >='2018-04-01'   AND EDT <= @TODATE + ' 23:59:59' 
+
+GROUP BY CLTCODE 
+
+
+
+INSERT INTO #BAL4
+
+SELECT CLTCODE ,SUM(CASE WHEN DRCR='D' THEN VAMT*-1 ELSE VAMT END) FROM LEDGER
+
+ WHERE VDT < '2018-04-01'  AND EDT > @TODATE + ' 23:59:59'   AND  VTYP in ( '15' ,'35')
+
+ GROUP BY CLTCODE 
+
+ 
+
+ select CLTCODE,SUM(BAL) BAL from #BAL4   
+
+where    cltcode IN (SELECT * FROM MTFTRADE.dbo.oldnew) 
+
+GROUP BY CLTCODE
+
+order by CLTCODE
+
+
+
+
+
+
+
+END
+
+GO

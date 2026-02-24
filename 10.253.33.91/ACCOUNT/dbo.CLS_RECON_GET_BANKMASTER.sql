@@ -1,0 +1,15 @@
+-- Object: PROCEDURE dbo.CLS_RECON_GET_BANKMASTER
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+
+CREATE PROCEDURE [dbo].[CLS_RECON_GET_BANKMASTER]
+AS
+BEGIN
+
+SELECT * FROM RECON_BANK_MASTER_VW
+
+END
+
+GO

@@ -1,0 +1,53 @@
+-- Object: PROCEDURE dbo.NBFC_SaleReversal
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+CREATE Proc [dbo].[NBFC_SaleReversal] (@Sauda_Date Varchar(11), @ForParty Varchar(10) = '%' ) As  
+
+Declare @Party_Code Varchar(10),
+@NBFCCUR Cursor
+
+SELECT EXCHANGE, PARTY_CODE, SCRIP_CD, SERIES, BSECODE
+INTO #NBFC_SALEREVERSAL FROM NBFC_TRANS_PROCESS
+WHERE left(convert(varchar,MarginDate,109),11) = @Sauda_Date
+AND left(convert(varchar,SAUDA_DATE,109),11) = @Sauda_Date 
+AND BILLFLAG = 5 And Party_Code Like @ForParty
+GROUP BY EXCHANGE, PARTY_CODE, SCRIP_CD, SERIES, BSECODE
+
+IF (SELECT ISNULL(COUNT(1),0) FROM #NBFC_SALEREVERSAL ) > 0 
+BEGIN
+	UPDATE MSAJAG.DBO.SETTLEMENT SET AUCTIONPART = 'N'
+	FROM #NBFC_SALEREVERSAL N
+	WHERE left(convert(varchar,SAUDA_DATE,109),11) = @Sauda_Date 
+	AND MSAJAG.DBO.SETTLEMENT.PARTY_CODE = N.PARTY_CODE
+	AND MSAJAG.DBO.SETTLEMENT.SCRIP_CD = N.SCRIP_CD
+	AND MSAJAG.DBO.SETTLEMENT.SERIES = N.SERIES
+	AND BILLFLAG = 5
+	AND AUCTIONPART = 'MF'
+	AND EXCHANGE = 'NSE'
+
+	UPDATE BSEDB.DBO.SETTLEMENT SET AUCTIONPART = 'N'
+	FROM #NBFC_SALEREVERSAL N
+	WHERE left(convert(varchar,SAUDA_DATE,109),11) = @Sauda_Date 
+	AND BSEDB.DBO.SETTLEMENT.PARTY_CODE = N.PARTY_CODE
+	AND BSEDB.DBO.SETTLEMENT.SCRIP_CD = N.SCRIP_CD
+	AND BSEDB.DBO.SETTLEMENT.SERIES = N.SERIES
+	AND BILLFLAG = 5
+	AND AUCTIONPART = 'MF'
+	AND EXCHANGE = 'BSE'
+END
+
+Set @NBFCCUR = cursor for
+Select Distinct Party_Code From #NBFC_SALEREVERSAL
+Order By Party_Code
+open @NBFCCUR
+Fetch Next From @NBFCCUR into @Party_Code
+While @@Fetch_Status = 0 
+Begin
+	Exec NBFC_RearrangeFlag @Sauda_Date, @Party_Code
+	Fetch Next From @NBFCCUR into @Party_Code
+End
+Close @NBFCCUR
+DeAllocate @NBFCCUR
+
+GO

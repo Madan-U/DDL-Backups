@@ -1,0 +1,177 @@
+-- Object: PROCEDURE dbo.LEDGER_GL_MFSS_NXT_Bkp29Nov2019
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+		
+
+--select cltcode from ledger where vtyp = '3' and booktype = '01' and vno = '201900036402' and cltcode <> '48DSB'
+
+		--ANAND1.DBO.ACCOUNT.LEDGER_GL_MFSS_NXT 'Apr  1 2019', 'Jul 23 2019', '48DSB', '48DSB'
+
+
+
+	CREATE PROC LEDGER_GL_MFSS_NXT_Bkp29Nov2019
+
+		(
+
+	@SDATE VARCHAR(11),                    
+	@EDATE VARCHAR(11),                     
+	@FDATE VARCHAR(11),                   
+	@TDATE VARCHAR(11), 
+
+		@FCODE VARCHAR(10),
+
+		@TCODE VARCHAR(10)
+
+		 
+
+		) 
+
+		 AS
+
+
+
+DECLARE          
+@@OPENDATE   AS VARCHAR(11) 
+--DECLARE  
+--@SDATE VARCHAR(11) = 'Apr  1 2019'
+
+--declare @FDATE VARCHAR(11) = 'Apr  1 2019'
+
+--declare @FCODE VARCHAR(10) = '48dsb'
+
+ 
+ SELECT @@OPENDATE = (SELECT LEFT(CONVERT(VARCHAR,ISNULL(SDTCUR,0),109),11) FROM PARAMETER (NOLOCK) WHERE @SDATE BETWEEN SDTCUR AND LDTCUR) 
+         
+   IF @SDATE = @FDATE          
+   BEGIN          
+    IF @@OPENDATE = @FDATE           
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+     FROM LEDGER  (NOLOCK)           
+     WHERE CLTCODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+     GROUP BY CLTCODE          
+    END          
+    ELSE          
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED            
+     SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+     FROM LEDGER  (NOLOCK)           
+     WHERE CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+     GROUP BY CLTCODE          
+    END          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+    FROM LEDGER  (NOLOCK)           
+    WHERE CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+    GROUP BY CLTCODE          
+   END          
+
+
+		
+
+		BEGIN 
+
+
+
+         SELECT  L.BOOKTYPE, VOUDT=L.VDT, EFFDT=L.EDT, ISNULL(SHORTDESC,'') SHORTDESC, 
+
+		 DRAMT=(CASE WHEN UPPER(L.DRCR) = 'D' THEN VAMT ELSE 0 END),  
+
+		 CRAMT=(CASE WHEN UPPER(L.DRCR) = 'C' THEN VAMT ELSE 0 END), 
+
+		 L.VNO,
+
+		 DDNO= ISNULL((SELECT MAX(DDNO) FROM LEDGER1 L1 WHERE L1.VNO=L.VNO AND L1.VTYP=L.VTYP 
+
+		 AND L1.BOOKTYPE=L.BOOKTYPE AND L1.LNO = L.LNO),''),
+
+		 NARRATION = REPLACE(REPLACE(L.NARRATION,'''',''),'""','') ,
+
+		  L.CLTCODE, A.LONGNAME, VTYP, L.BOOKTYPE, CONVERT(VARCHAR,L.VDT,103) VDT, 
+
+		  CONVERT(VARCHAR,L.EDT,103) EDT, L.ACNAME, EDIFF=DATEDIFF(D,L.EDT,GETDATE()) 
+
+		  FROM LEDGER L  (NOLOCK) LEFT OUTER JOIN ACMAST A  (NOLOCK) 
+
+		  ON L.CLTCODE = A.CLTCODE , VMAST  (NOLOCK)     
+
+		  WHERE L.VDT >= @FDATE  AND   L.VDT <= @TDATE +' 23:59:59'                      
+
+		  AND L.VTYP <> 18 
+
+		  AND L.CLTCODE = A.CLTCODE 
+
+		--AND ACCAT = '4'
+
+		  AND L.CLTCODE >= @FCODE   AND L.CLTCODE <= @TCODE  
+
+		  AND L.VTYP = VTYPE 
+
+		  ORDER BY L.CLTCODE, VOUDT, L.VTYP DESC, L.VNO 
+
+
+
+      END
+
+                          
+
+
+
+   --        SELECT L.BOOKTYPE, VOUDT=L.VDT, EFFDT=L.EDT, ISNULL(SHORTDESC,'') SHORTDESC,
+
+		 --   DRAMT=(CASE WHEN UPPER(L.DRCR) = 'D' THEN VAMT ELSE 0 END), 
+
+			-- CRAMT=(CASE WHEN UPPER(L.DRCR) = 'C' THEN VAMT ELSE 0 END),
+
+			--  L.VNO,DDNO= ISNULL((SELECT MAX(DDNO) FROM LEDGER1 L1 WHERE L1.VNO=L.VNO AND L1.VTYP=L.VTYP AND L1.BOOKTYPE=L.BOOKTYPE AND L1.LNO = L.LNO),'')
+
+			--  ,NARRATION = REPLACE(REPLACE(L.NARRATION,'''',''),'""','') ,
+
+			--   L.CLTCODE, A.LONGNAME, VTYP, L.BOOKTYPE, 
+
+			--   CONVERT(VARCHAR,L.VDT,103) VDT, 
+
+			--   CONVERT(VARCHAR,L.EDT,103) EDT, 
+
+			--   L.ACNAME, EDIFF=DATEDIFF(D,L.EDT,GETDATE()) 
+
+			                              
+
+			--	FROM LEDGER L  (NOLOCK) ,VMAST V (NOLOCK) , 
+
+			--	LEDGER2 L2  (NOLOCK) LEFT OUTER JOIN ACMAST A 
+
+			--	ON L2.CLTCODE = A.CLTCODE, COSTMAST C (NOLOCK)  
+
+			--	WHERE L.VDT >= '2019-04-01' AND    L.VDT <= '2019-07-23 23:59:59'  
+
+   --        AND L.VTYP <> 18 
+
+		 --  AND L2.CLTCODE >= '48DSB'
+
+		 --   AND L2.CLTCODE <= '48DSB' 
+
+			-- AND L.VNO = L2.VNO 
+
+		 --  AND L.LNO = L2.LNO
+
+			--AND L.VTYP = V.VTYPE 
+
+		 --  AND A.CLTCODE = L2.CLTCODE 
+
+		 --  --AND A.ACCAT = '4' 
+
+		 --  AND L.VTYP = L2.VTYPE 
+
+		 --  AND L.BOOKTYPE = L2.BOOKTYPE
+
+		    
+
+		 --  AND L2.COSTCODE = C.COSTCODE
+
+GO

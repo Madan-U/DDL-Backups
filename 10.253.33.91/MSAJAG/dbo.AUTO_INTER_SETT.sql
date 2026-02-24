@@ -1,0 +1,94 @@
+-- Object: PROCEDURE dbo.AUTO_INTER_SETT
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE PROC [dbo].[AUTO_INTER_SETT]  
+  
+AS  
+  
+SELECT B.PARTY_CODE,'INTER_SETT IS NO' AS [MESSAGE] INTO #INTER_SET FROM CLIENT_BROK_DETAILS A WITH (NOLOCK),Client_Details B WITH (NOLOCK)  
+WHERE InActive_From > GETDATE()  
+AND Inter_Sett <> 0   
+AND A.Cl_Code =B.cl_code  
+AND B.cl_type <> 'NRI'  
+UNION   
+SELECT PARTY_CODE ,'DEFAULT ID' AS [MESSAGE]FROM (  
+SELECT PARTY_CODE,COUNT(Cltdpid) AS C FROM [AngelDemat].MSAJAG.DBO.CLIENT4  
+WHERE DefDp =1  
+AND Depository IN ('CDSL','NSDL')  
+GROUP BY PARTY_CODE  
+HAVING COUNT(Cltdpid) >1  
+UNION   
+SELECT PARTY_CODE,COUNT(Cltdpid) AS C FROM [AngelDemat].BSEDB.DBO.CLIENT4  
+WHERE DefDp =1  
+AND Depository IN ('CDSL','NSDL')  
+GROUP BY PARTY_CODE  
+HAVING COUNT(Cltdpid) >1 )A  
+  
+DECLARE @BODYMSG NVARCHAR(MAX)      
+DECLARE @SUBJECT NVARCHAR(MAX)      
+DECLARE @TABLEHTML NVARCHAR(MAX)    
+DECLARE @MIX NVARCHAR(MAX)   
+  
+SET @SUBJECT = 'INTER_SETT AND DEFAULT ID REPORT'      
+  
+SET @TABLEHTML =       
+  
+N'<STYLE TYPE="TEXT/CSS">     
+#BOX-TABLE      
+{      
+FONT-FAMILY: "LUCIDA SANS UNICODE", "LUCIDA GRANDE", SANS-SERIF;      
+FONT-SIZE: 12PX;      
+TEXT-ALIGN: CENTER;      
+BORDER-COLLAPSE: COLLAPSE;      
+BORDER-TOP: 7PX SOLID #9BAFF1;      
+BORDER-BOTTOM: 7PX SOLID #9BAFF1;      
+}      
+#BOX-TABLE TH      
+{      
+FONT-SIZE: 13PX;      
+FONT-WEIGHT: NORMAL;      
+BACKGROUND: #B9C9FE;      
+BORDER-RIGHT: 2PX SOLID #9BAFF1;      
+BORDER-LEFT: 2PX SOLID #9BAFF1;      
+BORDER-BOTTOM: 2PX SOLID #9BAFF1;      
+COLOR: #039;      
+}      
+#BOX-TABLE TD      
+{      
+BORDER-RIGHT: 1PX SOLID #AABCFE;      
+BORDER-LEFT: 1PX SOLID #AABCFE;      
+BORDER-BOTTOM: 1PX SOLID #AABCFE;      
+COLOR: #669;      
+}      
+TR:NTH-CHILD(ODD) { BACKGROUND-COLOR:#EEE; }      
+TR:NTH-CHILD(EVEN) { BACKGROUND-COLOR:#FFF; }       
+</STYLE>'+       
+N'<H3><FONT COLOR="BLUE">INTER_SETT AND DEFAULT ID REPORT</H3>' +      
+N'<TABLE BORDER=1 >' +      
+N'<TR><TH>PARTY_CODE</TH>          
+<TH>MESSAGE</TH>           
+</TR>' +      
+  
+CAST ( (     
+     
+select TD = [PARTY_CODE],'',TD = [MESSAGE],''  
+  
+  
+ from #INTER_SET   
+   
+ FOR XML PATH('TR'), TYPE       
+  
+) AS NVARCHAR(MAX) ) +    
+N'</TABLE>'       
+  
+EXEC MSDB.DBO.SP_SEND_DBMAIL      
+@PROFILE_NAME ='DBA',  
+@RECIPIENTS='deepak.redekar@angelbroking.com' ,      
+--@RECIPIENTS='punit.verma@angelbroking.com' ,    
+@COPY_RECIPIENTS='punit.verma@angelbroking.com',      
+@SUBJECT = @SUBJECT,      
+@BODY = @TABLEHTML,       
+@BODY_FORMAT = 'HTML' ;
+
+GO

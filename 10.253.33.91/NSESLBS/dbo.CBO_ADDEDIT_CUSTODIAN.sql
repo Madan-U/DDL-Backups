@@ -1,0 +1,145 @@
+-- Object: PROCEDURE dbo.CBO_ADDEDIT_CUSTODIAN
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+
+
+
+
+
+CREATE        PROCEDURE [dbo].[CBO_ADDEDIT_CUSTODIAN]
+	@CUSTODIANCODE VARCHAR(15),
+	@SHORT_NAME VARCHAR(21),
+	@LONG_NAME VARCHAR(50),
+	@ADDRESS1 VARCHAR(50),
+	@ADDRESS2 VARCHAR(50),
+	@CITY VARCHAR(50),
+	@STATE VARCHAR(50),
+	@NATION VARCHAR(50),
+	@ZIP VARCHAR(10),
+	@FAX VARCHAR(10),
+	@OFF_PHONE1 VARCHAR(10),
+	@OFF_PHONE2 VARCHAR(10),
+	@EMAIL VARCHAR(10),
+	@CLTDPNO VARCHAR(16),
+	@DPID VARCHAR(16),
+	@SEBIREGNO VARCHAR(15),
+	@FLAG VARCHAR(1),
+	@STATUSID VARCHAR(25) = 'BROKER',
+	@STATUSNAME VARCHAR(25) = 'BROKER'
+AS
+	IF @STATUSID <> 'BROKER'
+		BEGIN
+			RAISERROR ('This Procedure is accessible to Broker', 16, 1)
+			RETURN
+		END
+	IF @FLAG <> 'A' AND @FLAG <> 'E' AND @FLAG <> 'D'
+		BEGIN
+			RAISERROR ('Add/Edit Flags Not Set Properly', 16, 1)
+			RETURN
+		END
+	IF @FLAG = 'E'
+		BEGIN
+			DELETE FROM
+				CUSTODIAN
+			WHERE
+				CUSTODIANCODE = @CUSTODIANCODE
+			INSERT INTO CUSTODIAN
+			(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+			)
+			VALUES
+			(
+				@CUSTODIANCODE,
+				@SHORT_NAME,
+				@LONG_NAME,
+				@ADDRESS1,
+				@ADDRESS2,
+				@CITY,
+				@STATE,
+				@NATION,
+				@ZIP,
+				@FAX,
+				@OFF_PHONE1,
+				@OFF_PHONE2,
+				@EMAIL,
+				@CLTDPNO,
+				@DPID,
+				@SEBIREGNO
+			)
+		END
+	ELSE IF @FLAG = 'A'
+	BEGIN
+		IF EXISTS (SELECT TOP 1 CUSTODIANCODE FROM CUSTODIAN WHERE CUSTODIANCODE = @CUSTODIANCODE)
+				BEGIN
+					RAISERROR ('Custodiancode already exists...', 16, 1)
+					RETURN
+				END	
+		
+                   	
+			INSERT INTO CUSTODIAN
+			(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+			)
+			VALUES
+			(
+				@CUSTODIANCODE,
+				@SHORT_NAME,
+				@LONG_NAME,
+				@ADDRESS1,
+				@ADDRESS2,
+				@CITY,
+				@STATE,
+				@NATION,
+				@ZIP,
+				@FAX,
+				@OFF_PHONE1,
+				@OFF_PHONE2,
+				@EMAIL,
+				@CLTDPNO,
+				@DPID,
+				@SEBIREGNO
+			)
+			
+	END
+             ELSE IF @FLAG = 'D'
+		BEGIN
+			DELETE FROM
+				CUSTODIAN
+			WHERE
+				CUSTODIANCODE = @CUSTODIANCODE
+		END
+
+GO

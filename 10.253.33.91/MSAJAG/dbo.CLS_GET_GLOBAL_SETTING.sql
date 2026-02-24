@@ -1,0 +1,13 @@
+-- Object: PROCEDURE dbo.CLS_GET_GLOBAL_SETTING
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+CREATE PROC [dbo].[CLS_GET_GLOBAL_SETTING]
+AS
+SELECT * FROM CLS_GLOBAL_SETTING, TBLGLOBALPARAMS
+
+--alter table TBLGLOBALPARAMS add  ALLOW_MULTI_LOGIN int
+
+GO

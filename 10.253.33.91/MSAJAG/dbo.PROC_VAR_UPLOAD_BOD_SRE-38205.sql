@@ -1,0 +1,129 @@
+-- Object: PROCEDURE dbo.PROC_VAR_UPLOAD_BOD_SRE-38205
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+ 
+CREATE PROC [dbo].[PROC_VAR_UPLOAD_BOD_SRE-38205]
+(
+@FILEDATE VARCHAR(11), 
+@FILEPATH VARCHAR(150), 
+@PROCID VARCHAR(50) = ''
+) 
+AS   
+Declare @strSql varchar(400),
+@DETAILKEY       VARCHAR(10),
+@RECCNT            INT
+   
+TRUNCATE TABLE VARDETAIL_TMP
+TRUNCATE TABLE  MG02_TMP
+	set @strSql = 'Bulk insert MG02_TMP from ''' + @FilePath  + ''' with ( ROWTERMINATOR = ''' + char(10) + ''' )'        
+	Exec(@strSql)  
+
+	Set @strSql = 'Bulk insert VARDETAIL_TMP from ''' + @FilePath  + '''  with ( FIELDTERMINATOR = '','', ROWTERMINATOR = ''0x0A'', FirstRow = 2 )'            
+	Exec(@strSql) 
+ 
+SELECT @DETAILKEY = ISNULL(.DBO.PIECE(FILETEXT,',',2),'0')     
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 10
+ 
+IF @DETAILKEY <> REPLACE(CONVERT(VARCHAR,CONVERT(DATETIME,@FILEDATE),103),'/','')
+                RETURN
+ 
+ 
+-- TO UPLOAD T DAY BOD VAR FILE ON T-1 DAY VARCONTROL
+DECLARE @FILEDATE_NEW VARCHAR(11), @DETAILKEY_NEW VARCHAR(10)
+SELECT @FILEDATE_NEW = MAX(START_DATE) FROM Sett_Mst WHERE Sett_Type = 'M' AND Start_Date = CONVERT(DATETIME,@FILEDATE)
+SELECT @DETAILKEY_NEW = REPLACE(CONVERT(VARCHAR,CONVERT(DATETIME,@FILEDATE_NEW),103),'/','')
+
+
+Delete FROM VARCONTROL where  Detailkey = @DETAILKEY_NEW
+Delete FROM VARDETAIL where  Detailkey = @DETAILKEY_NEW
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T-1 DAY
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T DAY VARCONTROL_BOD
+/*
+DECLARE @FILEDATE_NEWT VARCHAR(11), @DETAILKEY_NEWT VARCHAR(10)
+SELECT @FILEDATE_NEWT = MAX(START_DATE) FROM Sett_Mst WHERE Sett_Type = 'M' AND Start_Date = CONVERT(DATETIME,@FILEDATE)
+SELECT @DETAILKEY_NEWT = REPLACE(CONVERT(VARCHAR,CONVERT(DATETIME,@FILEDATE_NEWT),103),'/','')
+
+Delete FROM VARCONTROL_BOD where  Detailkey = @FILEDATE_NEWT
+Delete FROM VARDETAIL_BOD where  Detailkey =@DETAILKEY_NEWT
+*/
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T DAY
+ 
+SELECT @RECCNT = ISNULL(COUNT(1),0) FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 20
+-- TO UPLOAD T DAY BOD VAR FILE ON T-1 DAY VARCONTROL
+
+INSERT INTO VARCONTROL
+SELECT ISNULL(.DBO.PIECE(FILETEXT,',',1),0),
+                   @FILEDATE_NEW,
+                   ISNULL(.DBO.PIECE(FILETEXT,',',3),0),
+                   (CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN '0' ELSE ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') END),
+                   --(CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') ELSE ISNULL(.DBO.PIECE(FILETEXT,',',5),'0') END),
+                   @RECCNT,
+                   @DETAILKEY_NEW,
+                   'NSE', 'CM'         
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 10
+
+
+INSERT INTO VARDETAIL
+SELECT Rectype,    
+		Scrip_Cd,
+		Series, 
+		Isin,                
+		Secvar ,               
+		Indexvar,              
+		Appvar ,               
+		Secspecvar,            
+		--COLUMN9               
+		Varmarginrate,            
+		@DETAILKEY_NEW
+	    --'EQUITY'
+
+FROM VARDETAIL_TMP
+
+
+
+
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T-1 DAY VARCONTROL
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T DAY VARCONTROL
+/*
+INSERT INTO VARCONTROL_BOD
+SELECT ISNULL(.DBO.PIECE(FILETEXT,',',1),0),
+                   @FILEDATE_NEW,
+                   ISNULL(.DBO.PIECE(FILETEXT,',',3),0),
+                   (CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN '0' ELSE ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') END),
+                   --(CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') ELSE ISNULL(.DBO.PIECE(FILETEXT,',',5),'0') END),
+                   @RECCNT,
+                   @DETAILKEY_NEWT,
+                   'NSE', 
+				   'CM'         
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 10
+
+INSERT INTO VARDETAIL_BOD
+SELECT ISNULL(.DBO.PIECE(FILETEXT,',',1),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',2),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',3),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',4),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',5),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',6),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',7),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',8),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',10),0),
+                   @DETAILKEY_NEWT,
+				   'EQUITY'
+
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 20
+*/
+
+-- TO UPLOAD T DAY BOD VAR FILE ON T-1 DAY VARCONTROL
+
+GO

@@ -1,0 +1,333 @@
+-- Object: PROCEDURE dbo.acc_opbal_01042020
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+CREATE PROCEDURE [DBO].[ACC_OPBAL]          
+@SDATE VARCHAR(11),            /* AS MMM DD YYYY */          
+@EDATE VARCHAR(11),            /* AS MMM DD YYYY */          
+@FDATE VARCHAR(11),            /* AS MMM DD YYYY */          
+@TDATE VARCHAR(11),            /* AS MMM DD YYYY */          
+@FCODE VARCHAR(10),          
+@TCODE VARCHAR(10),          
+@STATUSID VARCHAR(30),          
+@STATUSNAME VARCHAR(30),          
+@BRANCH VARCHAR(10),          
+@SELECTIONBY VARCHAR(3),          
+@GROUPBY VARCHAR(10),          
+@SORTBY VARCHAR(50),          
+@REPORTNAME VARCHAR(30),          
+@REPORTOPT VARCHAR(10),          
+@FLD1 VARCHAR(10),          
+@FLD2 VARCHAR(10),          
+@FLD3 VARCHAR(10)          
+          
+AS          
+DECLARE          
+@@OPENDATE   AS VARCHAR(11)          
+          
+/* -------------------------------------------------------------------------- */          
+          
+IF @FDATE =''          
+BEGIN          
+   SELECT @FDATE = @SDATE          
+END          
+          
+IF @TDATE = ''          
+BEGIN          
+   SELECT @TDATE = @EDATE          
+END          
+          
+IF @REPORTNAME <> 'MARGINLEDGER'          
+BEGIN          
+ /* GET OPENDATE FROM SDATE, FDATE RECEIVED AS PARAMETER */          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+ SELECT @@OPENDATE = (SELECT LEFT(CONVERT(VARCHAR,ISNULL(SDTCUR,0),109),11) FROM PARAMETER (NOLOCK) WHERE @FDATE BETWEEN SDTCUR AND LDTCUR)           
+ --SELECT @@OPENDATE = ( SELECT LEFT(CONVERT(VARCHAR, ISNULL(MAX(VDT), 0), 109), 11) FROM LEDGER WHERE VTYP = 18 AND VDT < = @FDATE )            
+ --PRINT @@OPENDATE          
+        
+ /* -------------------------------------------------------------------------- */               
+ IF RTRIM(@BRANCH) = '' OR RTRIM(@BRANCH) = '%'           
+ BEGIN          
+  IF UPPER(@SELECTIONBY) = 'VDT'          
+  BEGIN          
+   IF @SDATE = @FDATE          
+   BEGIN          
+    IF @@OPENDATE = @FDATE           
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+     FROM LEDGER  (NOLOCK)           
+     WHERE CLTCODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+     GROUP BY CLTCODE          
+    END          
+    ELSE          
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED            
+     SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+     FROM LEDGER  (NOLOCK)           
+     WHERE CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+     GROUP BY CLTCODE          
+    END          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+    FROM LEDGER  (NOLOCK)           
+    WHERE CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+    GROUP BY CLTCODE          
+   END          
+  END          
+  ELSE          
+  BEGIN          
+   IF @SDATE = @FDATE AND @@OPENDATE = @FDATE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT CLTCODE, OPBAL = SUM(BALAMT)          
+    FROM LEDGER  (NOLOCK)           
+    WHERE CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+    GROUP BY CLTCODE          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT CLTCODE, OPBAL=SUM(OPBAL)          
+    FROM          
+    ( SELECT CLTCODE, OPBAL = SUM(BALAMT)          
+    FROM LEDGER  (NOLOCK)           
+    WHERE CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+    GROUP BY CLTCODE          
+    UNION ALL          
+    SELECT CLTCODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END)          
+    FROM LEDGER  (NOLOCK)           
+    WHERE CLTCODE = @FCODE AND EDT >= @@OPENDATE + ' 00:00:00' AND EDT < @FDATE AND VTYP <> 18          
+    GROUP BY CLTCODE ) T          
+    GROUP BY CLTCODE          
+   END          
+  END          
+ END        
+        
+        
+ ELSE IF UPPER(@STATUSID) = 'REGION'        
+ BEGIN          
+  IF UPPER(@SELECTIONBY) = 'VDT'          
+  BEGIN          
+   IF @SDATE = @FDATE          
+   BEGIN          
+    IF @@OPENDATE = @FDATE           
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+     FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R           
+     WHERE L2.CLTCODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+     AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+     AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(R.BRANCH_CODE)        
+     GROUP BY L2.CLTCODE          
+    END          
+    ELSE          
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+     FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R              
+     WHERE L2.CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+     AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+     AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(R.BRANCH_CODE)         
+     GROUP BY L2.CLTCODE          
+    END          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+    FROM LEDGER2 L2 (NOLOCK) , LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R              
+    WHERE L2.CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) =UPPER(R.BRANCH_CODE)        
+    GROUP BY L2.CLTCODE          
+   END          
+  END          
+  ELSE          
+  BEGIN          
+   IF @SDATE = @FDATE AND @@OPENDATE = @FDATE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT L2.CLTCODE, OPBAL = SUM(CAMT)          
+    FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R              
+    WHERE L2.CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(R.BRANCH_CODE)         
+    GROUP BY L2.CLTCODE          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT T.CLTCODE, OPBAL=SUM(OPBAL)          
+    FROM          
+    ( SELECT L2.CLTCODE, OPBAL = SUM(CAMT)          
+    FROM LEDGER2 L2, LEDEGR L (NOLOCK) , COSTMAST CM (NOLOCK), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R              
+    WHERE L2.CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(R.BRANCH_CODE)          
+    GROUP BY L2.CLTCODE          
+    UNION ALL          
+    SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END), (SELECT BRANCH_CODE FROM MSAJAG.DBO.REGION WHERE REGIONCODE = @STATUSNAME) R             
+    FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+    WHERE L2.CLTCODE = @FCODE AND EDT >= @@OPENDATE + ' 00:00:00' AND EDT < @FDATE AND VTYPE <> 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(R.BRANCH_CODE)        
+    GROUP BY L2.CLTCODE ) T          
+    GROUP BY T.CLTCODE          
+   END          
+  END          
+ END        
+        
+ ELSE          
+ BEGIN          
+  IF UPPER(@SELECTIONBY) = 'VDT'          
+  BEGIN          
+   IF @SDATE = @FDATE          
+   BEGIN          
+    IF @@OPENDATE = @FDATE           
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+     FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+     WHERE L2.CLTCODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+     AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+     AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+     GROUP BY L2.CLTCODE          
+    END          
+    ELSE          
+    BEGIN          
+     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+     SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+     FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+     WHERE L2.CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+     AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+     AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+     GROUP BY L2.CLTCODE          
+    END          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+    FROM LEDGER2 L2 (NOLOCK) , LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+    WHERE L2.CLTCODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+    GROUP BY L2.CLTCODE          
+   END          
+  END          
+  ELSE          
+  BEGIN          
+   IF @SDATE = @FDATE AND @@OPENDATE = @FDATE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT L2.CLTCODE, OPBAL = SUM(CAMT)          
+    FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+    WHERE L2.CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+    GROUP BY L2.CLTCODE          
+   END          
+   ELSE          
+   BEGIN          
+    SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+    SELECT T.CLTCODE, OPBAL=SUM(OPBAL)          
+    FROM          
+    ( SELECT L2.CLTCODE, OPBAL = SUM(CAMT)          
+    FROM LEDGER2 L2, LEDEGR L (NOLOCK) , COSTMAST CM (NOLOCK)           
+    WHERE L2.CLTCODE = @FCODE AND EDT LIKE @@OPENDATE + '%' AND VTYPE = 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+    GROUP BY L2.CLTCODE          
+    UNION ALL          
+    SELECT L2.CLTCODE, OPBAL = SUM( CASE WHEN UPPER(L2.DRCR) = 'D' THEN CAMT ELSE -CAMT END)          
+    FROM LEDGER2 L2 (NOLOCK), LEDGER L (NOLOCK) , COSTMAST CM (NOLOCK)           
+    WHERE L2.CLTCODE = @FCODE AND EDT >= @@OPENDATE + ' 00:00:00' AND EDT < @FDATE AND VTYPE <> 18          
+    AND L2.VTYPE = L.VTYP AND L2.BOOKTYPE = L.BOOKTYPE AND L2.VNO = L.VNO AND L2.LNO = L.LNO          
+    AND L2.COSTCODE = CM.COSTCODE AND UPPER(RTRIM(CM.COSTNAME)) = UPPER(RTRIM(@BRANCH))          
+    GROUP BY L2.CLTCODE ) T          
+    GROUP BY T.CLTCODE          
+   END          
+  END          
+ END          
+END          
+          
+          
+IF @REPORTNAME = 'MARGINLEDGER'          
+BEGIN          
+/* GET OPENDATE FROM SDATE, FDATE RECEIVED AS PARAMETER */          
+   IF UPPER(@SELECTIONBY) = 'VDT'          
+      BEGIN          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+         SELECT @@OPENDATE = ( SELECT LEFT(CONVERT(VARCHAR,ISNULL(MAX(VDT),0),109),11) FROM MARGINLEDGER (NOLOCK)  WHERE VTYP = 18 AND VDT <= @FDATE )          
+      END          
+   ELSE          
+      BEGIN          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+         SELECT @@OPENDATE = ( SELECT LEFT(CONVERT(VARCHAR,ISNULL(MAX(VDT),0),109),11) FROM MARGINLEDGER  (NOLOCK) WHERE VTYP = 18 AND VDT <= @FDATE )          
+   END          
+          
+/* -------------------------------------------------------------------------- */               
+   IF UPPER(@SELECTIONBY) = 'VDT'          
+      BEGIN          
+         IF @SDATE = @FDATE          
+            BEGIN          
+  IF @@OPENDATE = @FDATE           
+  BEGIN          
+  SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+                SELECT CLTCODE=PARTY_CODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN AMOUNT ELSE -AMOUNT END)          
+                FROM MARGINLEDGER  (NOLOCK)           
+                WHERE PARTY_CODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+                GROUP BY PARTY_CODE          
+  END          
+  ELSE          
+  BEGIN          
+  SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED               
+  SELECT CLTCODE=PARTY_CODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN AMOUNT ELSE -AMOUNT END)          
+                FROM MARGINLEDGER  (NOLOCK)           
+                WHERE PARTY_CODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+                GROUP BY PARTY_CODE          
+  END          
+            END          
+         ELSE          
+            BEGIN          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED              
+ SELECT CLTCODE=PARTY_CODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN AMOUNT ELSE -AMOUNT END)          
+               FROM MARGINLEDGER  (NOLOCK)           
+               WHERE PARTY_CODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE           
+               GROUP BY PARTY_CODE          
+            END          
+      END          
+   ELSE          
+      BEGIN          
+         IF @SDATE = @FDATE AND @@OPENDATE = @FDATE          
+            BEGIN          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+               SELECT CLTCODE=PARTY_CODE, OPBAL = SUM(SETT_NO)          
+               FROM MARGINLEDGER  (NOLOCK)           
+               WHERE PARTY_CODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+               GROUP BY PARTY_CODE          
+            END          
+         ELSE          
+            BEGIN          
+ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED          
+               SELECT CLTCODE, OPBAL=SUM(OPBAL)          
+               FROM          
+               ( SELECT CLTCODE=PARTY_CODE, OPBAL = SUM(SETT_NO)          
+                 FROM MARGINLEDGER  (NOLOCK)           
+                 WHERE PARTY_CODE = @FCODE AND VDT LIKE @@OPENDATE + '%' AND VTYP = 18          
+                 GROUP BY PARTY_CODE          
+                 UNION ALL          
+                 SELECT CLTCODE=PARTY_CODE, OPBAL = SUM( CASE WHEN UPPER(DRCR) = 'D' THEN AMOUNT ELSE -AMOUNT END)          
+                 FROM MARGINLEDGER  (NOLOCK)           
+                 WHERE PARTY_CODE = @FCODE AND VDT >= @@OPENDATE + ' 00:00:00' AND VDT < @FDATE AND VTYP <> 18          
+                 GROUP BY PARTY_CODE) T          
+               GROUP BY CLTCODE          
+            END          
+      END          
+END
+
+GO

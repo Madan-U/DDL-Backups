@@ -1,0 +1,25 @@
+-- Object: PROCEDURE dbo.ALBMOLDMARGIN
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+/****** Object:  Stored Procedure dbo.ALBMOLDMARGIN    Script Date: 3/17/01 9:55:43 PM ******/
+
+/****** Object:  Stored Procedure dbo.ALBMOLDMARGIN    Script Date: 3/21/01 12:49:59 PM ******/
+
+/****** Object:  Stored Procedure dbo.ALBMOLDMARGIN    Script Date: 20-Mar-01 11:38:42 PM ******/
+
+/****** Object:  Stored Procedure dbo.ALBMOLDMARGIN    Script Date: 2/5/01 12:06:06 PM ******/
+
+/****** Object:  Stored Procedure dbo.ALBMOLDMARGIN    Script Date: 12/27/00 8:58:42 PM ******/
+
+CREATE PROCEDURE ALBMOLDMARGIN (@SETT_NO VARCHAR(7),@SETT_TYPE VARCHAR(2), @PARTY VARCHAR(10)) AS
+SELECT SETT_NO ,SETT_TYPE,PARTY_CODE,SCRIP_CD,SERIES = (CASE WHEN SETT_TYPE = 'L' THEN 'EQ' ELSE 'BE' END ),
+fIXMARGIN = ABS((ISNULL(( SELECT fixmargin FROM MARGIN1 WHERE SETT_NO=S.SETT_NO AND SETT_TYPE = S.SETT_TYPE ),0)*(SUM(PQTY)-SUM(SQTY))/100 ))  , 
+ADDMAR = ABS(ISNULL(( SELECT AddMargin*(SUM(PQTY)-SUM(SQTY))/100 FROM MARGIN2 
+WHERE SETT_TYPE = S.SETT_TYPE AND SCRIP_CD = S.SCRIP_CD and sett_no =S.sett_no ),0))
+FROM ALBMPOS S 
+WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND PARTY_CODE = @PARTY
+GROUP BY SETT_NO ,SETT_TYPE,PARTY_CODE,SCRIP_CD
+
+GO

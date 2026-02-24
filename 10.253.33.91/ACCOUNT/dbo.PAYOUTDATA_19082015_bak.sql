@@ -1,0 +1,239 @@
+-- Object: PROCEDURE dbo.PAYOUTDATA_19082015_bak
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+CREATE proc PAYOUTDATA (      
+      
+@FROMDATE VARCHAR(11),      
+@TODATE   VARCHAR(11)      
+)AS      
+BEGIN       
+ SELECT * INTO #TEMP FROM (     
+  SELECT   
+ [EXCHANGE]='BSE',      
+   [BOOKTYPE]=L.BOOKTYPE ,   
+ 
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt    
+      
+      
+FROM [ANAND].ACCOUNT_AB.DBO.LEDGER L ,[ANAND].ACCOUNT_AB.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'BSE' AS EXCHANGE,L.BOOKTYPE  ,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt 
+ FROM [ANAND].ACCOUNT_AB.DBO.LEDGER L, [ANAND].ACCOUNT_AB.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+-----NSE----    
+UNION ALL    
+  SELECT  
+  [EXCHANGE]='NSE',      
+  [BOOKTYPE]=L.BOOKTYPE ,    
+  
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt     
+      
+      
+FROM [ANAND1].ACCOUNT.DBO.LEDGER L , [ANAND1].ACCOUNT.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'NSE' AS EXCHANGE ,L.BOOKTYPE , CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt  
+ FROM [ANAND1].ACCOUNT.DBO.LEDGER L, [ANAND1].ACCOUNT.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+---NSEFO---    
+UNION all    
+ SELECT   
+ [EXCHANGE]='NSEFO',      
+   [BOOKTYPE]=L.BOOKTYPE ,   
+
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt     
+      
+      
+FROM [ANGELFO].ACCOUNTFO.DBO.LEDGER L , [ANGELFO].ACCOUNTFO.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'NSEFO' AS EXCHANGE,L.BOOKTYPE,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt
+ FROM [ANGELFO].ACCOUNTFO.DBO.LEDGER L, [ANGELFO].ACCOUNTFO.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+---NSECURFO---    
+UNION all    
+ SELECT  
+ [EXCHANGE]='NSECURFO',      
+  [BOOKTYPE]=L.BOOKTYPE,     
+  
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt    
+      
+      
+FROM [ANGELFO].ACCOUNTCURFO.DBO.LEDGER L , [ANGELFO].ACCOUNTCURFO.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'NSECURFO' AS EXCHANGE,L.BOOKTYPE,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt  
+ FROM [ANGELFO].ACCOUNTCURFO.DBO.LEDGER L, [ANGELFO].ACCOUNTCURFO.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+---MCDX---    
+    
+UNION all    
+ SELECT   
+ [EXCHANGE]='MCDX',
+ [BOOKTYPE]=L.BOOKTYPE,    
+    
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt     
+     
+      
+      
+FROM [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER L , [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'MCDX' AS EXCHANGE ,L.BOOKTYPE  ,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt 
+ FROM [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER L, [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+---MCDXCDS--    
+UNION all    
+ SELECT  
+ [EXCHANGE]='MCDXCDS',      
+  [BOOKTYPE]=L.BOOKTYPE,    
+  
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt     
+      
+      
+FROM [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER L , [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'MCDXCDS' AS EXCHANGE ,L.BOOKTYPE   ,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt
+ FROM [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER L, [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+---NCDX--    
+    
+UNION all    
+ SELECT  
+ [EXCHANGE]='NCDX',      
+  [BOOKTYPE]=L.BOOKTYPE ,    
+  
+[CLTCODE]=CLTCODE,      
+[VDT]=L.VDT,      
+[vno]= L.VNO,      
+[NARRATION]=L.NARRATION,      
+[VAMT]=L.VAMT,    
+[DRCR]=L.DRCR,      
+[DDNO]=L1.ddno,      
+[vtyp]=L.VTYP,      
+[reldt]=L1.reldt     
+      
+      
+FROM [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER L , [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='D' AND L.VTYP =3  AND L.vdt> =@FROMDATE    
+and L.vdt< = @TODATE + ' 23:59:59:999' and L1.reldt='1900-01-01 00:00:00.000'    
+UNION ALL      
+    
+SELECT 'NCDX' AS EXCHANGE ,L.BOOKTYPE  ,CLTCODE,L.vdt,L.VNO,L.narration,L.vamt,L.DRCR,L1.ddno,    
+ L.vtyp,L1.reldt 
+ FROM [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER L, [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER1 L1 (NOLOCK)    
+WHERE L.VNO=L1.VNO AND L.VTYP=L1.VTYP AND L.BOOKTYPE=L1.BOOKTYPE     
+AND L.DRCR ='C' AND L.VTYP =3  AND L.vdt> =@FROMDATE and L1.reldt='1900-01-01 00:00:00.000'    
+and L.vdt< = @TODATE + ' 23:59:59:999'     
+    
+    
+) A      
+    
+    
+SELECT a.exchange, b.short_name,b.region,b.branch_cd,b.sub_broker,b.Bank_Name,b.AC_Num,A.booktype,a.cltcode,
+a.vdt,a.vno,a.narration,a.vamt,a.drcr,a.ddno,a.vtyp,a.reldt
+  FROM #TEMP A    
+LEFT OUTER JOIN    
+msajag.dbo.client_details B on a.cltcode = b.cl_code ORDER BY EXCHANGE    
+    
+      
+END      
+      
+      
+---EXEC PAYOUTDATA 'JUN  1 2015','JUN 16 2015'
+
+GO

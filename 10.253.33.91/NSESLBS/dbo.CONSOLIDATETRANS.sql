@@ -1,0 +1,281 @@
+-- Object: PROCEDURE dbo.CONSOLIDATETRANS
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+CREATE PROC CONSOLIDATETRANS
+	@FORMDATA VARCHAR(8000),
+	@AFTERBEFORE VARCHAR(1),
+	@STATUSNAME VARCHAR(50),
+	@MODULE VARCHAR(100)
+
+AS
+
+/*
+EXEC CONSOLIDATETRANS 'ISettleMent,0560840,Z02153,,SYNDIBANK,EQ,04/08/2006,,,0,2,2,65.4996,64.9100,64.9100,INST           ,N|', 'SYSTEM'
+BEGIN TRAN
+EXEC CONSOLIDATETRANS 'ISettleMent,0000024,UTIBK     ,,EASUNREYRL,EQ,01/06/2007,,,0,2,2,747.0000,747.0500,747.0500,dvp,N', 'Y', 'AshokS/Broker/127.0.0.1', '/InsApp/innerReport.aspx'
+EXEC CONSOLIDATETRANS 'Trade,,101501    ,,DLF       ,EQ,06/07/2007,,,0,2,1,573.4000,0,0,06386,''|', 'N', 'AshokS/Broker/127.0.0.1', '/InsApp/innerReport.aspx'
+EXEC Nse_Inst_Consolidation_brokReCal 'UTIBK','EASUNREYRL', 'Jun  1 2007', 'N', 'dvp', '%', 'EQ', '0000024', 'AshokS/Broker/127.0.0.1', '/InsApp/innerReport.aspx'
+ROLLBACK
+*/
+
+	DECLARE
+		@TABLENAME VARCHAR(30),
+		@CONTRACTNO VARCHAR(7),
+		@PARTYCODE VARCHAR(10),
+		@PARTICIPANT VARCHAR(30),
+		@TERMID VARCHAR(30),
+		@SCRIPCD VARCHAR(10),
+		@SERIES VARCHAR(2),
+		@SAUDADATE VARCHAR(10),
+		@SAUDA_DATE VARCHAR(11),
+		@ORDERNO VARCHAR(16),
+		@TRADENO VARCHAR(14),
+		@SETTTYPE VARCHAR(2),
+		@SELLBUY VARCHAR(1),
+		@MKTRATE VARCHAR(20),
+		@NEWNETRATE NUMERIC(18, 4),
+		@OLDNETRATE NUMERIC(18, 4),
+		@RECORD VARCHAR(2000),
+		@RECNO INT,
+		@OPTION VARCHAR(1),
+		@LEVEL INT,
+		@SQL VARCHAR(2000),
+		@CALCBROK VARCHAR(2000)
+	SET @RECNO = 1
+	WHILE 1 = 1
+		BEGIN
+			SET @RECORD = .dbo.PIECE(@FORMDATA, '|', @RECNO)
+			IF @RECORD IS NOT NULL AND @RECORD <> ''
+				BEGIN
+					SET @CALCBROK = ''
+					SET @LEVEL = CONVERT(INT, LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 11))))
+
+					SET @TABLENAME = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 1)))
+					SET @CONTRACTNO = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 2)))
+					SET @PARTYCODE = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 3)))
+					SET @TERMID = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 4)))
+					SET @SCRIPCD = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 5)))
+					SET @SERIES = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 6)))
+					SET @SAUDADATE = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 7)))
+					SET @SAUDA_DATE = CONVERT(VARCHAR(11), CONVERT(DATETIME, @SAUDADATE, 103), 109)
+					IF @LEVEL = 3 OR @LEVEL = 4
+						BEGIN
+							SET @ORDERNO = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 8)))
+						END
+					IF @LEVEL = 4
+						BEGIN
+							SET @TRADENO = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 9)))
+						END
+					SET @SELLBUY = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 12)))
+					SET @OPTION = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 10)))
+					IF @OPTION = '0'
+						BEGIN
+							SET @MKTRATE = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 13)))
+							SET @PARTICIPANT = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 16)))
+							SET @SETTTYPE = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 17)))
+							SET @NEWNETRATE = CONVERT(NUMERIC(18, 4), LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 14))))
+							SET @OLDNETRATE = CONVERT(NUMERIC(18, 4), LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 15))))
+						END
+					IF @OPTION = '1'
+						BEGIN
+							SET @PARTICIPANT = LTRIM(RTRIM(.dbo.PIECE(@RECORD, ',', 13)))
+						END
+					/*SELECT 'SETT_TYPE ' + @SETTTYPE
+					SELECT 'TABLENAME ' + @TABLENAME
+					SELECT 'CONTRACTNO ' + @CONTRACTNO
+					SELECT 'PARTYCODE ' + @PARTYCODE
+					SELECT 'TERMID ' + @TERMID
+					SELECT 'SCRIPCD ' + @SCRIPCD
+					SELECT 'SERIES ' + @SERIES
+					SELECT 'SAUDA DATE ' + @SAUDA_DATE
+					SELECT 'SELLBUY ' + @SELLBUY
+					SELECT 'OPTION ' + @OPTION
+					SELECT 'PARTICIPANT ' + @PARTICIPANT
+					SELECT 'MARKETRATE ' + @MKTRATE
+					SELECT 'PARTICIPANT ' + @PARTICIPANT*/
+					--RETURN
+					IF @OPTION = '0'
+						BEGIN
+							IF @AFTERBEFORE = 'Y'
+								BEGIN
+									IF @NEWNETRATE <> @OLDNETRATE
+										BEGIN
+											PRINT '1'
+											SET @CALCBROK =  + "EXEC CALCULATE_BROKERAGE '" + @RECORD + "'"
+											EXEC (@CALCBROK)
+											EXEC STT_CHARGES_FINAL @SETTTYPE, @SAUDA_DATE, @PARTYCODE, @PARTYCODE
+										END
+									ELSE
+										BEGIN
+											PRINT '2'
+											SET @SQL = "UPDATE " + @TABLENAME + " "
+											SET @SQL = @SQL + "SET DUMMY2 = 1, MARKETRATE = " + @MKTRATE + " "
+											SET @SQL = @SQL + "WHERE PARTY_CODE = '" + @PARTYCODE + "' AND SCRIP_CD = '" + @SCRIPCD + "' "
+											SET @SQL = @SQL + "AND SERIES = '" + @SERIES + "' AND SELL_BUY = " + @SELLBUY + " AND CONTRACTNO = '" + @CONTRACTNO + "' "
+											SET @SQL = @SQL + "AND PARTIPANTCODE = '" + @PARTICIPANT + "' "
+											IF @TERMID <> ''
+												BEGIN
+													SET @SQL = @SQL + "AND USER_ID = '" + @TERMID + "' "
+												END
+											SET @SQL = @SQL + "AND CONVERT(VARCHAR(10), SAUDA_DATE, 103) = '" + @SAUDADATE + "' "
+											IF @LEVEL = 3
+												BEGIN
+													SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+												END
+											IF @LEVEL = 4
+												BEGIN
+													SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+													SET @SQL = @SQL + "AND TRADE_NO = '" + @TRADENO + "' "
+												END
+											EXEC(@SQL)
+											SET @CALCBROK = "EXEC Nse_Inst_Consolidation_brokReCal '" + @PARTYCODE + "',"
+											SET @CALCBROK = @CALCBROK + "'" + @SCRIPCD + "', '" + CONVERT(VARCHAR(11), CONVERT(DATETIME, @SAUDADATE, 103), 109) + "', "
+											SET @CALCBROK = @CALCBROK + "'" + @SETTTYPE + "', '" + @PARTICIPANT + "', "
+											SET @CALCBROK = @CALCBROK + "'%', '" + @SERIES + "', '" + @CONTRACTNO + "', "
+											SET @CALCBROK = @CALCBROK + "'" + @STATUSNAME + "', '" + LTRIM(RTRIM(@MODULE)) + "'"
+											EXEC(@CALCBROK)
+											EXEC STT_CHARGES_FINAL @SETTTYPE, @SAUDA_DATE, @PARTYCODE, @PARTYCODE
+										END
+								END
+							ELSE
+								BEGIN
+									SET @SQL = "UPDATE " + @TABLENAME + " "
+									SET @SQL = @SQL + "SET DUMMY2 = 1, MARKETRATE = " + @MKTRATE + " "
+									SET @SQL = @SQL + "WHERE PARTY_CODE = '" + @PARTYCODE + "' AND SCRIP_CD = '" + @SCRIPCD + "' "
+									SET @SQL = @SQL + "AND SERIES = '" + @SERIES + "' AND SELL_BUY = " + @SELLBUY + " "
+									SET @SQL = @SQL + "AND PARTIPANTCODE = '" + @PARTICIPANT + "' "
+									SET @SQL = @SQL + "AND CONVERT(VARCHAR(10), SAUDA_DATE, 103) = '" + @SAUDADATE + "' "
+									IF @TERMID <> ''
+										BEGIN
+											SET @SQL = @SQL + "AND USER_ID = '" + @TERMID + "' "
+										END
+									IF @LEVEL = 3
+										BEGIN
+											SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+										END
+									IF @LEVEL = 4
+										BEGIN
+											SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+											SET @SQL = @SQL + "AND TRADE_NO = '" + @TRADENO + "' "
+										END
+									EXEC(@SQL)
+								END
+						END
+					ELSE
+						BEGIN
+							SET @SQL = "UPDATE " + @TABLENAME + " "
+							SET @SQL = @SQL + "SET DUMMY2 = 0, MARKETRATE = DUMMY1 "
+							SET @SQL = @SQL + "WHERE PARTY_CODE = '" + @PARTYCODE + "' AND SCRIP_CD = '" + @SCRIPCD + "' "
+							SET @SQL = @SQL + "AND SERIES = '" + @SERIES + "' AND SELL_BUY = " + @SELLBUY + " "
+							IF @AFTERBEFORE = 'Y'
+								BEGIN
+									SET @SQL = @SQL + "AND CONTRACTNO = '" + @CONTRACTNO + "' "
+								END
+							SET @SQL = @SQL + "AND PARTIPANTCODE = '" + @PARTICIPANT + "' "
+							IF @TERMID <> ''
+								BEGIN
+									SET @SQL = @SQL + "AND USER_ID = '" + @TERMID + "' "
+								END
+							SET @SQL = @SQL + "AND CONVERT(VARCHAR(10), SAUDA_DATE, 103) = '" + @SAUDADATE + "' "
+							IF @LEVEL = 3
+								BEGIN
+									SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+								END
+							IF @LEVEL = 4
+								BEGIN
+									SET @SQL = @SQL + "AND ORDER_NO = '" + @ORDERNO + "' "
+									SET @SQL = @SQL + "AND TRADE_NO = '" + @TRADENO + "' "
+								END
+							EXEC(@SQL)
+						END
+					SET @RECNO = @RECNO + 1
+					IF @OPTION = 0
+						BEGIN
+							INSERT INTO INST_LOG
+								(PARTY_CODE, NEW_PARTY_CODE, SAUDA_DATE, SETT_NO, SETT_TYPE,
+								SCRIP_CD, SERIES, ORDER_NO, TRADE_NO, SELL_BUY, CONTRACT_NO, NEW_CONTRACT_NO, 
+								BROKERAGE, NEW_BROKERAGE, MARKET_RATE, NEW_MARKET_RATE, NET_RATE, 
+								NEW_NET_RATE, QTY, NEW_QTY, PARTICIPANT_CODE, NEW_PARTICIPANT_CODE, 
+								USERNAME, MODULE, CALLED_FROM, TIMESTAMP, EXTRAFIELD3, EXTRAFIELD4, 
+								EXTRAFIELD5)
+							SELECT
+								PARTY_CODE = ISNULL(@PARTYCODE, ''),
+								NEW_PARTY_CODE = ISNULL(@PARTYCODE, ''),
+								SAUDA_DATE = CONVERT(DATETIME, @SAUDADATE, 103),
+								SETT_NO = '',
+								SETT_TYPE = ISNULL(@SETTTYPE, ''),
+								SCRIP_CD = ISNULL(@SCRIPCD, ''),
+								SERIES = ISNULL(@SERIES, ''),
+								ORDER_NO = '',
+								TRADE_NO = '',
+								SELL_BUY = ISNULL(@SELLBUY, ''),
+								CONTRACT_NO = ISNULL(@CONTRACTNO, ''),
+								NEW_CONTRACT_NO = ISNULL(@CONTRACTNO, ''),
+								BROKERAGE = 0,
+								NEW_BROKERAGE = 0,
+								MARKET_RATE = ISNULL(@MKTRATE, 0),
+								NEW_MARKET_RATE = ISNULL(@MKTRATE, 0),
+								NET_RATE = ISNULL(@OLDNETRATE, 0),
+								NEW_NET_RATE = ISNULL(@NEWNETRATE, 0),
+								QTY = 0,
+								NEW_QTY = 0,
+								PARTICIPANT_CODE = ISNULL(@PARTICIPANT, ''),
+								NEW_PARTICIPANT_CODE = '',
+								USERNAME = @STATUSNAME,
+								MODULE = @MODULE,
+								CALLED_FROM = 'CONSOLIDATION',
+								TIMESTAMP = GETDATE(),
+								EXTRAFIELD3 = 'CONSOLIDATETRANS',
+								EXTRAFIELD4 = '',
+								EXTRAFIELD5 = ''
+						END
+					ELSE
+						BEGIN
+							INSERT INTO INST_LOG
+								(PARTY_CODE, NEW_PARTY_CODE, SAUDA_DATE, SETT_NO, SETT_TYPE,
+								SCRIP_CD, SERIES, ORDER_NO, TRADE_NO, SELL_BUY, CONTRACT_NO, NEW_CONTRACT_NO, 
+								BROKERAGE, NEW_BROKERAGE, MARKET_RATE, NEW_MARKET_RATE, NET_RATE, 
+								NEW_NET_RATE, QTY, NEW_QTY, PARTICIPANT_CODE, NEW_PARTICIPANT_CODE, 
+								USERNAME, MODULE, CALLED_FROM, TIMESTAMP, EXTRAFIELD3, EXTRAFIELD4, 
+								EXTRAFIELD5)
+							SELECT
+								PARTY_CODE = ISNULL(@PARTYCODE, ''),
+								NEW_PARTY_CODE = ISNULL(@PARTYCODE, ''),
+								SAUDA_DATE = CONVERT(DATETIME, @SAUDADATE, 103),
+								SETT_NO = '',
+								SETT_TYPE = ISNULL(@SETTTYPE, ''),
+								SCRIP_CD = ISNULL(@SCRIPCD, ''),
+								SERIES = ISNULL(@SERIES, ''),
+								ORDER_NO = '',
+								TRADE_NO = '',
+								SELL_BUY = ISNULL(@SELLBUY, ''),
+								CONTRACT_NO = ISNULL(@CONTRACTNO, ''),
+								NEW_CONTRACT_NO = ISNULL(@CONTRACTNO, ''),
+								BROKERAGE = 0,
+								NEW_BROKERAGE = 0,
+								MARKET_RATE = ISNULL(@MKTRATE, 0),
+								NEW_MARKET_RATE = ISNULL(@MKTRATE, 0),
+								NET_RATE = ISNULL(@OLDNETRATE, 0),
+								NEW_NET_RATE = ISNULL(@NEWNETRATE, 0),
+								QTY = 0,
+								NEW_QTY = 0,
+								PARTICIPANT_CODE = ISNULL(@PARTICIPANT, ''),
+								NEW_PARTICIPANT_CODE = '',
+								USERNAME = @STATUSNAME,
+								MODULE = @MODULE,
+								CALLED_FROM = 'UNCONSOLIDATION',
+								TIMESTAMP = GETDATE(),
+								EXTRAFIELD3 = 'CONSOLIDATETRANS',
+								EXTRAFIELD4 = '',
+								EXTRAFIELD5 = ''
+						END
+				END
+			ELSE
+				BEGIN
+					BREAK
+				END
+		END
+
+GO

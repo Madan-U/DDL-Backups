@@ -1,0 +1,14 @@
+-- Object: PROCEDURE dbo.GST_NO_CLIENT
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+---SELECT cl_code,GST_NO,L_STATE FROM CLIENT_DETAILS WHERE GST_NO<>''
+
+
+CREATE PROCEDURE GST_NO_CLIENT
+AS 
+BEGIN
+SELECT cl_code,GST_NO,L_STATE FROM CLIENT_DETAILS WHERE GST_NO<>''
+END
+
+GO

@@ -1,0 +1,30 @@
+-- Object: PROCEDURE dbo.AUTO_PROC_CM_MARGIN_DWLOAD_JOB_BKP_04032023
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+CREATE PROC [dbo].[AUTO_PROC_CM_MARGIN_DWLOAD_JOB_BKP_04032023]     
+(    
+@SAUDA_DATE VARCHAR(11),    
+@BATCH_NO VARCHAR(2))    
+AS    
+    
+    
+BEGIN     
+ TRUNCATE TABLE tbl_AUTO_CM_MARGIN_DWLOAD    
+ INSERT INTO tbl_AUTO_CM_MARGIN_DWLOAD    
+ SELECT @SAUDA_DATE,@BATCH_NO    
+ EXEC msdb.DBO.SP_START_JOB 'AUTO_PROC_CM_MARGIN_DWLOAD'     
+  SELECT 'CASH MARGIN REPORING PROCESS STARTED FOR '+ @SAUDA_DATE + ' AND BATCH NO ' + '0'+@BATCH_NO +'.      
+  PLEASE WAIT FOR 1 MIN ...!     
+      
+  AFTER THAT    
+  Kindly Find the File ON Below Path:     
+  \\196.1.115.196\Backoffice\Automation\UPDATION\MARGIN_EXCHANGE_REPORTING\  ....!!!    
+      
+      BY |>#^;T' AS STATUS    
+      
+ END
+
+GO

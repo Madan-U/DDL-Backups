@@ -1,0 +1,234 @@
+-- Object: PROCEDURE dbo.MULTIBANK_CITRUS_Client
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+ 
+ CREATE PROC [dbo].[MULTIBANK_CITRUS_Client]
+ (@party_code Varchar(10),@Bank_name Varchar(50),@long_name VarChar(50), @branch_name Varchar(40),@DEFAULTBANK int,@IFSC_Code varchar(50),@micr varchar(50),@bank_acc_No varchar(50),@ACtype Varchar(1))
+ AS
+  --- Changes done to optimize
+ -- Jira Ticket No :https://angelbrokingpl.atlassian.net/browse/SRE-24703
+
+ Select BOPARTYCODE='K78026' ,BANK_NAME='' ,BANK_BRANCH='' ,DEFAULTBANK='' ,BANK_IFSC_CODE='' 
+ ,BANK_MICR_CODE=''  ,BANK_ACC_NO='' ,BANK_AC_TYPE=  'Savings'  ,Long_name=''
+ ,Exchange,Segment into #temp 
+ FROM MSAJAG.dbo.client_brok_details where Cl_code ='K78026' 
+
+ CREATE INDEX #t ON #temp(BOPARTYCODE,BANK_ACC_NO)
+----------------------------NSE -----------------------------------------
+INSERT INTO POBANK
+           ([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]
+           ,[Nation]         ,[Zip]           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]
+           ,[MICRNO])      
+
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='NSE' AND SEGMENT ='CAPITAL'    
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  POBANK  WHERE BRANCH_NAME = BANK_BRANCH)    
+
+INSERT INTO ACCOUNT.DBO.MULTIBANKID      
+SELECT  BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK
+FROM #TEMP AS C, POBANK AS P      
+WHERE  EXCHANGE ='NSE' AND SEGMENT ='CAPITAL'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ACCOUNT.DBO.MULTIBANKID WITH(NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno       )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+
+
+--UPDATE MULTIBANKID_COMMONINTERFACE SET UPDATEFLAG= 1 WHERE  EXCHANGE ='NSE' AND SEGMENT ='CAPITAL' AND UPDATEFLAG=0 
+-----------------BSE--------------     
+SET XACT_ABORT ON       
+INSERT INTO AngelBSECM.BSEDB_AB.DBO.POBANK
+           ([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]
+           ,[Nation]         ,[Zip]           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]
+           ,[MICRNO])      
+
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='BSE' AND SEGMENT ='CAPITAL'    
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM AngelBSECM.BSEDB_AB.DBO.POBANK  WHERE BRANCH_NAME = BANK_BRANCH)    
+ 
+
+INSERT INTO AngelBSECM.ACCOUNT_AB.DBO.MULTIBANKID     
+           ([cltcode]           ,[bankid]           ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]          ,[DEFAULTBANK])
+                     SELECT  BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK 
+FROM  #TEMP AS C,  AngelBSECM.BSEDB_AB.DBO.POBANK AS P      
+WHERE   EXCHANGE ='BSE' AND SEGMENT ='CAPITAL'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM AngelBSECM.ACCOUNT_AB.DBO.MULTIBANKID WITH (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno        )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+
+
+----------------------------------NSEFO      
+
+SET XACT_ABORT ON    
+
+INSERT INTO ANGELFO.NSEFO.DBO.POBANK 
+  ([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]           ,[Zip]
+           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]           ,[MICRNO])      
+		   SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+EXCHANGE ='NSE' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM ANGELFO.NSEFO.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)    
+
+INSERT INTO ANgelfo.ACCOUNTfo.DBO.MULTIBANKID     
+           ([cltcode]           ,[bankid]          ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]           ,[DEFAULTBANK])
+SELECT  BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK 
+FROM  #TEMP AS C,  ANgelfo.NSEFO.DBO.POBANK AS P      
+WHERE   EXCHANGE ='NSE' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ANgelfo.ACCOUNTfo.DBO.MULTIBANKID    WITH (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno         )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+ 
+-------------------------NSX---------
+
+INSERT INTO ANGELFO.NSECURFO.DBO.POBANK
+([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]           ,[Zip]
+           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]          ,[IFSCCODE]           ,[MICRNO])     
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='NSX' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  ANGELFO.NSECURFO.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)    
+      
+INSERT INTO ANgelfo.ACCOUNTCURfo.DBO.MULTIBANKID     
+           ([cltcode]           ,[bankid]           ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]
+           ,[DEFAULTBANK])
+ SELECT  BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK 
+FROM  #TEMP AS C,  ANGELFO.NSECURFO.DBO.POBANK AS P      
+WHERE   EXCHANGE ='NSX' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM  ANgelfo.ACCOUNTCURfo.DBO.MULTIBANKID       WITH  (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno          )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+ 
+---------------------MCDX------------    
+
+SET XACT_ABORT ON          
+INSERT INTO ANGELCOMMODITY.MCDX.DBO.POBANK   
+([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]           ,[Zip]
+           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]
+           ,[MICRNO])  
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='MCX' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  ANGELCOMMODITY.MCDX.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)  		   
+		   
+
+INSERT INTO ANGELCOMMODITY.ACCOUNTMCDX.DBO.MULTIBANKID     
+           ([cltcode]           ,[bankid]          ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]
+           ,[DEFAULTBANK])
+SELECT BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK  
+FROM #TEMP AS C,  ANGELCOMMODITY.MCDX.DBO.POBANK AS P      
+WHERE   EXCHANGE ='MCX' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ANGELCOMMODITY.ACCOUNTMCDX.DBO.MULTIBANKID   WITH (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno         )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+ 
+-------------------NCDX---------   
+INSERT INTO ANGELCOMMODITY.NCDX.DBO.POBANK      
+([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]           ,[Zip]
+           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]           ,[MICRNO])        
+
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='NCX' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  ANGELCOMMODITY.NCDX.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)  		   
+		   
+INSERT INTO ANGELCOMMODITY.ACCOUNTNCDX.DBO.MULTIBANKID     
+           ([cltcode]          ,[bankid]           ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]           ,[DEFAULTBANK])
+SELECT BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK  
+FROM #TEMP AS C,  ANGELCOMMODITY.MCDX.DBO.POBANK AS P      
+WHERE   EXCHANGE ='NCX' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ANGELCOMMODITY.ACCOUNTNCDX.DBO.MULTIBANKID   WITH (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno          )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+      
+
+     
+
+
+------------------------------MCDXCDS--------------- 
+
+
+INSERT INTO ANGELCOMMODITY.MCDXCDS.DBO.POBANK
+([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]
+           ,[Zip]           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]           ,[MICRNO])       
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP  WHERE  
+ EXCHANGE ='MCD' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  ANGELCOMMODITY.MCDXCDS.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)  		   
+		   
+
+
+
+
+INSERT INTO ANGELCOMMODITY.ACCOUNTMCDXCDS.DBO.MULTIBANKID     
+          ([cltcode]           ,[bankid]           ,[accno]           ,[ACCTYPE]           ,[CHEQUENAME]
+           ,[DEFAULTBANK])
+SELECT BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK  
+FROM #TEMP AS C,  ANGELCOMMODITY.MCDX.DBO.POBANK AS P      
+WHERE   EXCHANGE ='MCD' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ANGELCOMMODITY.ACCOUNTMCDXCDS.DBO.MULTIBANKID   WITH  (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno          )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME 
+  
+
+
+
+--UPDATE MULTIBANKID_COMMONINTERFACE SET UPDATEFLAG= 1 WHERE  EXCHANGE ='MCD' AND SEGMENT ='FUTURES' AND UPDATEFLAG=0
+
+
+
+
+
+ 
+
+    
+
+ -----------------BSEFO     
+
+     
+
+  
+
+      
+
+
+
+INSERT INTO ANGELCOMMODITY.BSEFO.DBO.POBANK 
+([Bank_Name]           ,[Branch_Name]           ,[Address1]           ,[Address2]           ,[City]           ,[State]           ,[Nation]
+           ,[Zip]           ,[Phone1]           ,[Phone2]           ,[Fax]           ,[Email]           ,[IFSCCODE]           ,[MICRNO])       
+SELECT DISTINCT BANK_NAME,BANK_BRANCH,'','','','','','','','','','',BANK_IFSC_CODE,ISNULL(BANK_MICR_CODE,'') 
+FROM #TEMP     
+ WHERE  
+ EXCHANGE ='BSE' AND SEGMENT ='FUTURES'  
+AND BANK_NAME NOT IN (SELECT BANK_NAME FROM  ANGELCOMMODITY.BSEFO.DBO.POBANK   WHERE BRANCH_NAME = BANK_BRANCH)  
+
+
+
+
+      
+
+      
+
+INSERT INTO ANGELCOMMODITY.ACCOUNTbfo.DBO.MULTIBANKID     
+
+           ([cltcode]
+
+           ,[bankid]
+
+           ,[accno]
+
+           ,[ACCTYPE]
+
+           ,[CHEQUENAME]
+
+           ,[DEFAULTBANK])
+
+          SELECT BOPARTYCODE,MAX(P.BANKID) BANKID ,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME CHEQUENAME,0 DEFAULTBANK  
+FROM #TEMP AS C,  ANGELCOMMODITY.BSEFO.DBO.POBANK AS P      
+WHERE   EXCHANGE ='MCD' AND SEGMENT ='FUTURES'  AND P.BANK_NAME=C.BANK_NAME  
+AND P.BRANCH_NAME=C.BANK_BRANCH      AND NOT EXISTS (SELECT DISTINCT CLTCODE FROM ANGELCOMMODITY.ACCOUNTBFO.DBO.MULTIBANKID   WITH  (NOLOCK) WHERE BOPARTYCODE=CLTCODE AND  BANK_ACC_NO =Accno          )   
+AND ISNULL(LONG_NAME,'')<>'' 
+GROUP BY BOPARTYCODE,BANK_ACC_NO,BANK_AC_TYPE,LONG_NAME
+
+GO

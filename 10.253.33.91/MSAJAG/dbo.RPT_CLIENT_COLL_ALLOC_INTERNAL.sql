@@ -1,0 +1,14 @@
+-- Object: PROCEDURE dbo.RPT_CLIENT_COLL_ALLOC_INTERNAL
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+CREATE PROC [dbo].[RPT_CLIENT_COLL_ALLOC_INTERNAL]
+(
+	@RUNDATE	VARCHAR(11) 
+)
+AS
+
+EXEC RPT_CLIENT_COLL_ALLOC @RUNDATE, 1
+
+GO

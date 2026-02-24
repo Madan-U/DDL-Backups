@@ -1,0 +1,26 @@
+-- Object: PROCEDURE dbo.Report_Rpt_NseDelAuctionDBLShort
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+
+CREATE Proc Report_Rpt_NseDelAuctionDBLShort 
+(@Sett_no Varchar(7), @Sett_Type Varchar(2))
+AS 
+
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED  
+
+SELECT D.SETT_NO,D.SETT_TYPE,D.PARTY_CODE,Party_Name=C1.Long_Name,D.SCRIP_CD,D.Series,MARKETPURCHASE=TRADEQTY,
+DELIVEREDQTY=SUM(ISNULL(QTY,0)),SHORTAGEQTY=TRADEQTY-SUM(ISNULL(QTY,0)),ASett_No, ASett_Type
+FROM Client1_Report C1, Client2_Report C2, DelAuctionPos D LEFT OUTER JOIN Deltrans_Report DE 
+ON ( D.SETT_NO = DE.SETT_NO AND D.SETT_TYPE = DE.SETT_TYPE 
+AND D.PARTY_CODE = DE.PARTY_CODE AND D.SCRIP_CD = DE.SCRIP_CD 
+AND FILLER2 = 1 AND DRCR = 'C' AND REASON LIKE 'AUC%' )
+WHERE C1.Cl_Code = C2.Cl_Code And C2.Party_Code = D.Party_Code
+And D.SETT_NO LIKE @Sett_No AND D.SETT_TYPE = @Sett_Type
+GROUP BY D.SETT_NO,D.SETT_TYPE,D.PARTY_CODE,C1.Long_Name,D.SCRIP_CD,D.Series,TRADEQTY,ASett_No, ASett_Type
+HAVING TRADEQTY-SUM(ISNULL(QTY,0)) > 0 
+Order BY D.SETT_NO,D.SETT_TYPE,D.PARTY_CODE,D.SCRIP_CD,D.Series
+
+GO

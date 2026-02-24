@@ -1,0 +1,40 @@
+-- Object: PROCEDURE dbo.MTF_Fund_Summary_08012020
+-- Server: 10.253.33.91 | DB: MTFTRADE
+--------------------------------------------------
+
+
+
+  
+CREATE Proc MTF_Fund_Summary_08012020 ( @fromdate datetime,@todate datetime)  
+  
+as   
+  
+SELECT  sauda_date,SUM(CASE WHEN SELL_BUY=2 THEN NETAMT ELSE 0 END)/10000000 AS TODAY_SELL INTO #SELL  
+ FROM TBL_PRODUCT_DATA where sauda_date >=@fromdate and sauda_date <=@todate +' 23:59'  
+ GROUP BY sauda_date  
+  
+  SELECT T.SAUDA_DATE,SUM(BODVALUE)/10000000 AS PREV_POS ,SUM(FRESHBUY)/10000000 AS TODAYS_BUY,SUM(FRESHSELL)/10000000 AS TODAYS_SELL INTO #MTF   
+  FROM TBL_NSE_REPORTING  T   
+  WHERE T.SAUDA_DATE >=@fromdate and t.sauda_date <=@todate +' 23:59'  
+  GROUP BY T.SAUDA_DATE  
+  
+     
+    SELECT  row_number() over(order by M.SAUDA_DATE) AS R,M.SAUDA_DATE,PREV_POS,TODAYS_BUY,(TODAYS_SELL-ISNULL(TODAY_SELL,0)) AS TODAYS_SELL ,  
+ TODAY_SELL AS OTHER_SELL ,  
+ PREV_POS+TODAYS_BUY-TODAYS_SELL AS  TODAY_POS INTO #FINAL  
+  FROM #MTF M  
+ LEFT OUTER JOIN   
+  #SELL S ON M.SAUDA_DATE=S.SAUDA_DATE   
+  ORDER BY M.SAUDA_DATE  
+   
+ SELECT *,[Decrease Due to sell]= [Pos Decrement]-TODAYS_SELL,[Decrase due to others]= TODAYS_SELL,EXCHANGE ='NSE' FROM (   
+    SELECT G.SAUDA_DATE AS TRADE_DAY,TDAY_FUNDED=G.TODAY_POS,H.SAUDA_DATE AS [T+1_DAY],  
+ H.TODAY_POS AS [T+1 Day Funded],[Net Diffrence]=G.TODAY_POS-H.TODAY_POS,  
+ [Pos Increment]=H.TODAYS_BUY, [Pos Decrement]=G.TODAY_POS-H.TODAY_POS+H.TODAYS_BUY,  
+ h.TODAYS_SELL   
+ FROM #FINAL G  
+ LEFT OUTER JOIN   
+ (SELECT SAUDA_DATe,R,TODAY_POS,TODAYS_BUY ,TODAYS_SELL FROM #FINAL  WHERE R>1) H  
+ ON G.R =H.R-1 )A
+
+GO

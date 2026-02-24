@@ -1,0 +1,128 @@
+-- Object: PROCEDURE dbo.CBO_ADDEDITPOBANKsrch
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+CREATE    PROC [dbo].[CBO_ADDEDITPOBANKsrch]
+	@BANKID NUMERIC(18),
+	@BANK_NAME VARCHAR(50),
+	@BRANCH_NAME VARCHAR(40),
+	@ADDRESS1 VARCHAR(50),
+	@ADDRESS2 VARCHAR(50),
+	@CITY VARCHAR(25),
+	@STATE VARCHAR(25),
+	@NATION VARCHAR(25),
+	@ZIP VARCHAR(15),
+	@PHONE1 VARCHAR(15),
+	@PHONE2 VARCHAR(15),
+	@FAX VARCHAR(15),
+	@EMAIL VARCHAR(50),
+	@FLAG VARCHAR(1),
+	@STATUSID VARCHAR(25) = 'BROKER',
+	@STATUSNAME VARCHAR(25) = 'BROKER'
+AS
+	IF @STATUSID <> 'BROKER'
+		BEGIN
+			RAISERROR ('This Procedure is accessible to Broker', 16, 1)
+			RETURN
+		END
+	IF @FLAG <> 'A' AND @FLAG <> 'E' AND @FLAG <> 'D'
+		BEGIN
+			RAISERROR ('Add/Edit/Delete Flag Not Set Properly', 16, 1)
+			RETURN
+		END
+	IF @BANK_NAME = '' OR @BRANCH_NAME = ''
+		BEGIN
+			RAISERROR ('Bank Name Or Branch Name Cannot be Blank...', 16, 1)
+			RETURN
+		END
+	IF @FLAG = 'A'
+		BEGIN
+			INSERT INTO
+				POBANK
+				(
+					BANK_NAME,
+					BRANCH_NAME,
+					ADDRESS1,
+					ADDRESS2,
+					CITY,
+					STATE,
+					NATION,
+					ZIP,
+					PHONE1,
+					PHONE2,
+					FAX,
+					EMAIL
+				)
+			VALUES
+				(
+					@BANK_NAME,
+					@BRANCH_NAME,
+					ISNULL(@ADDRESS1, ''),
+					ISNULL(@ADDRESS2, ''),
+					ISNULL(@CITY, ''),
+					ISNULL(@STATE, ''),
+					ISNULL(@NATION, ''),
+					ISNULL(@ZIP, ''),
+					ISNULL(@PHONE1, ''),
+					ISNULL(@PHONE2, ''),
+					ISNULL(@FAX, ''),
+					ISNULL(@EMAIL, '')
+				)
+		END
+
+	ELSE IF @BANK_NAME <> ''
+		BEGIN
+			SELECT
+					BANK_NAME,
+					BRANCH_NAME,
+					ADDRESS1,
+					ADDRESS2,
+					CITY,
+					STATE,
+					NATION,
+					ZIP,
+					PHONE1,
+					PHONE2,
+					FAX,
+					EMAIL
+
+			FROM
+				POBANK
+			WHERE
+				BANK_NAME LIKE @BANK_NAME + '%'
+			ORDER BY
+				BANKID
+			
+			END
+
+	ELSE IF @FLAG = 'E'
+		BEGIN
+			UPDATE
+				POBANK
+			SET
+				BANK_NAME = @BANK_NAME,
+				BRANCH_NAME = @BRANCH_NAME,
+				ADDRESS1 = ISNULL(@ADDRESS1, ''),
+				ADDRESS2 = ISNULL(@ADDRESS2, ''),
+				CITY = ISNULL(@CITY, ''),
+				STATE = ISNULL(@STATE, ''),
+				NATION = ISNULL(@NATION, ''),
+				ZIP = ISNULL(@ZIP, ''),
+				PHONE1 = ISNULL(@PHONE1, ''),
+				PHONE2 = ISNULL(@PHONE2, ''),
+				FAX = ISNULL(@FAX, ''),
+				EMAIL = ISNULL(@EMAIL, '')
+			WHERE
+				BANKID = @BANKID
+		END
+	ELSE IF @FLAG = 'D'
+		BEGIN
+			DELETE FROM
+				POBANK
+			WHERE
+				BANKID = @BANKID
+		END
+
+GO

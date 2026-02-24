@@ -1,0 +1,74 @@
+-- Object: PROCEDURE dbo.Data4BillPosted
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+
+
+CREATE PROC Data4BillPosted
+
+AS
+
+DECLARE @@COUNTER AS NUMERIC
+SELECT @@COUNTER = COUNT(*) FROM BILLPOSTED
+
+IF @@COUNTER = 0
+	BEGIN
+		BEGIN TRAN
+			INSERT 
+			INTO BILLPOSTED 
+				(
+					VNO, 
+					VTYP, 
+					BOOKTYPE, 
+					VDT, 
+					BILLDATE, 
+					SETT_NO, 
+					SETT_TYPE, 
+					NARRATION, 
+					USERNAME, 
+					POSTDATE, 
+					EDTDR, 
+					EDTCR
+				) 
+			SELECT 
+				VNO, 
+				VTYP, 
+				BOOKTYPE, 
+				CONVERT(VARCHAR(11), VDT, 109), 
+				CONVERT(VARCHAR(11), VDT, 109), 
+				SUBSTRING(NARRATION, 8, 7), 
+				SUBSTRING(NARRATION, 20, 1), 
+				--CASE WHEN SUBSTRING(NARRATION, 20, 1) = 'A' THEN SUBSTRING(NARRATION, 20, 2) ELSE SUBSTRING(NARRATION, 20, 1) END, 
+				NARRATION, 
+				'FROM SYSTEM', 
+				GETDATE(), 
+				CONVERT(VARCHAR(11), MIN(EDT), 109), 
+				CONVERT(VARCHAR(11), MAX(EDT), 109) 
+			FROM LEDGER 
+			WHERE VDT >= 'APR  1 2005' 
+				AND VTYP IN (15, 21) 
+			GROUP BY VNO, 
+				VTYP, 
+				BOOKTYPE, 
+				CONVERT(VARCHAR(11), VDT, 109), 
+				SUBSTRING(NARRATION, 8, 7), 
+				CASE 
+					WHEN SUBSTRING(NARRATION, 20, 1) = 'A' 
+					THEN SUBSTRING(NARRATION, 20, 2) 
+					ELSE SUBSTRING(NARRATION, 20, 1) 
+				END
+				, 
+				NARRATION 
+			ORDER BY VNO, 
+				VTYP, 
+				BOOKTYPE, 
+				CONVERT(VARCHAR(11), VDT, 109) 
+		COMMIT
+	END
+ELSE
+	BEGIN
+		PRINT 'Data Already Found in Table BillPosted. Cannot Continue...'
+	END
+
+GO

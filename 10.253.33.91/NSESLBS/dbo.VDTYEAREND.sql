@@ -1,0 +1,250 @@
+-- Object: PROCEDURE dbo.VDTYEAREND
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+CREATE PROCEDURE VDTYEAREND
+	@SDTCUR VARCHAR(11),
+	@LDTCUR VARCHAR(11),
+	@VTYP   SMALLINT,
+	@VNO VARCHAR(12),
+	@BOOKTYPE CHAR(2),
+	@VDT    DATETIME,
+	@MSG1   VARCHAR(234)
+AS
+DECLARE
+	@@CLTCODE AS VARCHAR(10),
+	@@ACNAME AS VARCHAR(100),
+	@@VDTBAL AS MONEY,
+	@@LNO AS INT,
+	@@CDT AS DATETIME,
+	@@NETDIFF AS MONEY,
+	@@PLCOUNT AS INT,
+	@@PLBAL AS MONEY,
+	@@RCURSOR AS CURSOR,
+	@@FIXCODE VARCHAR(10)
+
+SELECT
+	@@FIXCODE = CLTCODE FROM ACMAST WHERE LONGNAME LIKE 'PROFIT AND LOSS%'
+
+SELECT
+	@@CDT = ( SELECT GETDATE() )
+  
+SET @@RCURSOR = CURSOR FOR  
+	SELECT
+		L.CLTCODE,
+		A.LONGNAME,
+		BALANCE=ISNULL(SUM( CASE WHEN UPPER(DRCR) = 'D' THEN VAMT ELSE -VAMT END),0)
+	FROM
+		LEDGER L
+			LEFT OUTER JOIN ACMAST A
+			ON
+				L.CLTCODE = A.CLTCODE
+	WHERE
+		L.VDT >= @SDTCUR + ' 00:00:00'
+		AND L.VDT <= @LDTCUR + ' 23:59:59'
+		AND (A.ACTYP LIKE 'ASS%' OR A.ACTYP LIKE 'LIAB%')
+		AND L.CLTCODE <> @@FIXCODE
+	GROUP BY
+		L.CLTCODE,
+		A.LONGNAME
+	ORDER BY
+		L.CLTCODE,
+		A.LONGNAME
+
+OPEN @@RCURSOR
+	FETCH NEXT FROM
+		@@RCURSOR
+	INTO
+		@@CLTCODE,
+		@@ACNAME,
+		@@VDTBAL
+  
+SELECT
+	@@LNO = 0  
+SELECT
+	@@NETDIFF = 0  
+WHILE @@FETCH_STATUS = 0
+	BEGIN
+		SELECT
+			@@LNO = @@LNO + 1
+		SELECT
+			@@NETDIFF = @@NETDIFF + @@VDTBAL
+		INSERT 
+		INTO LEDGER 
+			(
+				VTYP,
+				VNO,
+				DRCR,
+				VAMT,
+				VDT,
+				REFNO,
+				CLTCODE, 
+				ENTEREDBY,
+				LNO,
+				BALAMT,
+				VNO1,
+				BOOKTYPE,
+				EDT,
+				CDT,
+				PDT,
+				NODAYS,
+				ACTNODAYS,
+				CHECKEDBY,
+				ACNAME,
+				NARRATION
+			) 
+			VALUES 
+			(
+				@VTYP,
+				@VNO,
+				(
+				CASE 
+					WHEN @@VDTBAL >= 0 
+					THEN 'D' 
+					ELSE 'C' 
+				END
+				),
+				ISNULL(ABS(@@VDTBAL),0),
+				@VDT,
+				'',
+				UPPER(@@CLTCODE), 
+				'SYSTEM',
+				@@LNO,
+				0,
+				@VNO,
+				@BOOKTYPE,
+				@VDT,
+				@@CDT,
+				@@CDT,
+				0,0,
+				'SYSTEM',
+				@@ACNAME,
+				@MSG1
+			)
+
+		INSERT 
+		INTO LEDGER3
+			(
+				NARATNO,
+				NARR,
+				REFNO,
+				VTYP,
+				VNO,
+				BOOKTYPE
+			) 
+			VALUES
+			(
+				@@LNO,
+				@MSG1,
+				'',
+				@VTYP,
+				@VNO,
+				@BOOKTYPE
+			)
+
+		FETCH NEXT FROM
+			@@RCURSOR   
+		INTO
+			@@CLTCODE,
+			@@ACNAME,
+			@@VDTBAL
+	END  
+CLOSE @@RCURSOR  
+DEALLOCATE @@RCURSOR  
+  
+SELECT
+	@@LNO = @@LNO + 1
+
+SELECT 
+	@@ACNAME =	(
+				SELECT
+					ACNAME
+				FROM
+					ACMAST
+				WHERE
+					CLTCODE = @@FIXCODE
+				)
+INSERT 
+INTO LEDGER
+	(
+		VTYP,
+		VNO,
+		DRCR,
+		VAMT,
+		VDT,
+		REFNO,
+		CLTCODE, 
+		ENTEREDBY,
+		LNO,
+		BALAMT,
+		VNO1,
+		BOOKTYPE,
+		EDT,
+		CDT,
+		PDT,
+		NODAYS,
+		ACTNODAYS,
+		CHECKEDBY,
+		ACNAME,
+		NARRATION
+	) 
+	VALUES 
+	(
+		@VTYP,
+		@VNO,
+		(
+		CASE 
+			WHEN @@NETDIFF >= 0 
+			THEN 'C' 
+			ELSE 'D' 
+		END
+		),
+		ABS(@@NETDIFF),
+		@VDT,
+		'',
+		@@FIXCODE, 
+		'SYSTEM',
+		@@LNO,
+		0,
+		@VNO,
+		@BOOKTYPE,
+		@VDT,
+		@@CDT,
+		@@CDT,
+		0,0,
+		'SYSTEM',
+		@@ACNAME,
+		@MSG1
+	)
+
+INSERT 
+INTO LEDGER3 
+SELECT 
+	LNO, 
+	NARRATION, 
+	REFNO, 
+	VTYP, 
+	VNO, 
+	BOOKTYPE 
+FROM LEDGER 
+WHERE VTYP = @VTYP 
+	AND BOOKTYPE = @BOOKTYPE 
+	AND VNO = @VNO 
+	AND CLTCODE=@@FIXCODE
+
+INSERT 
+INTO LEDGER3 
+SELECT 
+	0, 
+	NARRATION, 
+	REFNO, 
+	VTYP, 
+	VNO, 
+	BOOKTYPE 
+FROM LEDGER 
+WHERE VTYP = @VTYP 
+	AND BOOKTYPE = @BOOKTYPE 
+	AND VNO = @VNO 
+	AND LNO = 1
+
+GO

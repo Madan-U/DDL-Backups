@@ -1,0 +1,142 @@
+-- Object: PROCEDURE dbo.NEWVALANSUMMARY_NORMAL
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+/*use bsedb  
+Exec NEWVALANSUMMARY_NORMAL '2007071', 'D', 'Jul 10 2007', 'A', 'broker', 'broker'*/  
+  
+CREATE PROC NEWVALANSUMMARY_NORMAL    
+/*    
+ EXEC NEWVALANSUMMARY '2006070', 'N', 'APR  1 2006', 'O', 'CLIENT', 'ME123'    
+*/    
+ @SETT_NO VARCHAR(7),    
+ @SETT_TYPE VARCHAR(2),    
+ @VDT VARCHAR(11),    
+ @DISPOPT VARCHAR(1),    
+ @STATUSID VARCHAR(10),    
+ @STATUSNAME VARCHAR(30)    
+    
+AS    
+    
+IF @STATUSID <> 'BROKER'    
+ BEGIN    
+  SELECT     
+   CLTCODE = C2.PARTY_CODE,     
+   ACNAME = C1.LONG_NAME,     
+   DRAMT = CASE WHEN A.SELL_BUY = 1 THEN AMOUNT ELSE 0 END,     
+   CRAMT = CASE WHEN A.SELL_BUY = 2 THEN AMOUNT ELSE 0 END,    
+   VDT = @VDT,     
+   CLBAL = 0    
+  FROM     
+   ACCBILL A, CLIENT1 C1, CLIENT2 C2    
+  WHERE     
+   C1.CL_CODE = C2.CL_CODE     
+   AND C2.PARTY_CODE = A.PARTY_CODE    
+   AND A.SETT_NO = @SETT_NO    
+   AND A.SETT_TYPE = @SETT_TYPE    
+   AND @STATUSNAME =     
+    (    
+     CASE    
+      WHEN @STATUSID = 'BRANCH' THEN C1.BRANCH_CD    
+      WHEN @STATUSID = 'SUBBROKER' THEN C1.SUB_BROKER    
+      WHEN @STATUSID = 'TRADER' THEN C1.TRADER    
+      WHEN @STATUSID = 'FAMILY' THEN C1.FAMILY    
+      WHEN @STATUSID = 'AREA' THEN C1.AREA    
+      WHEN @STATUSID = 'REGION' THEN C1.REGION    
+      WHEN @STATUSID = 'CLIENT' THEN C2.PARTY_CODE    
+     ELSE    
+      'BROKER'    
+     END    
+    )    
+  ORDER BY    
+   C2.PARTY_CODE    
+ END    
+ELSE    
+ BEGIN    
+  IF @DISPOPT = 'A'    
+   BEGIN    
+    SELECT     
+     CLTCODE = A.PARTY_CODE,     
+     ACNAME = M.LONGNAME,     
+     DRAMT = (CASE WHEN SUM(CASE WHEN A.SELL_BUY = 1 THEN A.AMOUNT ELSE -A.AMOUNT END) > 0 THEN SUM(CASE WHEN A.SELL_BUY = 1 THEN A.AMOUNT ELSE -A.AMOUNT END) ELSE 0 END),     
+     CRAMT = (CASE WHEN SUM(CASE WHEN A.SELL_BUY = 2 THEN A.AMOUNT ELSE -A.AMOUNT END) > 0 THEN SUM(CASE WHEN A.SELL_BUY = 2 THEN A.AMOUNT ELSE -A.AMOUNT END) ELSE 0 END),
+     VDT = @VDT,     
+     CLBAL = 0    
+    FROM     
+     ACCBILL A, ACCOUNT.DBO.ACMAST M    
+    WHERE     
+     A.PARTY_CODE = M.CLTCODE    
+     AND A.SETT_NO = @SETT_NO    
+     AND A.SETT_TYPE = @SETT_TYPE    
+     AND A.BRANCHCD <> 'ZZZ'    
+    GROUP BY    
+     A.PARTY_CODE,    
+     M.LONGNAME    
+    ORDER BY    
+     A.PARTY_CODE    
+   END    
+  ELSE IF @DISPOPT = 'P'    
+   BEGIN    
+    SELECT     
+     CLTCODE = C2.PARTY_CODE,     
+     ACNAME = C1.LONG_NAME,     
+     DRAMT = CASE WHEN A.SELL_BUY = 1 THEN AMOUNT ELSE 0 END,     
+     CRAMT = CASE WHEN A.SELL_BUY = 2 THEN AMOUNT ELSE 0 END,    
+     VDT = @VDT,     
+     CLBAL = 0    
+    FROM     
+     ACCBILL A, CLIENT1 C1, CLIENT2 C2    
+    WHERE     
+     C1.CL_CODE = C2.CL_CODE     
+     AND C2.PARTY_CODE = A.PARTY_CODE    
+     AND A.SETT_NO = @SETT_NO    
+     AND A.SETT_TYPE = @SETT_TYPE    
+    ORDER BY    
+     C2.PARTY_CODE    
+   END    
+  ELSE    
+   BEGIN    
+    SELECT     
+     CLTCODE = PARTY_CODE, ACNAME = LONG_NAME, DRAMT = SUM(DRAMT), CRAMT = SUM(CRAMT), VDT, CLBAL = SUM(CLBAL)    
+    FROM    
+     (    
+      SELECT     
+       A.PARTY_CODE,     
+       LONG_NAME = M.LONGNAME,     
+     DRAMT = (CASE WHEN SUM(CASE WHEN A.SELL_BUY = 1 THEN A.AMOUNT ELSE -A.AMOUNT END) > 0 THEN SUM(CASE WHEN A.SELL_BUY = 1 THEN A.AMOUNT ELSE -A.AMOUNT END) ELSE 0 END),     
+     CRAMT = (CASE WHEN SUM(CASE WHEN A.SELL_BUY = 2 THEN A.AMOUNT ELSE -A.AMOUNT END) > 0 THEN SUM(CASE WHEN A.SELL_BUY = 2 THEN A.AMOUNT ELSE -A.AMOUNT END) ELSE 0 END),
+       VDT = @VDT,     
+       CLBAL = 0    
+      FROM     
+       ACCBILL A, ACCOUNT.DBO.ACMAST M    
+      WHERE     
+       A.PARTY_CODE = M.CLTCODE    
+       AND M.ACCAT NOT IN (4, 14)    
+       AND A.SETT_NO = @SETT_NO    
+       AND A.SETT_TYPE = @SETT_TYPE    
+       AND A.BRANCHCD <> 'ZZZ'    
+      GROUP BY    
+       A.PARTY_CODE,    
+       M.LONGNAME    
+      UNION ALL    
+      SELECT     
+       PARTY_CODE = '',    
+       LONG_NAME = 'CLIENT SUMMARY',     
+       DRAMT = CASE WHEN A.SELL_BUY = 1 THEN AMOUNT ELSE 0 END,     
+       CRAMT = CASE WHEN A.SELL_BUY = 2 THEN AMOUNT ELSE 0 END,    
+       VDT = @VDT,     
+       CLBAL = 0    
+      FROM     
+       ACCBILL A, CLIENT1 C1, CLIENT2 C2    
+      WHERE     
+       C1.CL_CODE = C2.CL_CODE     
+       AND C2.PARTY_CODE = A.PARTY_CODE    
+       AND A.SETT_NO = @SETT_NO    
+       AND A.SETT_TYPE = @SETT_TYPE    
+     ) A    
+    GROUP BY    
+     PARTY_CODE, LONG_NAME, VDT    
+   END    
+ END
+
+GO

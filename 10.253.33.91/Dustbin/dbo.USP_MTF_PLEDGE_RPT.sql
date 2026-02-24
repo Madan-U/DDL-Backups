@@ -1,0 +1,75 @@
+-- Object: PROCEDURE dbo.USP_MTF_PLEDGE_RPT
+-- Server: 10.253.33.91 | DB: Dustbin
+--------------------------------------------------
+
+            
+---- // USE DUSTBIN   --- // 196.1.115.196                            
+---- // DESCRIPTION :- MTF PLEDGE DATA REQUESTED BY SWAPNIL TADGE AND CREATED BY HRISHI      
+                            
+CREATE PROC USP_MTF_PLEDGE_RPT  
+AS            
+DECLARE @SQL VARCHAR (MAX) ,@SQL2 VARCHAR (MAX), @SQLFINAL VARCHAR (MAX) , @PATH VARCHAR (MAX)                             
+SET @PATH='J:\Backoffice\SL_AUTO\SWAPNIL_T\MTF_PLEDGE_RPT\INPUT\INPUT.txt'                              
+  
+ IF OBJECT_ID(N'tempdb..#CODE') IS NOT NULL  
+    DROP TABLE #CODE            
+CREATE TABLE #CODE (CODE VARCHAR(50))              
+                            
+SET @SQL='BULK INSERT #CODE FROM ' + ''''+ @PATH +''''            
+SET @SQL2=' WITH            
+    (                              
+           FIRSTROW = 1,                              
+           FIELDTERMINATOR = '','',  --CSV FIELD DELIMITER                              
+           ROWTERMINATOR = ''\n'',   --USE TO SHIFT THE CONTROL TO NEXT ROW                              
+           TABLOCK                              
+    )'                              
+                            
+SET @SQLFINAL= @SQL + @SQL2                              
+PRINT @SQLFINAL                              
+EXEC (@SQLFINAL)                            
+            
+--SELECT TOP 10 * FROM #CODE              
+--SELECT TOP 10 * FROM #DATA          
+  
+--SELECT COUNT(1) FROM [ANGELDEMAT].MSAJAG.DBO.TBL_POA_PLD_ADNL P INNER JOIN #CODE C ON P.SETT_NO=C.CODE  
+  
+IF OBJECT_ID(N'DUSTBIN..TBL_MTF_PLEDGE_DATA') IS NOT NULL                        
+DROP TABLE TBL_MTF_PLEDGE_DATA   
+  
+SELECT SETT_NO,SETT_TYPE,PARTY_CODE,SCRIP_CD,SERIES,CERTNO,DPID,CLTDPID  
+,CONVERT(VARCHAR(10), QTY) AS QTY  
+,CAST(RTRIM(DELIVERED) AS VARCHAR(10)) AS DELIVERED  
+,CONVERT(VARCHAR(16), FOLIONO) AS FOLIONO  
+,CONVERT(VARCHAR(10), SLIPNO) AS SLIPNO ,BATCHNO  
+,CONVERT(VARCHAR,EXEDATE,21) AS 'EXEDATE',CONVERT(VARCHAR,TRANSDATE,21) AS 'TRANSDATE'  
+,CONVERT(VARCHAR,PROCESSDATE,21) AS 'PROCESSDATE' ,INST_TYPE  
+,CONVERT(VARCHAR(10), CL_RATE) AS CL_RATE  
+,CONVERT(VARCHAR(10), VARRATE) AS VARRATE ,BOID,PLDNO,UPLOAD_STATUS,SUCCESSFLAG  
+,CONVERT(VARCHAR(10), PAYQTY) AS PAYQTY  
+,CASE WHEN FOLIONO=BATCHNO THEN 'ONLINE' ELSE 'OFFLINE' END AS 'STATUS'   
+INTO TBL_MTF_PLEDGE_DATA  
+FROM [ANGELDEMAT].MSAJAG.DBO.TBL_POA_PLD_ADNL P INNER JOIN #CODE C ON P.SETT_NO=C.CODE  
+
+
+  
+--SELECT TOP 10 * FROM DUSTBIN.DBO.TBL_MTF_PLEDGE_DATA  
+--SELECT TOP 10 * FROM [ANGELDEMAT].MSAJAG.DBO.TBL_POA_PLD_ADNL WHERE SETT_NO='2024003'  
+              
+DECLARE @RPT_DATE VARCHAR(30)=REPLACE(CONVERT(VARCHAR(10),GETDATE(),3),'/','')              
+DECLARE @FILENAME VARCHAR(100) = 'J:\Backoffice\SL_AUTO\SWAPNIL_T\MTF_PLEDGE_RPT\OUTPUT\' +'MTF_PLEDGE_DATA.CSV'              
+DECLARE @ALL VARCHAR(MAX)  
+  
+SET @ALL = 'EXEC MASTER.DBO.XP_CMDSHELL ''BCP "SELECT ''''SETT_NO'''',''''SETT_TYPE'''',''''PARTY_CODE'''',''''SCRIP_CD'''',''''SERIES'''',''''CERTNO'''',''''DPID'''',''''CLTDPID'''',''''QTY'''',''''DELIVERED'''',''''FOLIONO'''',''''SLIPNO'''',''''BATCHNO'''',''''EXEDATE'''',''''TRANSDATE'''',''''PROCESSDATE'''',''''INST_TYPE'''',''''CL_RATE'''',''''VARRATE'''',''''BOID'''',''''PLDNO'''',''''UPLOAD_STATUS'''',''''SUCCESSFLAG'''',''''PAYQTY'''',''''STATUS'''''  
+  
+SET @ALL = @ALL+ ' UNION ALL SELECT * FROM DUSTBIN.DBO.TBL_MTF_PLEDGE_DATA'             
+PRINT @ALL              
+SET @ALL=@ALL+' " QUERYOUT ' +@FILENAME+ ' -c -t"," -c -t"," -r"\n" -T'', NO_OUTPUT'  
+PRINT @ALL              
+EXEC(@ALL)  
+  
+DROP TABLE #CODE  
+DROP TABLE DUSTBIN.DBO.TBL_MTF_PLEDGE_DATA  
+                            
+SELECT 'MTF PLEDGE DATA FILE EXPORTED TO ' + @FILENAME AS 'REMARK'
+
+GO

@@ -1,0 +1,265 @@
+-- Object: PROCEDURE dbo.BEFORE_BILL_PAYOUT_CHK_ANG
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+      
+CREATE PROC [dbo].[BEFORE_BILL_PAYOUT_CHK_ANG](@TDATE DATETIME,@BATCHID VARCHAR(50)='ALL')                      
+AS                      
+                      
+DECLARE @FDATE DATETIME                       
+                  
+--BEFORE_BILL_PAYOUT_CHK_ANG 'OCT 25 2022'                  
+                      
+SELECT  @FDATE = SDTCUR FROM ACCOUNT.DBO.PARAMETER WITH (NOLOCK) WHERE @TDATE BETWEEN SDTCUR AND LDTCUR                      
+                      
+------NSECM                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSECM' INTO #VDTLED                                        
+FROM ACCOUNT.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSECM' INTO #FCR                      
+FROM ACCOUNT.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND VTYP=15 AND DRCR='C' AND EDT > @TDATE + ' 23:59:59'                      
+GROUP BY CLTCODE                      
+                      
+                      
+---BSECM                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSECM'                                        
+FROM AngelBSECM.ACCOUNT_AB.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSECM'                                        
+FROM AngelBSECM.ACCOUNT_AB.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+---NSEFO                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSEFO'                                        
+FROM ANGELFO.ACCOUNTFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSEFO'                                        
+FROM ANGELFO.ACCOUNTFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+----BSEFO                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSEFO'                                        
+FROM ANGELCOMMODITY.ACCOUNTBFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSEFO'                                        
+FROM ANGELCOMMODITY.ACCOUNTBFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+                      
+----MTF                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MTF'                                        
+FROM MTFTRADE.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MTF'                                        
+FROM MTFTRADE.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=35 GROUP BY CLTCODE                      
+                      
+----SLBS                      
+INSERT INTO #VDTLED            
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='SLBS'          
+FROM ACCOUNTSLBS.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE           
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='SLBS'                                        
+FROM ACCOUNTSLBS.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+                      
+----NSECD                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSECD'                                        
+FROM ANGELFO.ACCOUNTCURFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NSECD'                                        
+FROM ANGELFO.ACCOUNTCURFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+----BSECD                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSECD'                                        
+FROM ANGELCOMMODITY.ACCOUNTCURBFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='BSECD'                                        
+FROM ANGELCOMMODITY.ACCOUNTCURBFO.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+---MCXCD                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MCXCD'                                        
+FROM ANGELCOMMODITY.ACCOUNTMCDXCDS.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MCXCD'                                        
+FROM ANGELCOMMODITY.ACCOUNTMCDXCDS.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+                      
+----MCDX                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MCDX'                                        
+FROM ANGELCOMMODITY.ACCOUNTMCDX.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='MCDX'                                        
+FROM ANGELCOMMODITY.ACCOUNTMCDX.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                    
+                      
+----NCDX                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NCDX'                                        
+FROM ANGELCOMMODITY.ACCOUNTNCDX.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,NETAMT=SUM(CASE WHEN DRCR='D' THEN -VAMT ELSE VAMT END),EXCHANGE='NCDX'                                        
+FROM ANGELCOMMODITY.ACCOUNTNCDX.DBO.LEDGER WITH (NOLOCK) WHERE VDT >=@FDATE AND VDT <=@TDATE  + ' 23:59:59' AND EDT > @TDATE + ' 23:59:59'                      
+AND DRCR='C' AND VTYP=15 GROUP BY CLTCODE                      
+                      
+                      
+---BSE MFSS                      
+INSERT INTO #VDTLED                      
+SELECT CLTCODE,BSEMF_VDT_BALANCE=SUM((-DRAMOUNT) + CRAMOUNT),EXCHANGE='BSEMF'                      
+FROM ANGELFO.BBO_FA.DBO.MFSS_LEDGER_BSE WITH (NOLOCK) WHERE VDT BETWEEN @FDATE AND @TDATE + ' 23:59:59' GROUP BY CLTCODE                      
+                      
+INSERT INTO #FCR                      
+SELECT CLTCODE,CRAMOUNT = SUM(CRAMOUNT),EXCHANGE='BSEMF'                      
+FROM ANGELFO.BBO_FA.DBO.MFSS_LEDGER_BSE WITH (NOLOCK) WHERE VDT BETWEEN @FDATE AND @TDATE + ' 23:59:59'                      
+AND EDT > @TDATE + ' 23:59:59' AND VTYPE='15' GROUP BY CLTCODE                      
+                      
+                      
+SELECT CLTCODE,VDT_BALANCE=SUM(NETAMT),FUTURE_CREDIT=CONVERT(NUMERIC (18,2),0),AVAILABLE_VDT_BALANCE=CONVERT(NUMERIC (18,2),0) INTO #VDTBALANCE                      
+FROM #VDTLED GROUP BY CLTCODE                      
+                      
+UPDATE A SET FUTURE_CREDIT = FCR FROM #VDTBALANCE A,                      
+(SELECT CLTCODE,FCR=SUM(NETAMT) FROM #FCR GROUP BY CLTCODE) B                      
+WHERE A.CLTCODE = B.CLTCODE                      
+                      
+UPDATE #VDTBALANCE SET AVAILABLE_VDT_BALANCE = VDT_BALANCE - FUTURE_CREDIT                      
+                      
+SELECT * INTO ##VDTBALANCE FROM #VDTBALANCE                      
+                      
+                      
+CREATE TABLE #CLT (CLTCODE VARCHAR(10),PAYOUTAMT NUMERIC (18,2),VDT_LEDGER_TODAY NUMERIC (18,2),TDAY_BILL NUMERIC (18,2),AMT_FOR_PAYOUT NUMERIC (18,2),FUTURE_CREDIT NUMERIC (18,2),VDT_BALANCE NUMERIC (18,2),AMT_FOR_PAYOUT_FINAL NUMERIC (18,2))           
+  
+    
+      
+        
+           
+                      
+                      
+INSERT INTO #CLT                      
+SELECT CLTCODE,SUM(VAMT) AS PAYOUTAMT ,VDT_LEDGER_TODAY=0,TDAY_BILL=0,AMT_FOR_PAYOUT=0,FUTURE_CREDIT=0,VDT_BALANCE =0,AMT_FOR_PAYOUT_FINAL = 0                     
+FROM ACCOUNT.DBO.LEDGER WITH (NOLOCK) WHERE VTYP='3'                       
+AND BOOKTYPE!='E8' AND VDT BETWEEN @TDATE AND @TDATE + ' 23:59'                     
+AND CDT BETWEEN @TDATE + ' 16:00' AND @TDATE + ' 23:59'                     
+AND CLTCODE BETWEEN 'A000000000' AND 'ZZZZZZZZZZ' GROUP BY CLTCODE           
+    
+                      
+UPDATE #CLT SET VDT_LEDGER_TODAY = AVAILABLE_VDT_BALANCE ,FUTURE_CREDIT = B.FUTURE_CREDIT , VDT_BALANCE = B.VDT_BALANCE  FROM #CLT A, ##VDTBALANCE B                      
+WHERE A.CLTCODE = B.CLTCODE                      
+                      
+SELECT SAUDA_DATE=CONVERT(VARCHAR(11),SAUDA_DATE,105),PARTY_CODE,SELL_BUY,TRADE_AMOUNT=SUM(TRADE_AMOUNT),EXCHANGE='NSECM' INTO #TBILL                      
+FROM MSAJAG.DBO.SETTLEMENT WITH (NOLOCK)                      
+WHERE SAUDA_DATE BETWEEN @TDATE AND @TDATE + ' 23:59'                      
+GROUP BY CONVERT(VARCHAR(11),SAUDA_DATE,105),PARTY_CODE,SELL_BUY                      
+UNION ALL                      
+SELECT SAUDA_DATE=CONVERT(VARCHAR(11),SAUDA_DATE,105),PARTY_CODE,SELL_BUY,TRADE_AMOUNT=SUM(TRADE_AMOUNT),EXCHANGE='BSECM'                      
+FROM AngelBSECM.BSEDB_AB.DBO.SETTLEMENT WITH (NOLOCK)                      
+WHERE SAUDA_DATE BETWEEN @TDATE AND @TDATE + ' 23:59'                      
+GROUP BY CONVERT(VARCHAR(11),SAUDA_DATE,105),PARTY_CODE,SELL_BUY                      
+                      
+                      
+UPDATE #CLT SET TDAY_BILL = TRADE_AMOUNT FROM #CLT A1,                       
+(SELECT  SAUDA_DATE,Party_Code,TRADE_AMOUNT=SUM(TRADE_AMOUNT) FROM (                      
+SELECT SAUDA_DATE,Party_Code,Sell_buy,                      
+TRADE_AMOUNT=CASE WHEN Sell_buy=1 THEN -TRADE_AMOUNT ELSE TRADE_AMOUNT END                      
+FROM #TBILL) B GROUP BY B.SAUDA_DATE,B.Party_Code) A2 WHERE A1.CLTCODE = A2.Party_Code                      
+                      
+UPDATE #CLT SET AMT_FOR_PAYOUT = VDT_LEDGER_TODAY + TDAY_BILL                      
+                
+UPDATE #CLT SET AMT_FOR_PAYOUT_FINAL = CASE WHEN AMT_FOR_PAYOUT > -200 THEN ABS(AMT_FOR_PAYOUT) ELSE  0  END                
+                      
+SELECT * INTO #VW_NCMS_PAYOUTDATA_BATCHWISE                       
+FROM  INTRANET.[CMS].[DBO].[VW_NCMS_PAYOUTDATA_BATCHWISE]                      
+WHERE PROCESSDATETIME BETWEEN @TDATE + ' 16:00' AND @TDATE + ' 23:59'                       
+                      
+CREATE CLUSTERED INDEX IDXCLT2 ON #VW_NCMS_PAYOUTDATA_BATCHWISE (PARTY_CODE)                      
+                      
+SELECT  #CLT.*,ISNULL(BATCHID,'') AS BATCHID INTO #CLT_FINAL FROM #CLT                   
+LEFT OUTER JOIN #VW_NCMS_PAYOUTDATA_BATCHWISE ON (PARTY_CODE = CLTCODE)            WHERE (TDAY_BILL <> 0 OR FUTURE_CREDIT <> 0 )              
+AND AMT_FOR_PAYOUT_FINAL = 0  AND PAYOUTAMT >= 200            
+ORDER BY 1                      
+            
+SELECT * INTO #CLT_FINAL1 FROM #CLT_FINAL WHERE (TDAY_BILL <> 0 OR  VDT_LEDGER_TODAY < 0 ) AND AMT_FOR_PAYOUT <> 0          
+    
+SELECT * FROM #CLT_FINAL1    
+    
+SELECT L.CLTCODE AS CLTCODE,VNO,VAMT,VDT_LEDGER_TODAY,TDAY_BILL,AMT_FOR_PAYOUT,FUTURE_CREDIT,VDT_BALANCE,AMT_FOR_PAYOUT_FINAL,BATCHID    
+INTO #PAYOUTCHECK_BEFORE                
+FROM ACCOUNT.DBO.LEDGER L WITH (NOLOCK)  , #CLT_FINAL1 WHERE VTYP='3' AND #CLT_FINAL1.CLTCODE = L.CLTCODE                 
+AND BOOKTYPE!='E8' AND VDT BETWEEN @TDATE AND @TDATE + ' 23:59'                     
+AND CDT BETWEEN @TDATE + ' 16:00' AND @TDATE + ' 23:59'                     
+AND L.CLTCODE BETWEEN 'A000000000' AND 'ZZZZZZZZZZ'     
+          
+    
+ALTER TABLE #PAYOUTCHECK_BEFORE ADD  OPPCODE VARCHAR(10) ,DDNO VARCHAR(50)         
+        
+UPDATE #PAYOUTCHECK_BEFORE SET OPPCODE = C.CLTCODE FROM ACCOUNT.DBO.LEDGER  C WITH(NOLOCK)        
+WHERE #PAYOUTCHECK_BEFORE.VNO = C.VNO  AND VTYP = 3   AND VDT BETWEEN @TDATE AND @TDATE + ' 23:59'   AND C.DRCR = 'C'        
+        
+UPDATE #PAYOUTCHECK_BEFORE SET DDNO = C.DDNO FROM ACCOUNT.DBO.LEDGER1  C WITH(NOLOCK)        
+WHERE #PAYOUTCHECK_BEFORE.VNO = C.VNO  AND VTYP = 3   AND DDDT BETWEEN @TDATE AND @TDATE + ' 23:59'          
+    
+TRUNCATE TABLE PAYOUTCHECK_ANG_BEFORE        
+        
+INSERT INTO PAYOUTCHECK_ANG_BEFORE        
+SELECT CONVERT(VARCHAR (MAX),'PRODUCT_CO,INST_NMBR,INST_DATE,BENEF_DESCRIPTION,INSTRUMENT_AMNT,LOC_DESCRIPTION,I_STAT,ENRICH_VALUE,NARRATION,[DEPOSIT FLAG]')        
+UNION ALL        
+SELECT         
+ CONVERT(VARCHAR(MAX),(CONVERT(VARCHAR(MAX),'CHQCAN'))+','+        
+ CONVERT(VARCHAR(MAX),DDNO)+','+        
+ CONVERT(VARCHAR(MAX),FORMAT(CONVERT(DATE,@TDATE),'dd-MM-yyyy'))+','+        
+ CONVERT(VARCHAR(MAX),'H')+','+        
+ CONVERT(VARCHAR(MAX),CONVERT(NUMERIC(18,2),VAMT))+','+        
+ CONVERT(VARCHAR(MAX),OPPCODE)+','+        
+ CONVERT(VARCHAR(MAX),'OPEN')+','+        
+ CONVERT(VARCHAR(MAX),RTRIM(LTRIM(CLTCODE)))+','+        
+ CONVERT(VARCHAR(MAX),' ') +','+         
+ CONVERT(VARCHAR(MAX),'N'))         
+FROM #PAYOUTCHECK_BEFORE    
+    
+INSERT INTO PAYOUTCHECK_ANG_BEFORE_LOG  SELECT *,GETDATE() FROM #PAYOUTCHECK_BEFORE        
+    
+      
+    
+DECLARE @CASHFILENAME VARCHAR(200)     
+DECLARE @CASH VARCHAR(MAX)    
+    
+    
+SET @CASHFILENAME = 'J:\BACKOFFICE\EXPORT\' +'RECEIPT_BEFORE_BILL_'+ CONVERT(VARCHAR, GETDATE(), 112) + '.CSV'                           
+SET @CASH = 'EXEC MASTER.DBO.XP_CMDSHELL ''BCP " SELECT FILEDATA FROM ACCOUNT.DBO.PAYOUTCHECK_ANG_BEFORE " QUERYOUT ' +@CASHFILENAME+ ' -c -t"," -c -t"," -r"\n" -T'', NO_OUTPUT'    
+EXEC(@CASH)    
+    
+  
+    
+DROP TABLE #CLT                      
+DROP TABLE #TBILL                      
+DROP TABLE ##VDTBALANCE                      
+DROP TABLE #VDTBALANCE                      
+DROP TABLE #VDTLED                      
+DROP TABLE #FCR                      
+DROP TABLE #VW_NCMS_PAYOUTDATA_BATCHWISE             
+DROP TABLE #CLT_FINAL    
+DROP TABLE #CLT_FINAL1    
+DROP TABLE #PAYOUTCHECK_BEFORE
+
+GO

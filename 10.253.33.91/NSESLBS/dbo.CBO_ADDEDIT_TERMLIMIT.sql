@@ -1,0 +1,66 @@
+-- Object: PROCEDURE dbo.CBO_ADDEDIT_TERMLIMIT
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+
+CREATE    PROCEDURE [dbo].[CBO_ADDEDIT_TERMLIMIT]
+	@TERM_CODE VARCHAR(10),
+	@TERM_LIMIT MONEY,
+	@FLAG VARCHAR(1),
+	@STATUSID VARCHAR(25) = 'BROKER',
+	@STATUSNAME VARCHAR(25) = 'BROKER'
+AS
+	IF @STATUSID <> 'BROKER'
+		BEGIN
+			RAISERROR ('This Procedure is accessible to Broker', 16, 1)
+			RETURN
+		END
+	IF @FLAG <> 'A' AND @FLAG <> 'E' AND @FLAG <> 'D'
+		BEGIN
+			RAISERROR ('Add/Edit Flags Not Set Properly', 16, 1)
+			RETURN
+		END
+	IF @FLAG = 'A'
+		BEGIN
+			IF EXISTS (SELECT TOP 1 USERID FROM TERMLIMIT WHERE USERID = @TERM_CODE)
+				BEGIN
+					RAISERROR ('UserId already exists...', 16, 1)
+					RETURN
+				END
+			INSERT INTO
+				TERMLIMIT
+				(
+					USERID,
+					TRADELIMIT
+				)
+			VALUES
+				(
+					@TERM_CODE,
+					@TERM_LIMIT
+				)
+		END
+	ELSE IF @FLAG = 'E'
+		BEGIN
+			IF NOT EXISTS (SELECT TOP 1 USERID FROM TERMLIMIT WHERE USERID = @TERM_CODE)
+				BEGIN
+					RAISERROR ('UserId doesnot exist...', 16, 1)
+					RETURN
+				END
+			UPDATE
+				TERMLIMIT
+			SET
+				TRADELIMIT = @TERM_LIMIT
+			WHERE
+				USERID = @TERM_CODE
+		END
+	ELSE IF @FLAG = 'D'
+		BEGIN
+			DELETE FROM
+				TERMLIMIT
+			WHERE
+				USERID = @TERM_CODE
+		END
+
+GO

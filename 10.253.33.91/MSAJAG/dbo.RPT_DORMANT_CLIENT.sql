@@ -1,0 +1,416 @@
+-- Object: PROCEDURE dbo.RPT_DORMANT_CLIENT
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+      
+      
+CREATE PROC [dbo].[RPT_DORMANT_CLIENT]      
+ (      
+ @PROCESS_F INT = 1,      
+ @RPT_TYPE INT = 1,      
+ @EXCHANGE VARCHAR(3) = 'EQF',      
+ @FDATE  VARCHAR(11) = '',      
+ @TDATE  VARCHAR(11) = '',      
+ @STATUSNAME VARCHAR(25) = '',      
+ @FROMBRANCH VARCHAR(15) = '',      
+ @TOBRANCH VARCHAR(15) = '',      
+ @FROMSUBBROKER VARCHAR(15) = '',      
+ @TOSUBBROKER VARCHAR(15) = '',      
+ @FROMPARTY  VARCHAR(15) = '',      
+ @TOPARTY  VARCHAR(15) = '',      
+ @SEGMENT  VARCHAR(15) = ''      
+ )      
+      
+ AS      
+       
+ /*      
+ EXEC RPT_DORMANT_CLIENT 1,0,'EQF'      
+ EXEC RPT_DORMANT_CLIENT_ANGEL 2,1,'','MAY 14 2012','MAY 15 2012','','','','','','','ZZZZZZZZZ',''      
+      
+      
+ @TDATE  ---> DATE ( IT IS GETDATE() )      
+ @STATUSNAME ---> USER NAME       
+ @PROCESS_F ---> PROCESS FLAG ( 1 & 2 )      
+      1 FOR EXECUTE PROCESS      
+      2 FOR REPORT      
+ @RPT_TYPE ---> REPORT TYPE ( 1 & 2 )                   
+      1 FOR DORMANT CLIENT DETAILS WITH DAY DIFFERENCE      
+      2 FOR GOING TO DORMANT CLIENT DETAILS WITH DAY DIFFERENCE      
+ */      
+       
+ IF (@PROCESS_F = 1)      
+ BEGIN      
+  DECLARE @FROMDATE VARCHAR(11)      
+  SELECT @FROMDATE = DATEADD(DD,-180,GETDATE())      
+  --SELECT @FROMDATE = DATEADD(DD,-344,@TDATE)      
+        
+  TRUNCATE TABLE TBL_DORMANT_CLIENT      
+        
+  CREATE TABLE #CLIENT      
+   (      
+	PARTY_CODE VARCHAR(15),      
+	SAUDA_DATE DATETIME,      
+	EXCHANGE VARCHAR(3),
+	SEGMENT  VARCHAR(8)
+   )      
+
+  CREATE TABLE #CLIENT_MST      
+   (      
+	PARTY_CODE VARCHAR(15), 
+	EXCHANGE VARCHAR(3),
+	SEGMENT  VARCHAR(8),
+	ACTIVE_DATE DATETIME,
+	DEACTIVE_VALUE CHAR(1)
+   )      
+
+        
+  IF @EXCHANGE = 'EQF'      
+  BEGIN      
+	INSERT INTO #CLIENT_MST
+	SELECT CL_CODE,EXCHANGE,SEGMENT,ACTIVE_DATE,DEACTIVE_VALUE
+	FROM CLIENT_BROK_DETAILS WITH (NOLOCK)
+	WHERE ISNULL(DEACTIVE_VALUE,'') IN ('R','N','')
+	AND EXCHANGE IN ('NSE','BSE','MCD','NSX') AND CL_CODE NOT LIKE '98%' 
+    AND INACTIVE_FROM > GETDATE () 
+	AND CL_CODE IN 
+	(SELECT CL_CODE FROM CLIENT_BROK_DETAILS (NOLOCK)
+		GROUP BY CL_CODE
+	HAVING CONVERT(NUMERIC,DATEDIFF(DAY,MIN(ACTIVE_DATE),GETDATE())) > 180)
+
+	SELECT DISTINCT CL_CODE INTO #DCLIENT_MST FROM CLIENT_BROK_DETAILS (NOLOCK)
+	WHERE DEACTIVE_VALUE='D' AND EXCHANGE in ('NSE','BSE','MCD','NSX')      
+
+   INSERT INTO #CLIENT      
+   SELECT      
+    PARTY_CODE,      
+    SAUDA_DATE = MAX(SAUDA_DATE),
+	EXCHANGE,
+	SEGMENT      
+   FROM      
+    (      
+    SELECT       
+		PARTY_CODE,      
+		SAUDA_DATE = MAX(SAUDA_DATE),      
+		EXCHANGE  ='NSE',
+		SEGMENT  ='CAPITAL'
+    FROM      
+     MSAJAG.DBO.CMBILLVALAN (NOLOCK)      
+    WHERE   
+	SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()       
+    AND(PQTYTRD+SQTYTRD+PQTYDEL+SQTYDEL) <> 0      
+     AND TRADETYPE NOT IN ( 'SCF','ICF','IR' )      
+    GROUP BY      
+     PARTY_CODE       
+     
+          
+    UNION      
+      
+    SELECT       
+     PARTY_CODE,      
+     SAUDA_DATE = MAX(SAUDA_DATE),      
+		EXCHANGE  ='BSE',
+		SEGMENT  ='CAPITAL'
+    FROM      
+     AngelBSECM.BSEDB_AB.DBO.CMBILLVALAN   
+    WHERE 
+	SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()          
+    AND (PQTYTRD+SQTYTRD+PQTYDEL+SQTYDEL) <> 0      
+     AND TRADETYPE NOT IN ( 'SCF','ICF','IR' )      
+    GROUP BY      
+     PARTY_CODE       
+          
+              
+    UNION      
+      
+    SELECT       
+     PARTY_CODE,      
+     SAUDA_DATE = MAX(SAUDA_DATE),      
+	EXCHANGE  ='NSE',
+	SEGMENT  ='FUTURES'
+    FROM      
+     ANGELFO.NSEFO.DBO.FOBILLVALAN 
+    WHERE  
+     SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()     
+     AND (PQTY+SQTY) <> 0              
+     AND TRADETYPE = 'BT'   AND AUCTIONPART = ''      
+    GROUP BY      
+     PARTY_CODE       
+      
+   
+   UNION      
+      
+    SELECT       
+     PARTY_CODE,      
+     SAUDA_DATE = MAX(SAUDA_DATE),      
+	EXCHANGE  ='BSE',
+	SEGMENT  ='FUTURES'
+    FROM      
+     ANGELCOMMODITY.BSEFO.DBO.BFOBILLVALAN 
+    WHERE 
+     SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()     
+     AND (PQTY+SQTY) <> 0              
+     AND TRADETYPE = 'BT'  AND AUCTIONPART = ''      
+    GROUP BY      
+     PARTY_CODE     
+    
+          
+    UNION      
+      
+    SELECT       
+     PARTY_CODE,      
+     SAUDA_DATE = MAX(SAUDA_DATE),      
+	EXCHANGE  ='NSX',
+	SEGMENT  ='FUTURES'
+    FROM      
+     ANGELFO.NSECURFO.DBO.FOBILLVALAN       
+    WHERE 
+	SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()         
+    AND (PQTY+SQTY) <> 0              
+     AND TRADETYPE = 'BT' AND AUCTIONPART = ''     
+    GROUP BY      
+     PARTY_CODE 
+
+   UNION
+
+	SELECT       
+     PARTY_CODE,      
+     SAUDA_DATE = MAX(SAUDA_DATE),      
+	EXCHANGE  ='MCD',
+	SEGMENT  ='FUTURES'
+    FROM      
+     ANGELCOMMODITY.MCDXCDS.DBO.FOBILLVALAN       
+    WHERE 
+	SAUDA_DATE BETWEEN @FROMDATE AND GETDATE()         
+    AND (PQTY+SQTY) <> 0              
+     AND TRADETYPE = 'BT'  AND AUCTIONPART = ''       
+    GROUP BY      
+     PARTY_CODE     
+          
+ 
+           
+    ) C      
+   GROUP BY      
+    PARTY_CODE,
+	EXCHANGE,
+	SEGMENT      
+  END      
+      
+  
+      
+  INSERT INTO TBL_DORMANT_CLIENT      
+  SELECT      
+   PARTY_CODE = PARTY_CODE,      
+   SAUDA_DATE = LEFT(MAX(SAUDA_DATE),11),      
+   DIFF  = CONVERT(NUMERIC,DATEDIFF(DAY,MAX(SAUDA_DATE),@FROMDATE)),      
+   CREATED_BY = @STATUSNAME,      
+   CREATED_ON = GETDATE(),
+   EXCHANGE,
+   SEGMENT   
+  FROM      
+   #CLIENT (NOLOCK)
+  WHERE
+	PARTY_CODE NOT LIKE '98%'	      
+  GROUP BY      
+   PARTY_CODE,
+   EXCHANGE,
+   SEGMENT   
+      
+      
+  SELECT       
+   T.PARTY_CODE,      
+   LAST_SAUDA_DATE,      
+   DAY_DIFF,      
+   DORMANT_FLAG= 1,      
+   DORMANT_DATE= GETDATE(),      
+   REACTIVE_DATE= '',      
+   CREATED_BY,      
+   CREATED_ON,
+   T.EXCHANGE,
+   T.SEGMENT,
+   CM.DEACTIVE_VALUE   
+  INTO      
+   #DORMANT_C      
+  FROM      
+   TBL_DORMANT_CLIENT T (NOLOCK),
+   #CLIENT_MST CM (NOLOCK)
+  WHERE       
+	T.PARTY_CODE = CM.PARTY_CODE	
+	AND DAY_DIFF > 180      
+	AND CONVERT(VARCHAR(11),CREATED_ON,112) = CONVERT(VARCHAR(11),GETDATE(),112)      
+  ORDER BY      
+   T.PARTY_CODE,      
+   LAST_SAUDA_DATE      
+
+  INSERT INTO #DORMANT_C
+  SELECT       
+   PARTY_CODE,      
+   LAST_SAUDA_DATE='',
+   DIFF  = 0,      
+   DORMANT_FLAG= 1,      
+   DORMANT_DATE= GETDATE(),      
+   REACTIVE_DATE= '',      
+   CREATED_BY = @STATUSNAME,      
+   CREATED_ON = GETDATE(),      
+   EXCHANGE,
+   SEGMENT,
+   CM.DEACTIVE_VALUE   
+  FROM      
+   #CLIENT_MST CM (NOLOCK)
+  WHERE       
+    Party_code Not in (SELECT DISTINCT PARTY_CODE FROM TBL_DORMANT_CLIENT (NOLOCK))
+      
+  INSERT INTO TBL_DORMANT_CLIENT_DATA      
+  SELECT * FROM #DORMANT_C      
+  WHERE PARTY_CODE NOT IN (SELECT DISTINCT PARTY_CODE FROM TBL_DORMANT_CLIENT_DATA (NOLOCK))      
+        
+  UPDATE TBL_DORMANT_CLIENT_DATA       
+  SET DORMANT_FLAG= 1,      
+   DORMANT_DATE= GETDATE(),      
+   REACTIVE_DATE= '',      
+   DAY_DIFF = C.DAY_DIFF      
+  FROM #DORMANT_C C      
+  WHERE C.PARTY_CODE = TBL_DORMANT_CLIENT_DATA.PARTY_CODE      
+  AND TBL_DORMANT_CLIENT_DATA.DORMANT_FLAG = 0      
+      
+  INSERT INTO TBL_DORMANT_CLIENT_DATA_LOG      
+  SELECT * FROM #DORMANT_C      
+      
+  DROP TABLE #DORMANT_C      
+   
+  /* RE-ACTIVE*/   
+  SELECT       
+   T.PARTY_CODE,      
+   T.LAST_SAUDA_DATE,      
+   T.DAY_DIFF,      
+   DORMANT_FLAG= 0,      
+   DORMANT_DATE= '',      
+   REACTIVE_DATE = GETDATE(),      
+   T.CREATED_BY,      
+   T.CREATED_ON,      
+   T.EXCHANGE,
+   T.SEGMENT,
+DEACTIVE_VALUE   =''
+  INTO      
+   #NONDORMANT_C      
+  FROM      
+   TBL_DORMANT_CLIENT T (NOLOCK)
+   --TBL_DORMANT_CLIENT_DATA T1 (NOLOCK)      
+  WHERE       
+   --AND T.DAY_DIFF < 180      
+   LEFT(T.LAST_SAUDA_DATE,11) = LEFT(GETDATE(),11)			
+   AND T.PARTY_CODE IN (SELECT DISTINCT CL_CODE FROM #DCLIENT_MST)      
+         
+      
+  UPDATE TBL_DORMANT_CLIENT_DATA      
+  SET      
+   DORMANT_FLAG = C.DORMANT_FLAG,      
+   REACTIVE_DATE = C.REACTIVE_DATE,      
+   DAY_DIFF  = C.DAY_DIFF      
+  FROM      
+   #NONDORMANT_C C (NOLOCK)      
+  WHERE      
+   TBL_DORMANT_CLIENT_DATA.PARTY_CODE = C.PARTY_CODE
+      
+      
+  INSERT INTO TBL_DORMANT_CLIENT_DATA_LOG      
+  SELECT * FROM #NONDORMANT_C      
+  DROP TABLE #NONDORMANT_C       
+  DROP TABLE #CLIENT        
+      
+  
+          
+  /*
+  IF (@EXCHANGE = 'EQF')      
+  BEGIN      
+	UPDATE      
+		CLIENT_BROK_DETAILS      
+	SET      
+		DEACTIVE_REMARKS = (      
+		CASE      
+		WHEN DORMANT_FLAG = 1 THEN 'DORMANT CLIENT'      
+		ELSE ''      
+		END),      
+		DEACTIVE_VALUE  = (      
+		CASE      
+		WHEN DORMANT_FLAG = 1 THEN 'D'      
+		ELSE ''      
+		END),
+		MODIFIEDON= GETDATE(),
+		MODIFIEDBY= 'SYSJOB'       
+	FROM      
+		TBL_DORMANT_CLIENT_DATA T (NOLOCK)      
+	WHERE      
+		CLIENT_BROK_DETAILS.CL_CODE = T.PARTY_CODE      
+		AND EXCHANGE IN ('NSE','BSE','MCD','NSX') 
+		AND INACTIVE_FROM > GETDATE () 
+		END
+  */     
+      
+ END      
+       
+      
+ IF (@PROCESS_F = 2)      
+ BEGIN      
+      
+  IF @TOBRANCH = ''      
+  BEGIN      
+   SET @TOBRANCH = 'ZZZZZZZZZZZ'      
+  END      
+        
+  IF @TOSUBBROKER = ''      
+  BEGIN      
+   SET @TOSUBBROKER = 'ZZZZZZZZZZZ'      
+  END       
+      
+  IF @TOPARTY = ''      
+  BEGIN      
+   SET @TOPARTY = 'ZZZZZZZZZZZ'      
+  END       
+      
+  --SELECT @FDATE, @FDATE, @FROMBRANCH, @TOBRANCH, @FROMSUBBROKER, @TOSUBBROKER, @FROMPARTY, @TOPARTY, @RPT_TYPE      
+  SELECT      
+   DISTINCT      
+   BRANCH  = C.BRANCH_CD,      
+   SUBBROKER = C.SUB_BROKER,      
+   PARTY_CODE = T.PARTY_CODE,      
+   PARTY_NAME = LONG_NAME,      
+   DORMANT_DATE= CONVERT(VARCHAR,DORMANT_DATE,103),      
+   REACTIVE_DATE= (      
+   CASE       
+    WHEN CONVERT(VARCHAR(11),REACTIVE_DATE,109) = 'JAN  1 1900' THEN ''      
+    ELSE CONVERT(VARCHAR(11),REACTIVE_DATE,103)      
+   END),      
+   LAST_DATE = CONVERT(VARCHAR,LAST_SAUDA_DATE,103),      
+   DAY_DIFF = DAY_DIFF,      
+   cb.EXCHANGE,      
+   cb.SEGMENT      
+  FROM       
+   TBL_DORMANT_CLIENT_DATA_LOG T (NOLOCK),      
+   MSAJAG..CLIENT_DETAILS C (NOLOCK),      
+   MSAJAG..CLIENT_BROK_DETAILS CB (NOLOCK)      
+  WHERE      
+   T.PARTY_CODE = C.PARTY_CODE      
+   AND CB.CL_CODE = C.CL_CODE      
+   AND CREATED_ON BETWEEN @FDATE AND @TDATE + ' 23:59:59'      
+   AND BRANCH_CD BETWEEN @FROMBRANCH AND @TOBRANCH      
+   AND SUB_BROKER BETWEEN @FROMSUBBROKER AND @TOSUBBROKER      
+   AND T.PARTY_CODE BETWEEN @FROMPARTY AND @TOPARTY         
+   AND DORMANT_FLAG = (      
+   CASE      
+    WHEN @RPT_TYPE = 1 THEN 1      
+    WHEN @RPT_TYPE = 2 THEN 0      
+    ELSE DORMANT_FLAG      
+   END)      
+   AND cb.EXCHANGE+cb.SEGMENT = (      
+   CASE      
+    WHEN @SEGMENT <> '' THEN @SEGMENT      
+    ELSE cb.EXCHANGE+cb.SEGMENT      
+   END)      
+  ORDER BY      
+   C.BRANCH_CD,      
+   C.SUB_BROKER,      
+   T.PARTY_CODE      
+ END
+
+GO

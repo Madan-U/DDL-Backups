@@ -1,0 +1,87 @@
+-- Object: PROCEDURE dbo.BULKCOPYRECO_ALLBANK_bakapr302015
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+CREATE PROC [dbo].[BULKCOPYRECO_ALLBANK](
+           @FILENAME  VARCHAR(200),
+           @TABLE     VARCHAR(50),
+           @BANK_TYPE VARCHAR(10),
+           @STAT_TYPE VARCHAR(10),
+           @LOGIN     VARCHAR(10),
+           @PWD       VARCHAR(15))
+
+AS
+  DECLARE  @@SQL  AS VARCHAR(4000)
+  
+  DECLARE  @@FNAME  AS VARCHAR(200)
+                       
+  SELECT @@FNAME = 'C:\TESTIMPORT.TXT'
+  
+  CREATE TABLE #TESTIMPORT (
+    ONEROW VARCHAR(2000),
+    SNO    INT   IDENTITY ( 1,1 ))
+  
+  SET NOCOUNT ON
+  
+  SELECT @@SQL = "INSERT INTO #TESTIMPORT EXEC MASTER.DBO.XP_CMDSHELL 'TYPE " + @FILENAME + "'"              
+  PRINT @@SQL
+  EXEC(@@SQL)     
+
+  IF @BANK_TYPE = 'ICICIRECO'
+    BEGIN
+      DELETE FROM #TESTIMPORT
+      WHERE       SNO <= (SELECT SNO
+                          FROM   #TESTIMPORT
+                          WHERE  LEFT(ONEROW,8) = 'TXN_DATE')
+    END
+    
+  DELETE FROM #TESTIMPORT
+  WHERE       SNO = 1
+                    
+  DELETE FROM #TESTIMPORT
+  WHERE       ONEROW IS NULL
+              
+  DELETE FROM #TESTIMPORT
+  WHERE       RTRIM(LEFT(ONEROW,1)) = CHAR(9)
+                                      
+  SELECT ONEROW = REPLACE(REPLACE(REPLACE(ONEROW,')',''),'(',''),'"',
+                          '')
+  INTO   #TESTIMPORT1
+  FROM   #TESTIMPORT
+         
+  DROP TABLE #TESTIMPORT
+  
+  SELECT *
+  INTO   TESTIMPORT
+  FROM   #TESTIMPORT1
+         
+  DROP TABLE #TESTIMPORT1
+
+  SELECT @@SQL = "MASTER.DBO.XP_CMDSHELL 'bcp " + CHAR(34) + DB_NAME() + ".DBO.TESTIMPORT" + CHAR(34) + " out " + CHAR(34) + @@FNAME + CHAR(34) + " -c -q -U " + CHAR(34) + @LOGIN + CHAR(34) + " -P " + CHAR(34) + @PWD + CHAR(34) + "', no_output"
+  PRINT @@SQL
+  EXEC (@@SQL)
+
+  DROP TABLE TESTIMPORT
+  
+  IF @BANK_TYPE = 'CITYRECO'
+    BEGIN
+      SELECT @@SQL = "BULK INSERT " + @TABLE + " FROM '" + @@FNAME + "' WITH (FIRSTROW = 1, ROWTERMINATOR = '\n', FIELDTERMINATOR = ';', KEEPNULLS)"
+    END
+    ELSE IF @BANK_TYPE = 'HDFCRECO' AND @STAT_TYPE = 'TAB'
+    BEGIN
+      SELECT @@SQL = "BULK INSERT " + @TABLE + " FROM '" + @@FNAME + "' WITH (FIRSTROW = 1, ROWTERMINATOR = '\n', FIELDTERMINATOR = '\t', KEEPNULLS)"
+    END
+    ELSE IF (@BANK_TYPE = 'HDFCRECO' AND @STAT_TYPE = 'CSV') OR @BANK_TYPE = 'UTIRECO' 
+    BEGIN
+      SELECT @@SQL = "BULK INSERT " + @TABLE + " FROM '" + @@FNAME + "' WITH (FIRSTROW = 1, ROWTERMINATOR = '\n', FIELDTERMINATOR = ',', KEEPNULLS)"
+    END
+    ELSE IF @BANK_TYPE = 'ICICIRECO' 
+    BEGIN
+      SELECT @@SQL = "BULK INSERT " + @TABLE + " FROM '" + @@FNAME + "' WITH (FIRSTROW = 1, ROWTERMINATOR = '\n', FIELDTERMINATOR = '\t', KEEPNULLS)"
+  END
+
+  PRINT @@SQL
+  EXEC (@@SQL)
+
+GO

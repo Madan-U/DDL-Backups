@@ -1,0 +1,35 @@
+-- Object: PROCEDURE dbo.MTF_NSEFO_INSERT
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE PROC MTF_NSEFO_INSERT   
+  
+AS  
+SELECT DISTINCT CLTCODE INTO #CL_CODE  FROM [AngelFO].ACCOUNTFO.DBO.LEDGER WITH(NOLOCK) WHERE VDT >='2017-08-04'   
+AND CLTCODE NOT IN (SELECT cltcode FROM [AngelFO].ACCOUNTFO.DBO.acmast)  
+AND CLTCODE >='A001' AND CLTCODE <='ZZZZ'  
+  
+  
+UPDATE CLIENT_BROK_DETAILS SET Imp_Status =0  
+WHERE EXCHANGE ='nse' AND  Segment = 'FUTURES'   
+AND Cl_Code IN (SELECT * FROM #CL_CODE)  
+  
+SELECT  * INTO #NFO  
+FROM CLIENT_BROK_DETAILS  where CL_CODE IN (SELECT * FROM #CL_CODE) AND EXCHANGE ='NSE'  AND Segment = 'FUTURES'  
+SELECT  * INTO #NSEFo1   
+FROM CLIENT_BROK_DETAILS WHERE CL_CODE IN (SELECT * FROM #CL_CODE) AND EXCHANGE ='NSE'  AND CL_CODE NOT IN (SELECT CL_CODE FROM #NFO)  
+  
+  
+update #NSEFo1 set Fut_Brok_Applicable =2, DEL_BROK=Trd_Brok ,Fut_Fut_Fin_Brok =223  
+update #NSEFo1 set Fut_Brok =Trd_Brok, Fut_Opt_Brok=Trd_Brok ,Fut_Opt_Exc =Trd_Brok  
+update #NSEFo1 set Trd_Brok =0  
+  
+ UPDATE #NSEFO1 SET Segment = 'FUTURES',Brok_Scheme = '3',TRD_STT =0,  
+ InActive_From=CONVERT(VARCHAR(11),GETDATE(),120) + ' 23:59' ,ACTIVE_DATE= CONVERT(VARCHAR(11),GETDATE(),120),  
+ SYSTEMDATE =CONVERT(VARCHAR(11),GETDATE(),120) ,Imp_Status =0 ,Deactive_Remarks ='MTF ACCOUNT UCC NOT DONE',Deactive_value ='M',Modifiedby ='MTF',  
+ Modifiedon =GETDATE(),Trd_Tran_Chrgs ='0.001850',Del_Tran_Chrgs ='0.050000',CheckActiveClient =1  
+  
+ INSERT INTO CLIENT_BROK_DETAILS  
+  SELECT * FROM #NSEFO1
+
+GO

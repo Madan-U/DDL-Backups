@@ -1,0 +1,24 @@
+-- Object: PROCEDURE dbo.CLS_GET_DATA_OMNESYS_ROUTE
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+CREATE PROCEDURE [dbo].[CLS_GET_DATA_OMNESYS_ROUTE](
+	
+	@MAPPEDUSERNAME VARCHAR(100)
+
+	)
+AS
+BEGIN
+	--  select * from CLASSAPP.DBO.PASSPORT_LOGIN_MAP
+	SELECT  FLDUSERNAME + '$' + FLDPASSWORD AS Data FROM MSAJAG..TBLPRADNYAUSERS A
+ 
+ WHERE  Fldusername = @MAPPEDUSERNAME 
+
+
+
+
+END
+
+GO

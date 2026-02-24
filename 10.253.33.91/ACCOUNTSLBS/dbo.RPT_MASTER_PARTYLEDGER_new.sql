@@ -1,0 +1,59 @@
+-- Object: PROCEDURE dbo.RPT_MASTER_PARTYLEDGER_new
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+--Exec RPT_MASTER_PARTYLEDGER 'Dec  1 2005','Dec 14 2005','Apr  1 2005','Apr  1 2005','broker','broker','Edt','c','b','BRANCH','S'    
+/*       
+THIS PROCEDURE IS A MASTER PROCEDURE WHICH INTERNALLY CALL THE DIFFERENT PROCEDURES ON BASIS OF FOLLOWING PARAMETERS      
+@STATUSID       
+@REPORTNAME      
+@SUMMARYOPT       
+IT TAKES A PROCEDURE NAME FROM TBL_MASTER_PARTYLEDGER TABLE AND EXECUTE WITH THE PARAMETERS PASSED IN MASTER PROCEDURE.      
+CREATED BY := NIKHIL NAVARE      
+CREATED DATE := DECEMBER 12 2005      
+DATABASE  := ACCOUNT AND ACCOUNTBSE AND ACCOUNTFO AND ACCOUNTMCDX AND ACCOUNTNCDX      
+SYNTAX AS FOLLOWS -----      
+EXEC RPT_MASTER_PARTYLEDGER 'APR  1 2005', 'DEC 31 2005', 'APR  1 2005', 'MAR 31 2006', 'BROKER', 'BROKER', 'VDT', 'ABC', 'ZZZ', 'BRANCH', 'S'      
+*/      
+      
+CREATE  PROC [dbo].[RPT_MASTER_PARTYLEDGER_new]      
+ @FDATE VARCHAR(11),      
+ @TDATE VARCHAR(11),      
+ @STDDATE VARCHAR(11),      
+ @LSTDATE VARCHAR(11),      
+ @STATUSID VARCHAR(20),      
+ @STATUSNAME VARCHAR(20),      
+ @DISPLAYRPT VARCHAR(3),      
+ @FPARTY VARCHAR(10),      
+ @TPARTY VARCHAR(10),      
+ @REPORTNAME varchar(15),      
+ @SUMMARYOPT CHAR(1),
+ @SHOWZERO VARCHAR(1) = 'N',
+	@nseflg varchar(1)  ,    
+	@bseflg varchar(1)  ,    
+	@nfoflg varchar(1)    
+      
+AS      
+      
+DECLARE      
+@@CALLINGSP VARCHAR(100),      
+@@SELECTQUERY VARCHAR(1000)      
+      
+      
+ SELECT       
+  @@CALLINGSP = CALLINGSP       
+ FROM       
+  TBL_MASTER_PARTYLEDGER_NEW      
+ WHERE      
+  REPORTNAME = @REPORTNAME      
+  AND STATUSID = @STATUSID      
+  AND SUMMARYOPT = @SUMMARYOPT      
+    
+      
+SET @@SELECTQUERY = @@CALLINGSP + ' ''' + @FDATE + ''',''' + @TDATE + ''',''' + @STDDATE + ''',''' + @LSTDATE + ''',''' +  @STATUSID + ''',''' + @STATUSNAME + ''',''' + @DISPLAYRPT + ''',''' + @FPARTY + ''',''' + @TPARTY  + ''',''' + @REPORTNAME + ''''  
+    
+
+EXEC (@@SELECTQUERY)
+
+GO

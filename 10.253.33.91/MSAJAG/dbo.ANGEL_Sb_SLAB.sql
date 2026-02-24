@@ -1,0 +1,59 @@
+-- Object: PROCEDURE dbo.ANGEL_Sb_SLAB
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+create PROCEDURE ANGEL_Sb_SLAB(@SBCODE AS VARCHAR(10),@tSLAB AS VARCHAR(10),@DSLAB AS VARCHAR(10))
+AS
+
+SET NOCOUNT ON
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+
+DECLARE @STAT AS INT
+SET @STAT=9
+SELECT @STAT=(CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END) FROM BROKTABLE WHERE TABLE_NO=@TSLAB AND TRD_DEL <> 'D' 
+
+IF @STAT=1
+BEGIN
+	SELECT @STAT=(CASE WHEN COUNT(*) > 0 THEN 2 ELSE 0 END) FROM BROKTABLE WHERE TABLE_NO=@DSLAB AND TRD_DEL = 'D' 
+END
+ELSE
+BEGIN
+	PRINT 'TRADING BROKERAGE SLAB DOES NOT EXISTS'	
+	RETURN
+END
+
+IF @STAT <> 0
+BEGIN
+	
+	select * into #abc from client2 where cl_code in (select cl_code from client1 where sub_Broker=@SBCODE)
+	
+	------------------------------------- TRADING
+	
+	
+	UPDATE clientbrok_scheme SET TO_DATE=CONVERT(VARCHAR(11),GETDATE()-1)+' 23:59:00'
+	where party_code in (select party_Code from #abc)
+	
+	INSERT INTO CLIENTBROK_SCHEME(Party_Code,Table_No,Scheme_Type,Scrip_Cd,Trade_Type,Brokscheme,From_Date,To_Date)
+	SELECT PARTY_CODE,@TSLAB,'TRD','ALL','NRM',BROK_SCHEME,
+	FROM_DATE=CONVERT(VARCHAR(11),GETDATE())+' 00:00:00',
+	TO_DATE='DEC 31 2049 23:59:00' FROM #ABC
+	
+	UPDATE CLIENT2 SET TABLE_NO=@TSLAB where party_code in (select party_Code from #abc)
+	
+	------------------------------------ DELIVERY
+	
+	INSERT INTO CLIENTBROK_SCHEME(Party_Code,Table_No,Scheme_Type,Scrip_Cd,Trade_Type,Brokscheme,From_Date,To_Date)
+	SELECT PARTY_CODE,@DSLAB,'DEL','ALL','NRM',BROK_SCHEME,
+	FROM_DATE=CONVERT(VARCHAR(11),GETDATE())+' 00:00:00',
+	TO_DATE='DEC 31 2049 23:59:00' FROM #ABC
+	
+	UPDATE CLIENT2 SET sub_TABLENO=@DSLAB where party_code in (select party_Code from #abc)
+	PRINT 'BROKERAGE MODIFIED SUCCESSFULLY'
+END
+ELSE
+BEGIN
+	PRINT 'DELIVERY BROKERAGE SLAB DOES NOT EXISTS'
+END
+SET NOCOUNT OFF
+
+GO

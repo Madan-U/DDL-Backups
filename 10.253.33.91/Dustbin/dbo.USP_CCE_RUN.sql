@@ -1,0 +1,96 @@
+-- Object: PROCEDURE dbo.USP_CCE_RUN
+-- Server: 10.253.33.91 | DB: Dustbin
+--------------------------------------------------
+
+    
+CREATE PROCEDURE USP_CCE_RUN @ACTION VARCHAR (50)
+AS    
+DECLARE @DATE VARCHAR(20) , @DATE1 VARCHAR(20) , @SQL VARCHAR (100) , @SQL1 VARCHAR (100) --,@ACTION VARCHAR (50)='T_DAY'  
+BEGIN
+
+IF @ACTION='T_DAY'
+BEGIN
+SELECT @DATE=SUBSTRING(CONVERT(VARCHAR, GETDATE(), 100), 1, 11)    
+PRINT @DATE 
+  
+DECLARE @BODYCONTENT VARCHAR(MAX),@SUB VARCHAR(500), @XML NVARCHAR(MAX)   
+SET @SUB = 'CCE PROCESS STATUS MAIL - '+ CONVERT(VARCHAR(11),GETDATE(),105)    
+  
+SET @BODYCONTENT ='<P>Dear All,</P>    
+<H3><P>CCE PROCESS JOB STATUS</P></H3>    
+<HTML><BODY>    
+<TABLE BORDER = 1>    
+<TR>    
+<TH style="background-color:#00de54;"> CCE PROCESS STARTED FOR '+@DATE+' </TH>    
+</TR>    
+</TABLE>    
+</BODY></HTML>    
+<br>    
+<P>Regards,</P>    
+<P>BO SUPPORT TEAM,</P>'
+
+SET @BODYCONTENT = @BODYCONTENT +'</TABLE></BODY></HTML>'    
+    
+PRINT @BODYCONTENT            
+          
+EXEC MSDB.DBO.SP_SEND_DBMAIL                         
+@PROFILE_NAME='BO SUPPORT',                         
+@RECIPIENTS='HRISHIKESH.YERUNKAR@ANGELBROKING.COM',    
+@COPY_RECIPIENTS ='',              
+@BLIND_COPY_RECIPIENTS='HRISHIKESH.YERUNKAR@ANGELBROKING.COM',                        
+@SUBJECT=@SUB,                        
+@BODY=@BODYCONTENT,                        
+@IMPORTANCE = 'HIGH',                        
+@BODY_FORMAT ='HTML'   
+    
+SET @SQL='EXEC ACCOUNT.DBO.GET_AUDIT_DATA_NEW_CURRENT '''+@DATE+''', ''0000'', ''ZZZZZZ'''    
+PRINT @SQL    
+
+END
+----EXEC (@SQL)    
+
+IF @ACTION='P_DAY'
+BEGIN
+
+SELECT @DATE1=SUBSTRING(CONVERT(VARCHAR, GETDATE()-1, 100), 1, 11)    
+PRINT @DATE1
+  
+DECLARE @BODYCONTENT1 VARCHAR(MAX),@SUB1 VARCHAR(500), @XML1 NVARCHAR(MAX)    
+SET @SUB1 = 'CCE PROCESS STATUS MAIL - '+ CONVERT(VARCHAR(11),GETDATE(),105)    
+  
+SET @BODYCONTENT1 ='<P>Dear All,</P>    
+<H3><P>CCE PROCESS JOB STATUS</P></H3>    
+<HTML><BODY>    
+<TABLE BORDER = 1>    
+<TR>    
+<TH style="background-color:#00de54;"> CCE PROCESS STARTED FOR '+@DATE1+' </TH>    
+</TR>    
+</TABLE>    
+</BODY></HTML>    
+<br>    
+<P>Regards,</P>    
+<P>BO SUPPORT TEAM,</P>'        
+    
+SET @BODYCONTENT1 = @BODYCONTENT1 +'</TABLE></BODY></HTML>'    
+    
+PRINT @BODYCONTENT1            
+          
+EXEC MSDB.DBO.SP_SEND_DBMAIL                         
+@PROFILE_NAME='BO SUPPORT',                         
+@RECIPIENTS='HRISHIKESH.YERUNKAR@ANGELBROKING.COM',    
+@COPY_RECIPIENTS ='',              
+@BLIND_COPY_RECIPIENTS='HRISHIKESH.YERUNKAR@ANGELBROKING.COM',                        
+@SUBJECT=@SUB1,                        
+@BODY=@BODYCONTENT1,                        
+@IMPORTANCE = 'HIGH',                        
+@BODY_FORMAT ='HTML'
+    
+SET @SQL1='EXEC ACCOUNT.DBO.GET_AUDIT_DATA_NEW_CURRENT '''+@DATE1+''', ''0000'', ''ZZZZZZ'''    
+PRINT @SQL1    
+    
+----EXEC (@SQL1)    
+    
+END
+END
+
+GO

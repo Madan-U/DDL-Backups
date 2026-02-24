@@ -1,0 +1,87 @@
+-- Object: PROCEDURE dbo.PROC_VAR_UPLOAD_BOD
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+ 
+CREATE PROC [dbo].[PROC_VAR_UPLOAD_BOD]
+(
+@FILEDATE VARCHAR(11), 
+@FILEPATH VARCHAR(150), 
+@PROCID VARCHAR(50) = ''
+) 
+AS   
+Declare @strSql varchar(400),
+@DETAILKEY       VARCHAR(10),
+@RECCNT            INT
+   
+TRUNCATE TABLE MG02_TMP
+
+
+
+IF @PROCID<>''
+BEGIN
+	INSERT INTO MG02_TMP
+	SELECT FILE_DATA FROM CLASSFILEUPD WHERE SESSION_ID = @PROCID
+	DELETE FROM CLASSFILEUPD WHERE SESSION_ID = @PROCID
+END
+ELSE
+BEGIN 
+	set @strSql = 'Bulk insert MG02_TMP from ''' + @FilePath  + ''' with ( ROWTERMINATOR = ''' + char(10) + ''' )'        
+	Exec(@strSql)      
+END
+ 
+--set @strSql = 'Bulk insert MG02_TMP from ''' + @FilePath  + ''' with ( ROWTERMINATOR = ''' + char(10) + ''' )'       
+--Exec(@strSql)     
+ 
+SELECT @DETAILKEY = ISNULL(.DBO.PIECE(FILETEXT,',',2),'0')     
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 10
+ 
+IF @DETAILKEY <> REPLACE(CONVERT(VARCHAR,CONVERT(DATETIME,@FILEDATE),103),'/','')
+                RETURN
+ 
+ 
+-- TO UPLOAD T DAY EOD VAR FILE ON T DAY
+DECLARE @FILEDATE_NEW VARCHAR(11), @DETAILKEY_NEW VARCHAR(10)
+
+ 
+SELECT @FILEDATE_NEW = MAX(START_DATE) FROM Sett_Mst WHERE Sett_Type = 'M' AND Start_Date = CONVERT(DATETIME,@FILEDATE)
+SELECT @DETAILKEY_NEW = REPLACE(CONVERT(VARCHAR,CONVERT(DATETIME,@FILEDATE_NEW),103),'/','')
+-- TO UPLOAD T DAY EOD VAR FILE ON T DAY
+ 
+ 
+Delete FROM VARCONTROL where  Detailkey = @FILEDATE_NEW
+Delete FROM VARDETAIL where  Detailkey = @DETAILKEY_NEW
+ 
+SELECT @RECCNT = ISNULL(COUNT(1),0) FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 20
+
+INSERT INTO VARCONTROL
+SELECT ISNULL(.DBO.PIECE(FILETEXT,',',1),0),
+                   @FILEDATE_NEW,
+                   ISNULL(.DBO.PIECE(FILETEXT,',',3),0),
+                   (CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN '0' ELSE ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') END),
+                   --(CASE WHEN ISNULL(.DBO.PIECE(FILETEXT,',',5),'-1') = '-1' THEN ISNULL(.DBO.PIECE(FILETEXT,',',4),'0') ELSE ISNULL(.DBO.PIECE(FILETEXT,',',5),'0') END),
+                   @RECCNT,
+                   @DETAILKEY_NEW,
+                   'NSE', 
+				   'CM'         
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 10
+
+INSERT INTO VARDETAIL
+SELECT ISNULL(.DBO.PIECE(FILETEXT,',',1),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',2),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',3),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',4),''),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',5),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',6),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',7),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',8),0),
+                   ISNULL(.DBO.PIECE(FILETEXT,',',10),0),
+                   @DETAILKEY_NEW
+				   --'EQUITY'
+FROM MG02_TMP
+WHERE LEFT(FILETEXT,2) = 20
+
+GO

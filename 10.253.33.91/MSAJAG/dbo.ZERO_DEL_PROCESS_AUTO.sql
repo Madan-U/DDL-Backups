@@ -1,0 +1,40 @@
+-- Object: PROCEDURE dbo.ZERO_DEL_PROCESS_AUTO
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+--  Ly&uR7OCnx@R9#jj
+
+
+
+--MTF_POA_PROCESS_FOR_50K 
+
+--ZERO__DEL_PROCESS_LO
+
+
+
+CREATE PROC [dbo].[ZERO_DEL_PROCESS_AUTO]  
+(
+@DATE VARCHAR(100)
+)
+AS  
+	DECLARE @C VARCHAR(MAX)
+	SET @DATE= CONVERT(varchar(11),@DATE,100)
+
+BEGIN
+       DECLARE  @D TABLE (D1 VARCHAR(20))
+
+		 insert into @D
+		EXEC DeleteDelBrokerage_NSE 'NSECM',@DATE,''
+		
+		EXEC DeleteDelBrokerage_NSE_UPDATE @DATE
+
+		INSERT INTO ZERO__DEL_PROCESS_LOG  
+		SELECT @DATE,GETDATE()  
+
+		SELECT 'NSE ZERO DELIVERY PROCESS WAS EXECUTED FOR '+ @DATE + +' & '+' PROCESS COMPLETED SUCCESSFULLY.....!!!!' AS [STATUS]  
+
+ END
+
+GO

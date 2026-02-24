@@ -1,0 +1,30 @@
+-- Object: PROCEDURE dbo.ACCALBMOLDMARGIN
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+/****** Object:  Stored Procedure dbo.ACCALBMOLDMARGIN    Script Date: 12/26/2001 1:22:50 PM ******/
+
+
+
+/****** Object:  Stored Procedure dbo.ACCALBMOLDMARGIN    Script Date: 3/21/01 12:49:58 PM ******/
+
+/****** Object:  Stored Procedure dbo.ACCALBMOLDMARGIN    Script Date: 20-Mar-01 11:38:41 PM ******/
+
+/****** Object:  Stored Procedure dbo.ACCALBMOLDMARGIN    Script Date: 2/5/01 12:06:05 PM ******/
+
+/****** Object:  Stored Procedure dbo.ACCALBMOLDMARGIN    Script Date: 12/27/00 8:58:41 PM ******/
+
+CREATE PROCEDURE ACCALBMOLDMARGIN (@SETT_NO VARCHAR(7),@SETT_TYPE VARCHAR(2)) AS
+DROP TABLE PARTYOLDMARGIN 
+SELECT SETT_NO ,SETT_TYPE=(CASE WHEN SETT_TYPE = 'L' THEN 'N' ELSE 'W' END ),PARTY_CODE,SCRIP_CD,SERIES = (CASE WHEN SETT_TYPE = 'L' THEN 'EQ' ELSE 'BE' END ),
+fIXMARGIN =ROUND( ABS((ISNULL(( SELECT fixmargin FROM MARGIN1 WHERE SETT_NO=S.SETT_NO AND SETT_TYPE = S.SETT_TYPE ),0)*(SUM(PQTY)-SUM(SQTY))/100 )) ,2) , 
+ADDMAR = ROUND(ABS(ISNULL(( SELECT AddMargin*(SUM(PQTY)-SUM(SQTY))/100 FROM MARGIN2 
+WHERE SETT_TYPE = S.SETT_TYPE AND SCRIP_CD = S.SCRIP_CD and sett_no =S.sett_no ),0)),2)
+INTO PARTYOLDMARGIN FROM ALBMPOS S 
+WHERE SETT_NO = @SETT_NO AND SETT_TYPE = (CASE WHEN @SETT_TYPE = 'N' THEN 'L'
+					 WHEN @SETT_TYPE = 'W' THEN 'P' END )
+GROUP BY SETT_NO ,SETT_TYPE,PARTY_CODE,SCRIP_CD
+
+GO

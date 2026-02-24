@@ -1,0 +1,101 @@
+-- Object: PROCEDURE dbo.CBO_CUSTODIANLIST
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+CREATE   PROCEDURE [dbo].[CBO_CUSTODIANLIST]
+(
+	@CUSTODIAN_CODE VARCHAR(15) = '',
+        @SHORT_NAME VARCHAR(25)='',  
+	@STATUSID VARCHAR(25) = 'BROKER',
+	@STATUSNAME VARCHAR(25) = 'BROKER'
+)
+AS
+/*
+	EXEC CBO_CUSTODIANLIST '123456', 'BROKER', 'BROKER'
+	SELECT @@ERROR
+*/
+	IF @STATUSID <> 'BROKER'
+		BEGIN
+			RAISERROR ('This Procedure is accessible to Broker', 16, 1)
+			RETURN
+		END
+	IF (@CUSTODIAN_CODE = '' OR @CUSTODIAN_CODE = '%')and(@SHORT_NAME = '' OR @SHORT_NAME = '%')
+		BEGIN
+			SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+			FROM
+				CUSTODIAN
+			ORDER BY
+				CUSTODIANCODE
+		END
+	ELSE IF @CUSTODIAN_CODE <> ''
+		BEGIN
+			SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+			FROM
+				CUSTODIAN
+			WHERE
+				CUSTODIANCODE LIKE @CUSTODIAN_CODE + '%'
+			ORDER BY
+				CUSTODIANCODE
+		END
+	Else
+                BEGIN
+			SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+			FROM
+				CUSTODIAN
+			WHERE
+				SHORT_NAME LIKE @SHORT_NAME + '%'
+			ORDER BY
+				CUSTODIANCODE
+		END
+
+GO

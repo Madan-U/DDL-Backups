@@ -1,0 +1,197 @@
+-- Object: PROCEDURE dbo.rpt_trialbal1
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+/*Written by neelambari
+on : 13 july 2001
+this query is executed if sort by date  = effective date
+*/
+/* report : trial balance        file : trialbal.asp
+ displays trial balance according to effective date */
+
+ 
+
+     
+CREATE PROCEDURE rpt_trialbal1 
+@statusid varchar(15),
+@statusname varchar(25),
+@date varchar(10),
+@flag varchar(15),
+@sdt varchar(15)
+
+AS
+
+if @flag="codewise" 
+begin
+ 	if @statusid = 'broker'
+ 	begin
+ 		select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+ 		where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+  		Amount = ( select isnull(sum(round(vamt,2)),0) from account.dbo.ledger where drcr = 'D' 
+				and cltcode = l.cltcode and  edt >= @sdt and edt <= @date + ' 23:59:59') - 
+ 			(select isnull(sum(round(vamt,2)),0) from account.dbo.ledger where drcr = 'C' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+  		From account.dbo.Ledger l where edt >= @sdt and edt <= @date + ' 23:59:59'  
+  		group by l.Cltcode , l.acname 
+		order by   l.Cltcode , l.acname 
+ 	end 
+ 
+	 if @statusid = 'branch'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(sum(vamt),0) from account.dbo.ledger where drcr = 'D' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') - 
+		  	  (select isnull(sum(vamt),0) from account.dbo.ledger where drcr = 'C' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l, branches b,client1 c1, client2 c2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and b.branch_cd=@statusname
+		  and b.short_name=c1.trader
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+                  order by   l.Cltcode , l.acname 
+	 end 
+ 
+	 if @statusid = 'trader'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D'
+				 and cltcode = l.cltcode  and edt >= @sdt and edt <= @date + ' 23:59:59')- 
+		  	   (select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date+ ' 23:59:59') 
+		  From account.dbo.Ledger l,  client1 c1, client2 c2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and c1.trader=@statusname
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+                  order by   l.Cltcode , l.acname 
+	 end 
+	 if @statusid='subbroker'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59')- 
+		  	(select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l, client1 c1, client2 c2, subbrokers sb
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and sb.sub_broker=@statusname
+		  and sb.sub_broker=c1.sub_broker
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+                  order by  l.Cltcode , l.acname 
+	 end
+	 if @statusid='client'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D'
+			 and cltcode = l.cltcode  and edt >= @sdt and edt <= @date + ' 23:59:59')- 
+		  (select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C' 
+			and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l , client1 C1, client2 C2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' and
+		  c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  and l.cltcode=@statusname
+		  group by l.Cltcode, l.acname 
+                  order by   l.Cltcode , l.acname 
+	 end
+
+end /* this end for query order by  codewise*/
+
+
+
+if @flag="namewise" 
+begin
+ 	if @statusid = 'broker'
+ 	begin
+ 		select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+ 		where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+  		Amount = ( select isnull(sum(round(vamt,2)),0) from account.dbo.ledger where drcr = 'D' and 
+				cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') - 
+	 		 (select isnull(sum(round(vamt,2)),0) from account.dbo.ledger where drcr = 'C' and
+			 	cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+  		From account.dbo.Ledger l where edt >= @sdt and edt <= @date + ' 23:59:59'  
+  		group by l.Cltcode , l.acname 
+		order by  l.acname , l.Cltcode
+ 	end 
+ 
+	 if @statusid = 'branch'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(sum(vamt),0) from account.dbo.ledger where drcr = 'D' and
+				 cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') - 
+		  	   (select isnull(sum(vamt),0) from account.dbo.ledger where drcr = 'C' and
+				 cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l, branches b,client1 c1, client2 c2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and b.branch_cd=@statusname
+		  and b.short_name=c1.trader
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+                  order by  l.acname , l.Cltcode
+
+	 end 
+ 
+	 if @statusid = 'trader'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D' and 
+				cltcode = l.cltcode  and edt >= @sdt and edt <= @date + ' 23:59:59')- 
+		  	  (select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C' and 
+				cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l,  client1 c1, client2 c2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and c1.trader=@statusname
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+                  order by  l.acname , l.Cltcode
+	 end 
+	 if @statusid='subbroker'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D' 
+				and cltcode = l.cltcode  and edt >= @sdt and edt <= @date+ ' 23:59:59')- 
+		  	   (select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C' 
+				and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l, client1 c1, client2 c2, subbrokers sb
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' 
+		  and sb.sub_broker=@statusname
+		  and sb.sub_broker=c1.sub_broker
+		  and c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  group by l.Cltcode, l.acname 
+		  order by  l.acname , l.Cltcode
+	 end
+	 if @statusid='client'
+	 begin
+		  select l.cltcode , clcode=isnull((select cl_code from client2 c2 
+		  where c2.party_code=l.cltcode),''),acname=isnull(l.acname,''), 
+		  Amount = ( select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'D' 
+				and cltcode = l.cltcode  and edt >= @sdt and edt <= @date + ' 23:59:59')- 
+		  	   (select isnull(round(sum(round(vamt,2)),2),0) from account.dbo.ledger where drcr = 'C'
+			 	and cltcode = l.cltcode and edt >= @sdt and edt <= @date + ' 23:59:59') 
+		  From account.dbo.Ledger l , client1 C1, client2 C2
+		  where edt >= @sdt and edt <= @date + ' 23:59:59' and
+		  c1.cl_code=c2.cl_code
+		  and c2.party_code=l.cltcode
+		  and l.cltcode=@statusname
+		  group by l.Cltcode, l.acname 
+                  order by  l.acname , l.Cltcode 
+	 end
+
+end /* this end for query order by namewise */
+
+GO

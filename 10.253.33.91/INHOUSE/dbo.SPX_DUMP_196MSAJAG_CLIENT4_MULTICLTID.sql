@@ -1,0 +1,50 @@
+-- Object: PROCEDURE dbo.SPX_DUMP_196MSAJAG_CLIENT4_MULTICLTID
+-- Server: 10.253.33.91 | DB: INHOUSE
+--------------------------------------------------
+
+-- =============================================
+-- Author:		<SOFTWARE>
+-- Create date: <JUN 22,2013>
+-- Description:	<BACKUP CLIENT4 AND MULTICLTID DATA FROM 196 MSAJAG TO 196 INHOUSE DATABASE>
+-- =============================================
+
+
+CREATE PROC [dbo].[SPX_DUMP_196MSAJAG_CLIENT4_MULTICLTID]
+
+AS
+
+
+DECLARE @ROWSCLT4 BIGINT,@ROWSMULTICLT BIGINT
+
+SET @ROWSCLT4=0
+SET @ROWSMULTICLT=0
+--DELETE 7 DAYS OLD RECORDS---
+DELETE FROM CLIENT4_DUMP WHERE DATE<=GETDATE()-7
+
+DELETE FROM MULTICLTID_DUMP WHERE DATE<=GETDATE()-7
+------------------------------
+
+--INSERT DATA-----------------
+
+INSERT INTO CLIENT4_DUMP(Cl_code,Party_code,Instru,BankID,Cltdpid,Depository,DefDp,date)
+SELECT Cl_code,	Party_code,	Instru,	BankID,	Cltdpid,	Depository,	DefDp,GETDATE() FROM MSAJAG.DBO.CLIENT4 WITH(NOLOCK)
+
+SET @ROWSCLT4=@@ROWCOUNT 
+
+INSERT INTO TBL_BACKUP_PROCESS_STATUS(ProcessName ,Status,RowsCount)
+VALUES('196MSAJAG_CLIENT4_BK','SUCCESS',@ROWSCLT4)
+
+
+
+INSERT INTO MULTICLTID_DUMP(Party_code,CltDpNo,DpId,Introducer,DpType,Def,date)
+SELECT Party_code,	CltDpNo,	DpId,	Introducer,	DpType,	Def,GETDATE() FROM MSAJAG.DBO.MULTICLTID WITH(NOLOCK)
+
+SET @ROWSMULTICLT=@@ROWCOUNT 
+
+INSERT INTO TBL_BACKUP_PROCESS_STATUS(ProcessName ,Status,RowsCount)
+VALUES('196MSAJAG_MULTICLTID_BK','SUCCESS',@ROWSMULTICLT)
+
+
+---------------------------
+
+GO

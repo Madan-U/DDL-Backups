@@ -1,0 +1,57 @@
+-- Object: PROCEDURE dbo.usp_rtb_nse_valan_interop
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+CREATE PROC [dbo].[usp_rtb_nse_valan_interop]  
+(@SETT_NO VARCHAR(11),@SETT_TYPE VARCHAR(5) ,@PROCESSDATE DATETIME)  
+AS
+BEGIN  
+
+DECLARE @OTHER_SETT_NO VARCHAR(11),@OTHER_SETT_TYPE VARCHAR(5)
+    
+SELECT @OTHER_SETT_TYPE = BSE_SETT_TYPE FROM TBL_INTEROP_SETT_TYPE 
+	 WHERE NSE_SETT_TYPE = @SETT_TYPE AND @PROCESSDATE BETWEEN FROM_DATE AND TO_DATE
+		   
+	 SELECT @OTHER_SETT_NO = SETT_NO FROM [ANGELBSECM].BSEDB_AB.DBO.SETT_MST WHERE START_DATE >= @PROCESSDATE 
+	 AND START_DATE <= @PROCESSDATE + ' 23:59' AND SETT_TYPE = @OTHER_SETT_TYPE   
+
+	 	
+		EXEC [ANGELBSECM].BSEDB_AB.DBO.INSPROC  
+         @OTHER_SETT_NO ,  
+         @OTHER_SETT_TYPE  
+          
+		 EXEC [ANGELBSECM].BSEDB_AB.DBO.DELPROC  
+         @OTHER_SETT_NO ,  
+         @OTHER_SETT_TYPE  
+
+		  EXEC INSPROC  
+         @SETT_NO ,  
+         @SETT_TYPE  
+          
+         EXEC DELPROC  
+         @SETT_NO ,  
+         @SETT_TYPE
+
+	 EXEC ANGELDEMAT.MSAJAG.DBO.INSPROC  
+         @SETT_NO ,  
+         @SETT_TYPE  
+          
+      EXEC ANGELDEMAT.MSAJAG.DBO.DELPROC  
+         @SETT_NO ,  
+         @SETT_TYPE
+ 
+ UPDATE V2_BUSINESS_PROCESS  
+      SET    VALAN = VALAN + 1,  
+             CONTRACT = 0,  
+             POSTING = 0,  
+             LASTUPDATEDATE = GETDATE(),  
+             LASTUPDATEBY = 'AUTO'  
+      WHERE  SETT_NO = @SETT_NO  
+             AND SETT_TYPE = @SETT_TYPE  
+             AND LEFT(BUSINESS_DATE,11) = @PROCESSDATE  
+             AND OPEN_CLOSE = 0  
+
+END
+
+GO

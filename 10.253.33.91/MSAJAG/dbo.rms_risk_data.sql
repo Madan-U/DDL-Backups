@@ -1,0 +1,14 @@
+-- Object: PROCEDURE dbo.rms_risk_data
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE proc rms_risk_data
+as
+
+DECLARE @@PROCESSDATE DATETIME
+SET @@PROCESSDATE=CONVERT(VARCHAR(11),GETDATE(),109)
+EXEC PROC_DELSALE @@PROCESSDATE,5,500,0,0,''
+EXEC PROC_DELSALE @@PROCESSDATE,6,500,0,0,''
+EXEC PROC_DELSALE @@PROCESSDATE,7,500,0,0,''
+
+GO

@@ -1,0 +1,15 @@
+-- Object: PROCEDURE dbo.RPT_EPN_DATA
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+CREATE PROC RPT_EPN_DATA
+(
+	@REPORTDATE	VARCHAR(11)
+)
+AS
+
+SELECT * FROM TBL_EPN_BENEFIT
+WHERE TRANSDATE = @REPORTDATE
+
+GO

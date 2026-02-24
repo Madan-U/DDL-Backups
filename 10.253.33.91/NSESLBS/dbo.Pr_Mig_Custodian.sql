@@ -1,0 +1,575 @@
+-- Object: PROCEDURE dbo.Pr_Mig_Custodian
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+CREATE PROCEDURE Pr_Mig_Custodian              
+(              
+  @pa_CanAddData AS Bit,              
+  @pa_CanModifyData AS Bit,              
+  @pa_CanDeleteData AS Bit,              
+  @pa_err AS VarChar(250) OUTPUT               
+)              
+AS              
+BEGIN              
+    
+ --- CHECK WETHER CUSTODIANCODE IS FOUND IN BSE
+ IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'BSE' AND SEGMENT= 'CAPITAL') 	
+	 UPDATE #CUSTODIAN SET RECORD_FOUND = 'Y'               
+	  FROM #CUSTODIAN AS A, BSEDB.DBO.CUSTODIAN AS B               
+	  WHERE A.EXCHANGE = 'BSE' AND A.SEGMENT= 'CAPITAL' 
+	  AND A.CUSTODIANCODE = B.CUSTODIANCODE              
+              
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END        
+           
+ --- CHECK WETHER CUSTODIANCODE IS FOUND IN NSE
+ IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT= 'CAPITAL') 	
+	 UPDATE #CUSTODIAN SET RECORD_FOUND = 'Y'               
+	  FROM #CUSTODIAN AS A, MSAJAG.DBO.CUSTODIAN AS B               
+	  WHERE A.EXCHANGE = 'NSE' AND A.SEGMENT= 'CAPITAL' 
+	  AND A.CUSTODIANCODE = B.CUSTODIANCODE              
+              
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END              
+
+ --- CHECK WETHER CUSTODIANCODE IS FOUND IN NSEFO
+ IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT= 'FUTURES') 	
+	 UPDATE #CUSTODIAN SET RECORD_FOUND = 'Y'               
+	  FROM #CUSTODIAN AS A, NSEFO.DBO.CUSTODIAN AS B               
+	  WHERE A.EXCHANGE = 'NSE' AND A.SEGMENT= 'FUTURES' 
+	  AND A.CUSTODIANCODE = B.CUSTODIANCODE              
+              
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END              
+
+ --- CHECK WETHER CUSTODIANCODE IS FOUND IN MCDX
+ IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'MCX' AND SEGMENT= 'FUTURES') 	
+	 UPDATE #CUSTODIAN SET RECORD_FOUND = 'Y'               
+	  FROM #CUSTODIAN AS A, MCDX.DBO.CUSTODIAN AS B               
+	  WHERE A.EXCHANGE = 'MCX' AND A.SEGMENT= 'FUTURES' 
+	  AND A.CUSTODIANCODE = B.CUSTODIANCODE              
+              
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END              
+
+ --- CHECK WETHER CUSTODIANCODE IS FOUND IN NCDX
+IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NCX' AND SEGMENT= 'FUTURES') 	
+	 UPDATE #CUSTODIAN SET RECORD_FOUND = 'Y'               
+	  FROM #CUSTODIAN AS A, NCDX.DBO.CUSTODIAN AS B               
+	  WHERE A.EXCHANGE = 'NCX' AND A.SEGMENT= 'FUTURES' 
+	  AND A.CUSTODIANCODE = B.CUSTODIANCODE              
+              
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END              
+              
+ --- Update whether the record is valid or not              
+ UPDATE #CUSTODIAN SET             
+  VALID_RECORD = CASE WHEN MODIFIED = 'N' AND RECORD_FOUND = 'N' THEN 'Y'   --- Record Addition              
+          WHEN MODIFIED = 'M' AND RECORD_FOUND = 'Y' THEN 'Y'   --- Record Modification              
+          WHEN MODIFIED = 'D' AND RECORD_FOUND = 'Y' THEN 'Y'   --- Record Deletion              
+          ELSE 'N'               
+       END              
+
+ IF @@ERROR <> 0               
+ BEGIN              
+  SET @pa_err = @@ERROR              
+  RETURN              
+ END                 
+
+ --- IF ADD IS PERMITED THE THEN ADD CUSTODIN INTO CORESPONDING DATABASES           
+ IF @pa_CanAddData =  1 
+ BEGIN
+	---- INSERT RECORDS FOR BSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'BSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'N' )
+		INSERT INTO BSEDB.DBO.CUSTODIAN(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO)
+		SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+		FROM #CUSTODIAN
+		WHERE EXCHANGE = 'BSE' AND SEGMENT = 'CAPITAL'
+		AND VALID_RECORD = 'Y' AND MODIFIED = 'N'  
+	
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	---- INSERT RECORDS FOR NSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'N' )
+		INSERT INTO MSAJAG.DBO.CUSTODIAN(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO)
+		SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+		FROM #CUSTODIAN
+		WHERE EXCHANGE = 'NSE' AND SEGMENT = 'CAPITAL'
+		AND VALID_RECORD = 'Y' AND MODIFIED = 'N'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	---- INSERT RECORDS FOR NSEFO
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'N' )
+		INSERT INTO NSEFO.DBO.CUSTODIAN(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO)
+		SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+		FROM #CUSTODIAN
+		WHERE EXCHANGE = 'NSE' AND SEGMENT = 'FUTURES'
+		AND VALID_RECORD = 'Y' AND MODIFIED = 'N'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	---- INSERT RECORDS FOR MCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'MCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'N' )
+		INSERT INTO MCDX.DBO.CUSTODIAN(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO)
+		SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+		FROM #CUSTODIAN
+		WHERE EXCHANGE = 'MCX' AND SEGMENT = 'FUTURES'
+		AND VALID_RECORD = 'Y' AND MODIFIED = 'N'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	---- INSERT RECORDS FOR NCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'N' )
+		INSERT INTO NCDX.DBO.CUSTODIAN(
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO)
+		SELECT
+				CUSTODIANCODE,
+				SHORT_NAME,
+				LONG_NAME,
+				ADDRESS1,
+				ADDRESS2,
+				CITY,
+				STATE,
+				NATION,
+				ZIP,
+				FAX,
+				OFF_PHONE1,
+				OFF_PHONE2,
+				EMAIL,
+				CLTDPNO,
+				DPID,
+				SEBIREGNO
+		FROM #CUSTODIAN
+		WHERE EXCHANGE = 'NCX' AND SEGMENT = 'FUTURES'
+		AND VALID_RECORD = 'Y' AND MODIFIED = 'N'            
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END 
+
+END               
+
+--- IF MODIFICATION IS PERMITED THE THEN MODIFY CUSTODIN FROM CORESPONDING DATABASES
+IF @pa_CanModifyData = 1
+BEGIN
+	--- UPDATE CUSTODIAN DETAILS FOR BSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'BSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'M' )
+		UPDATE BSEDB.DBO.CUSTODIAN SET
+				SHORT_NAME = B.SHORT_NAME,
+				LONG_NAME = B.LONG_NAME,
+				ADDRESS1 = B.ADDRESS1,
+				ADDRESS2 = B.ADDRESS2,
+				CITY = B.CITY,
+				STATE = B.STATE,
+				NATION = B.NATION,
+				ZIP = B.ZIP,
+				FAX = B.FAX,
+				OFF_PHONE1 = B.OFF_PHONE1,
+				OFF_PHONE2 = B.OFF_PHONE2,
+				EMAIL = B.EMAIL,
+				CLTDPNO = B.CLTDPNO,
+				DPID = B.DPID,
+					SEBIREGNO = B.SEBIREGNO
+		FROM BSEDB.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'BSE' AND B.SEGMENT = 'CAPITAL'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'M'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	--- UPDATE CUSTODIAN DETAILS FOR NSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'M' )
+		UPDATE MSAJAG.DBO.CUSTODIAN SET
+				SHORT_NAME = B.SHORT_NAME,
+				LONG_NAME = B.LONG_NAME,
+				ADDRESS1 = B.ADDRESS1,
+				ADDRESS2 = B.ADDRESS2,
+				CITY = B.CITY,
+				STATE = B.STATE,
+				NATION = B.NATION,
+				ZIP = B.ZIP,
+				FAX = B.FAX,
+				OFF_PHONE1 = B.OFF_PHONE1,
+				OFF_PHONE2 = B.OFF_PHONE2,
+				EMAIL = B.EMAIL,
+				CLTDPNO = B.CLTDPNO,
+				DPID = B.DPID,
+				SEBIREGNO = B.SEBIREGNO
+		FROM MSAJAG.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'NSE' AND B.SEGMENT = 'CAPITAL'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'M'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	--- UPDATE CUSTODIAN DETAILS FOR NSEFO
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'M' )
+		UPDATE NSEFO.DBO.CUSTODIAN SET
+				SHORT_NAME = B.SHORT_NAME,
+				LONG_NAME = B.LONG_NAME,
+				ADDRESS1 = B.ADDRESS1,
+				ADDRESS2 = B.ADDRESS2,
+				CITY = B.CITY,
+				STATE = B.STATE,
+				NATION = B.NATION,
+				ZIP = B.ZIP,
+				FAX = B.FAX,
+				OFF_PHONE1 = B.OFF_PHONE1,
+				OFF_PHONE2 = B.OFF_PHONE2,
+				EMAIL = B.EMAIL,
+				CLTDPNO = B.CLTDPNO,
+				DPID = B.DPID,
+				SEBIREGNO = B.SEBIREGNO
+		FROM NSEFO.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'NSE' AND B.SEGMENT = 'FUTURES'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'M'  
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	--- UPDATE CUSTODIAN DETAILS FOR MCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'MCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'M' )
+		UPDATE MCDX.DBO.CUSTODIAN SET
+				SHORT_NAME = B.SHORT_NAME,
+				LONG_NAME = B.LONG_NAME,
+				ADDRESS1 = B.ADDRESS1,
+				ADDRESS2 = B.ADDRESS2,
+				CITY = B.CITY,
+				STATE = B.STATE,
+				NATION = B.NATION,
+				ZIP = B.ZIP,
+				FAX = B.FAX,
+				OFF_PHONE1 = B.OFF_PHONE1,
+				OFF_PHONE2 = B.OFF_PHONE2,
+				EMAIL = B.EMAIL,
+				CLTDPNO = B.CLTDPNO,
+				DPID = B.DPID,
+				SEBIREGNO = B.SEBIREGNO
+		FROM MCDX.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'MCX' AND B.SEGMENT = 'FUTURES'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'M' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+
+	--- UPDATE CUSTODIAN DETAILS FOR NCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'M' )
+		UPDATE NCDX.DBO.CUSTODIAN SET
+				SHORT_NAME = B.SHORT_NAME,
+				LONG_NAME = B.LONG_NAME,
+				ADDRESS1 = B.ADDRESS1,
+				ADDRESS2 = B.ADDRESS2,
+				CITY = B.CITY,
+				STATE = B.STATE,
+				NATION = B.NATION,
+				ZIP = B.ZIP,
+				FAX = B.FAX,
+				OFF_PHONE1 = B.OFF_PHONE1,
+				OFF_PHONE2 = B.OFF_PHONE2,
+				EMAIL = B.EMAIL,
+				CLTDPNO = B.CLTDPNO,
+				DPID = B.DPID,
+				SEBIREGNO = B.SEBIREGNO
+		FROM NCDX.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'NCX' AND B.SEGMENT = 'FUTURES'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'M' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END    
+END
+
+IF @pa_CanDeleteData = 1
+BEGIN
+	--- DELETE CUSTODIAN DETAILS FOR BSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'BSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'D' )
+		DELETE BSEDB.DBO.CUSTODIAN 
+		FROM BSEDB.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'BSE' AND B.SEGMENT = 'CAPITAL'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'D' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END   
+
+	--- DELETE CUSTODIAN DETAILS FOR NSE
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'CAPITAL' AND VALID_RECORD = 'Y' AND MODIFIED = 'D' )
+		DELETE MSAJAG.DBO.CUSTODIAN 
+		FROM MSAJAG.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+			AND B.EXCHANGE = 'NSE' AND B.SEGMENT = 'CAPITAL'
+			AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'D' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END   
+
+	--- DELETE CUSTODIAN DETAILS FOR NSEFO
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NSE' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'D' )
+		DELETE NSEFO.DBO.CUSTODIAN 
+		FROM NSEFO.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+			AND B.EXCHANGE = 'NSE' AND B.SEGMENT = 'FUTURES'
+			AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'D' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	END
+
+	--- DELETE CUSTODIAN DETAILS FOR MCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'MCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'D' )
+		DELETE MCDX.DBO.CUSTODIAN 
+		FROM MCDX.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'MCX' AND B.SEGMENT = 'FUTURES'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'D' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END   
+
+	--- DELETE CUSTODIAN DETAILS FOR NCDX
+	IF EXISTS(SELECT 1 FROM #CUSTODIAN WHERE EXCHANGE = 'NCX' AND SEGMENT = 'FUTURES' AND VALID_RECORD = 'Y' AND MODIFIED = 'D' )
+		DELETE NCDX.DBO.CUSTODIAN 
+		FROM NCDX.DBO.CUSTODIAN A, #CUSTODIAN B
+		WHERE A.CUSTODIANCODE = B.CUSTODIANCODE 
+		AND B.EXCHANGE = 'NCX' AND B.SEGMENT = 'FUTURES'
+		AND B.VALID_RECORD = 'Y' AND B.MODIFIED = 'D' 
+
+	 IF @@ERROR <> 0               
+	 BEGIN              
+	  SET @pa_err = @@ERROR              
+	  RETURN              
+	 END   
+END
+              
+END              
+              
+/*              
+              
+DECLARE              
+ @CanAddData AS Bit,              
+ @CanModifyData AS Bit,              
+ @CanDeleteData AS Bit,             
+ @pa_err AS VarChar(250)               
+              
+SET @CanAddData = 1              
+SET @CanModifyData = 1              
+SET @CanDeleteData = 1              
+              
+EXEC Pr_Mig_Custodian @CanAddData, @CanModifyData, @CanDeleteData, @pa_err OUTPUT              
+PRINT @pa_err              
+              
+              
+SELECT * FROM CUSTODIAN              
+               
+
+*/
+
+GO

@@ -1,0 +1,72 @@
+-- Object: PROCEDURE dbo.SP_DESTINATION_LEDGER_TRF_SEGMENT
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+   
+CREATE PROC SP_DESTINATION_LEDGER_TRF_SEGMENT
+ @START_DATE VARCHAR(11),  
+ @START_DATENEW VARCHAR(11),
+ @FROMCLIENT VARCHAR(20),
+ @TOCLIENT VARCHAR(20),
+ @MIN_AMT MONEY
+ AS
+ BEGIN
+
+ TRUNCATE TABLE LEDGERTRANSFER_SEGMENTWISE
+
+ INSERT INTO LEDGERTRANSFER_SEGMENTWISE         
+ SELECT BRANCHCODE, CLTCODE, ACNAME, LEDGERBALANCE = 0, AMOUNT = SUM(AMOUNT)         
+ FROM   (
+			SELECT BRANCHCODE, A.CLTCODE, A.ACNAME, AMOUNT = SUM(CASE WHEN L.DRCR = 'C' THEN L.VAMT ELSE -L.VAMT END)         
+            FROM LEDGER L (NOLOCK)          
+                INNER JOIN FUND_TRF_CLIENT A         
+				ON L.CLTCODE = A.CLTCODE      
+         WHERE  L.EDT >=  @START_DATE + ' 00:00:00'         
+                AND L.EDT <=  @START_DATENEW + ' 23:59:59'  
+				AND L.CLTCODE BETWEEN @FROMCLIENT AND @TOCLIENT
+         GROUP  BY A.CLTCODE, A.ACNAME, A.BRANCHCODE        
+              
+         UNION ALL         
+		
+		 SELECT BRANCHCODE, A.CLTCODE, A.ACNAME, AMOUNT =  SUM(CASE WHEN L.DRCR = 'D' THEN L.VAMT ELSE -L.VAMT END)         
+         FROM   LEDGER L (NOLOCK)         
+                INNER JOIN FUND_TRF_CLIENT A         
+				ON L.CLTCODE = A.CLTCODE         
+         WHERE L.EDT >=   @START_DATE + ' 00:00:00'         
+                AND L.VDT <   @START_DATE
+				AND L.CLTCODE BETWEEN @FROMCLIENT AND @TOCLIENT
+         GROUP  BY A.CLTCODE, A.ACNAME, A.BRANCHCODE         
+              
+         UNION ALL         
+         SELECT BRANCHCODE, A.CLTCODE, A.ACNAME, AMOUNT = -SUM(CASE WHEN L.DRCR = 'C' THEN L.VAMT ELSE 0 END)         
+         FROM   LEDGER L  (NOLOCK)       
+                INNER JOIN FUND_TRF_CLIENT A         
+				ON L.CLTCODE = A.CLTCODE          
+                 INNER JOIN .DBO.LEDGER1 L1 (NOLOCK) 
+				 ON L.VNO = L1.VNO    
+					AND L.VTYP = L1.VTYP         
+					AND L.BOOKTYPE = L1.BOOKTYPE         
+					AND L.LNO = L1.LNO   
+         WHERE L.VDT >=   @START_DATE + ' 00:00:00'         
+                AND L.VDT <=    @START_DATENEW + ' 23:59:59'         
+                AND L.VTYP = 2    
+				AND L1.RELDT = '' 
+				AND L.CLTCODE BETWEEN @FROMCLIENT AND @TOCLIENT
+         GROUP  BY A.CLTCODE, A.ACNAME, A.BRANCHCODE        
+              
+         UNION ALL         
+         SELECT BRANCHCODE, A.CLTCODE, A.ACNAME, AMOUNT = SUM(CASE WHEN L.DRCR = 'C' THEN 0 ELSE -L.VAMT END)         
+         FROM   LEDGER L (NOLOCK)          
+                INNER JOIN FUND_TRF_CLIENT A         
+				ON L.CLTCODE = A.CLTCODE        
+         WHERE  L.EDT >=   @START_DATE + ' 00:00:00'         
+                AND L.EDT <=  @START_DATENEW   + ' 23:59:59'         
+                AND L.EDT >= CONVERT (DATETIME , @START_DATENEW  ) + 1  
+				AND L.CLTCODE BETWEEN @FROMCLIENT AND @TOCLIENT
+        GROUP  BY A.CLTCODE, A.ACNAME, A.BRANCHCODE        
+        ) F         
+GROUP  BY CLTCODE, ACNAME, BRANCHCODE   
+
+END
+
+GO

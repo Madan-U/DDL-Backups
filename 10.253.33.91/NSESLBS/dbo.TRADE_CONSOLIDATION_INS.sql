@@ -1,0 +1,2749 @@
+-- Object: PROCEDURE dbo.TRADE_CONSOLIDATION_INS
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+CREATE PROC [dbo].[TRADE_CONSOLIDATION_INS]
+	@SETTNO VARCHAR(7),
+	@SETTTYPE VARCHAR(2),
+	@SAUDADATE VARCHAR(10),
+	@FROMPARTY VARCHAR(10),
+	@TOPARTY VARCHAR(10),
+	@FROMSCRIP VARCHAR(10),
+	@TOSCRIP VARCHAR(10),
+	@FROMTERM VARCHAR(10),
+	@TOTERM VARCHAR(10),
+	@CONSOLIDATE INT,
+	@LEVEL INT,
+	@CONTRACTNO VARCHAR(7),
+	@AFTERCONTRACT VARCHAR(1) = 'Y',
+	@SELL_BUY INT = 0,
+	@PARTICIPANT VARCHAR(20) = '',
+	@ORDER_NO VARCHAR(16) = '',
+	@SHOW INT = 0,
+	@TRFTABLE VARCHAR(20) = 'TRADE'
+AS
+	/*
+	Exec TRADE_CONSOLIDATION_INS '2007182', 'N', '24/09/2007', 'Y04024', 'Y04024', 'INFOTECENT', 'INFOTECENT', '', '', 0, 4, '1312962', 'Y', 2, '', '200709246307596', 0
+	Exec TRADE_CONSOLIDATION_INS '2007182', 'N', '24/09/2007', 'Y04024', 'Y04024', 'AXISBANK', 'AXISBANK', '', '', 0, 102, '', '', 2, '', '', 0, 'ISETTLEMENT'
+	*/
+	DECLARE @TDATE VARCHAR(11)
+	SET @TDATE = CONVERT(VARCHAR(11), CONVERT(DATETIME, @SAUDADATE, 103), 109)
+	DECLARE @SQL AS VARCHAR(8000)
+	DECLARE @MEMBER VARCHAR(15)
+	SET @MEMBER = ''
+	SELECT @MEMBER = ISNULL(MEMBERCODE, '') FROM OWNER
+	IF @LEVEL = 1
+		BEGIN
+			IF @AFTERCONTRACT = 'Y'
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SELL_BUY,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		QTY = SUM(I.TRADEQTY),"
+					SET @SQL = @SQL + "		AMOUNT = SUM((I.TRADEQTY * I.MARKETRATE)),"
+					SET @SQL = @SQL + "		NETAMOUNT = SUM((I.TRADEQTY * I.NETRATE)),"
+					SET @SQL = @SQL + "		MKTRATE = CONVERT(NUMERIC(18,4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4)),"
+					SET @SQL = @SQL + "		NETRATE = CONVERT(NUMERIC(18,4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4)),"
+					SET @SQL = @SQL + "		PARTY_NAME = isNull(C1.LONG_NAME, 'Not Found')"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		ISETTLEMENT I WITH (NOLOCK), "
+					SET @SQL = @SQL + "		CLIENT2 C2 WITH (NOLOCK),"
+					SET @SQL = @SQL + "		CLIENT1 C1 WITH (NOLOCK)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		C1.CL_CODE = C2.CL_CODE"
+					SET @SQL = @SQL + "		AND I.PARTY_CODE = C2.PARTY_CODE"
+					SET @SQL = @SQL + "		AND SAUDA_DATE LIKE '" + @TDATE + "%'"
+--					SET @SQL = @SQL + "		AND CONVERT(VARCHAR(10), SAUDA_DATE, 103) = '" + @SAUDADATE + "'"
+					SET @SQL = @SQL + "		AND I.TRADEQTY > 0"
+					IF @SELL_BUY <> 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SELL_BUY = " + CONVERT(VARCHAR(1), @SELL_BUY) + " "
+						END
+					IF LTRIM(RTRIM(@SETTNO)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SETT_NO = '" + @SETTNO + "'"
+							SET @SQL = @SQL + "		AND I.SETT_TYPE = '" + @SETTTYPE + "'"
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 1"
+						END
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE >= '" + @FROMPARTY + "'"
+						END
+
+					IF @TOPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE <= '" + @TOPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SCRIP_CD >= '" + @FROMSCRIP + "'"
+						END
+
+					IF @TOSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SCRIP_CD <= '" + @TOSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID >= '" + @FROMTERM + "'"
+						END
+
+					IF @TOTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID <= '" + @TOTERM + "'"
+						END
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SELL_BUY,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		C1.LONG_NAME,"
+					SET @SQL = @SQL + "		I.DUMMY2"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SELL_BUY"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END))"*/
+				END
+			ELSE
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.SELL_BUY,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		QTY = SUM(T.TRADEQTY),"
+					SET @SQL = @SQL + "		AMOUNT = SUM((T.TRADEQTY * T.MARKETRATE)),"
+					SET @SQL = @SQL + "		MKTRATE = CONVERT(NUMERIC(18,4), ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4)),"
+					SET @SQL = @SQL + "		PARTY_NAME = isNull(C.LONG_NAME, 'Client Code Not Found')"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		TRADE T WITH (NOLOCK)"
+					SET @SQL = @SQL + "		LEFT OUTER JOIN (SELECT PARTY_CODE, LONG_NAME, CL_TYPE FROM CLIENT2 C2 WITH (NOLOCK) "
+					SET @SQL = @SQL + "			INNER JOIN CLIENT1 C1 ON (C1.CL_CODE = C2.CL_CODE)) C"
+					SET @SQL = @SQL + "		ON (T.PARTY_CODE = C.PARTY_CODE)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND T.TRADEQTY > 0"
+					SET @SQL = @SQL + "		AND (ISNULL(C.CL_TYPE,'') = 'INS' OR T.PARTIPANTCODE <> '" + @MEMBER + "')"
+					IF @SELL_BUY <> 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SELL_BUY = " + CONVERT(VARCHAR(1), @SELL_BUY) + " "
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 1"
+						END
+
+
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE >= '" + @FROMPARTY + "'"
+						END
+
+					IF @TOPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE <= '" + @TOPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SCRIP_CD >= '" + @FROMSCRIP + "'"
+						END
+
+					IF @TOSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SCRIP_CD <= '" + @TOSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID >= '" + @FROMTERM + "'"
+						END
+
+					IF @TOTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID <= '" + @TOTERM + "'"
+						END
+
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.SELL_BUY,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		isNull(C.LONG_NAME, 'Client Code Not Found')"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.SELL_BUY,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.DUMMY2"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END))"*/
+				END
+		END
+	ELSE IF @LEVEL = 2
+		BEGIN
+			IF @AFTERCONTRACT = 'Y'
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					IF @SHOW = 1 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		ORGPARTY = I.PARTY_CODE,"
+						END
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					IF @SHOW = 2 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		I.USER_ID,"
+						END
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		SELL_BUY = CASE WHEN I.SELL_BUY = 1 THEN 'BUY' ELSE 'SALE' END,"
+					SET @SQL = @SQL + "		QTY = SUM(I.TRADEQTY),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(I.DUMMY1*I.TRADEQTY)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		NETRATE = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.NETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		AMOUNT = SUM(I.TRADEQTY * I.MARKETRATE),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2) WHEN 4 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(I.TRADEQTY * I.MARKETRATE)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		NETAMOUNT = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.NETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2) WHEN 4 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		PARTY_NAME = C1.LONG_NAME,"
+					SET @SQL = @SQL + "		R_MKTRATE = ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(R.NETRATE, 4)"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		ISETTLEMENT I WITH (NOLOCK), "
+					SET @SQL = @SQL + "		CLIENT2 C2 WITH (NOLOCK)"
+					SET @SQL = @SQL + "			LEFT JOIN INSTCLIENT_TBL R WITH (NOLOCK)"
+					SET @SQL = @SQL + "				ON (C2.PARTY_CODE = R.PARTYCODE),"
+					SET @SQL = @SQL + "		CLIENT1 C1 WITH (NOLOCK)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		C1.CL_CODE = C2.CL_CODE"
+					SET @SQL = @SQL + "		AND I.PARTY_CODE = C2.PARTY_CODE"
+					SET @SQL = @SQL + "		AND SAUDA_DATE LIKE '" + @TDATE + "%'"
+--					SET @SQL = @SQL + "		AND CONVERT(VARCHAR(10), SAUDA_DATE, 103) = '" + @SAUDADATE + "'"
+					SET @SQL = @SQL + "		AND I.TRADEQTY > 0"
+					IF @SELL_BUY <> 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SELL_BUY = " + CONVERT(VARCHAR(1), @SELL_BUY) + " "
+						END
+					IF LTRIM(RTRIM(@SETTNO)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SETT_NO = '" + @SETTNO + "'"
+							SET @SQL = @SQL + "		AND I.SETT_TYPE = '" + @SETTTYPE + "'"
+						END
+					IF @CONTRACTNO <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.CONTRACTNO = '" + @CONTRACTNO + "'"
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 1"
+						END
+					IF @FROMPARTY <> '' AND @TOPARTY = ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+					ELSE IF @FROMPARTY <> '' AND @TOPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE >= '" + @FROMPARTY + "'"
+							SET @SQL = @SQL + "		AND I.PARTY_CODE <= '" + @TOPARTY + "'"
+						END
+
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID >= '" + @FROMTERM + "'"
+						END
+
+					IF @TOTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID <= '" + @TOTERM + "'"
+						END
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					IF @SHOW = 2 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		I.USER_ID,"
+						END
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SELL_BUY,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		C1.LONG_NAME,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.NETRATE, 4)"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		I.SELL_BUY"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END))"*/
+				END
+			ELSE
+				BEGIN
+					SET @SQL = "	SELECT"
+
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					IF @SHOW = 1 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		ORGPARTY = T.PARTY_CODE,"
+						END
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					IF @SHOW = 2 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		T.USER_ID,"
+						END
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		SELL_BUY = CASE WHEN T.SELL_BUY = 1 THEN 'BUY' ELSE 'SALE' END,"
+					SET @SQL = @SQL + "		QTY = SUM(T.TRADEQTY),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(T.DUMMY1*T.TRADEQTY)) / (SUM(T.TRADEQTY))),"
+					SET @SQL = @SQL + "		AMOUNT = SUM(T.TRADEQTY * T.MARKETRATE),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) END),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(T.TRADEQTY * T.MARKETRATE)) / (SUM(T.TRADEQTY))),"
+					SET @SQL = @SQL + "		PARTY_NAME = isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		R_MKTRATE = ISNULL(C.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(C.NETRATE, 4)"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		TRADE T WITH (NOLOCK)"
+
+					SET @SQL = @SQL + "		LEFT OUTER JOIN ( SELECT PARTY_CODE, LONG_NAME, CL_TYPE, MARKETRATE, BROKERAGE, NETRATE FROM CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK)"
+					SET @SQL = @SQL + "		ON (C1.CL_CODE = C2.CL_CODE ) INNER JOIN  INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)) C"
+					SET @SQL = @SQL + "		ON (T.PARTY_CODE = C.PARTY_CODE)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		T.SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND T.TRADEQTY > 0"
+					SET @SQL = @SQL + "		AND (ISNULL(C.CL_TYPE,'') = 'INS' OR T.PARTIPANTCODE <> '" + @MEMBER + "')"
+					IF @SELL_BUY <> 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SELL_BUY = " + CONVERT(VARCHAR(1), @SELL_BUY) + " "
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 1"
+						END
+
+
+					IF @FROMPARTY <> '' AND @TOPARTY = ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+					ELSE IF @FROMPARTY <> '' AND @TOPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE >= '" + @FROMPARTY + "'"
+							SET @SQL = @SQL + "		AND T.PARTY_CODE <= '" + @TOPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID >= '" + @FROMTERM + "'"
+						END
+
+					IF @TOTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID <= '" + @TOTERM + "'"
+						END
+
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					IF @SHOW = 2 OR @SHOW = 3
+						BEGIN
+							SET @SQL = @SQL + "		T.USER_ID,"
+						END
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.SELL_BUY,"
+					SET @SQL = @SQL + "		isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		C.MARKETRATE,"
+					SET @SQL = @SQL + "		ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(C.NETRATE, 4)"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.SELL_BUY"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END))"*/
+				END
+		END
+	ELSE IF @LEVEL = 3
+		BEGIN
+			IF @AFTERCONTRACT = 'Y'
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.ORDER_NO,"
+					SET @SQL = @SQL + "		QTY = SUM(I.TRADEQTY),"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		I.USER_ID,"
+					SET @SQL = @SQL + "		I.BRANCH_ID,"
+					SET @SQL = @SQL + "		AMOUNT = SUM((I.TRADEQTY * I.MARKETRATE)),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(I.TRADEQTY * I.MARKETRATE)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		NETAMOUNT = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.NETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(I.DUMMY1*I.TRADEQTY)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		NETRATE = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.NETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		PARTY_NAME = C1.LONG_NAME,"
+--					SET @SQL = @SQL + "		PARTY_NAME = isNull(C1.LONG_NAME, 'Not Found'),"
+					SET @SQL = @SQL + "		R_MKTRATE = ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(R.NETRATE, 4),"
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		I.USER_ID,"
+						END
+					SET @SQL = @SQL + "		I.SELL_BUY"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		ISETTLEMENT I WITH (NOLOCK), "
+					SET @SQL = @SQL + "		CLIENT2 C2 WITH (NOLOCK)"
+					SET @SQL = @SQL + "			LEFT JOIN INSTCLIENT_TBL R WITH (NOLOCK)"
+					SET @SQL = @SQL + "				ON (C2.PARTY_CODE = R.PARTYCODE),"
+					SET @SQL = @SQL + "		CLIENT1 C1 WITH (NOLOCK)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		C1.CL_CODE = C2.CL_CODE"
+					SET @SQL = @SQL + "		AND I.PARTY_CODE = C2.PARTY_CODE"
+					SET @SQL = @SQL + "		AND SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND SELL_BUY = " + LTRIM(RTRIM(CONVERT(VARCHAR, @SELL_BUY)))
+					SET @SQL = @SQL + "		AND I.CONTRACTNO = '" + @CONTRACTNO + "'"
+					SET @SQL = @SQL + "		AND I.TRADEQTY > 0"
+					IF LTRIM(RTRIM(@SETTNO)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SETT_NO = '" + @SETTNO + "'"
+							SET @SQL = @SQL + "		AND I.SETT_TYPE = '" + @SETTTYPE + "'"
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 1"
+						END
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID = '" + @FROMTERM + "'"
+						END
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.ORDER_NO,"
+					SET @SQL = @SQL + "		I.SCRIP_CD,"
+					SET @SQL = @SQL + "		I.SERIES,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		C1.LONG_NAME,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		I.USER_ID,"
+					SET @SQL = @SQL + "		I.BRANCH_ID,"
+					SET @SQL = @SQL + "		ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.NETRATE, 4),"
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		I.USER_ID,"
+						END
+					SET @SQL = @SQL + "		I.SELL_BUY"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.ORDER_NO,"
+					SET @SQL = @SQL + "		I.BRANCH_ID"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END))"*/
+				END
+			ELSE
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.ORDER_NO,"
+					SET @SQL = @SQL + "		QTY = SUM(T.TRADEQTY),"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		T.USER_ID,"
+					SET @SQL = @SQL + "		T.BRANCH_ID,"
+					SET @SQL = @SQL + "		AMOUNT = SUM((T.TRADEQTY * T.MARKETRATE)),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) END),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(I.TRADEQTY * I.MARKETRATE)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(T.DUMMY1*T.TRADEQTY)) / (SUM(T.TRADEQTY))),"
+					SET @SQL = @SQL + "		PARTY_NAME = isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		R_MKTRATE = ISNULL(C.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(C.NETRATE, 4),"
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		T.USER_ID,"
+						END
+					SET @SQL = @SQL + "		T.SELL_BUY"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		TRADE T WITH (NOLOCK)"
+
+					SET @SQL = @SQL + "		LEFT OUTER JOIN ( SELECT PARTY_CODE, LONG_NAME, CL_TYPE, MARKETRATE, BROKERAGE, NETRATE FROM CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK)"
+					SET @SQL = @SQL + "		ON (C1.CL_CODE = C2.CL_CODE ) INNER JOIN  INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)) C"
+					SET @SQL = @SQL + "		ON (T.PARTY_CODE = C.PARTY_CODE)"
+
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND SELL_BUY = " + LTRIM(RTRIM(CONVERT(VARCHAR, @SELL_BUY)))
+					SET @SQL = @SQL + "		AND T.TRADEQTY > 0"
+					SET @SQL = @SQL + "		AND (ISNULL(C.CL_TYPE,'') = 'INS' OR T.PARTIPANTCODE <> '" + @MEMBER + "')"
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 1"
+						END
+
+
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID = '" + @FROMTERM + "'"
+						END
+
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.ORDER_NO,"
+					SET @SQL = @SQL + "		T.SCRIP_CD,"
+					SET @SQL = @SQL + "		T.SERIES,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		T.USER_ID,"
+					SET @SQL = @SQL + "		T.BRANCH_ID,"
+					SET @SQL = @SQL + "		isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		C.MARKETRATE,"
+					SET @SQL = @SQL + "		ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(C.NETRATE, 4),"
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		T.USER_ID,"
+						END
+					SET @SQL = @SQL + "		T.SELL_BUY"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.ORDER_NO"
+					SET @SQL = @SQL + "		T.BRANCH_ID"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END))"*/
+				END
+		END
+	ELSE IF @LEVEL = 4
+		BEGIN
+			IF @AFTERCONTRACT = 'Y'
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.TRADE_NO,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		QTY = SUM(I.TRADEQTY),"
+					SET @SQL = @SQL + "		AMOUNT = SUM((I.TRADEQTY * I.MARKETRATE)),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(I.TRADEQTY * I.MARKETRATE)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.MARKETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		NETAMOUNT = CONVERT(NUMERIC(12, 4), CASE ISNULL(R.NETRATE, 4) WHEN 2 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(I.DUMMY1*I.TRADEQTY)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		NETRATE = ((SUM(I.NETRATE*I.TRADEQTY)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		I.ORDER_NO,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.USER_ID,"
+					SET @SQL = @SQL + "		I.BRANCH_ID,"
+					SET @SQL = @SQL + "		PARTY_NAME = C1.LONG_NAME,"
+					SET @SQL = @SQL + "		R_MARKETRATE = ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(R.NETRATE, 4)"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		ISETTLEMENT I WITH (NOLOCK), "
+					SET @SQL = @SQL + "		CLIENT2 C2 WITH (NOLOCK) "
+					SET @SQL = @SQL + "			LEFT JOIN INSTCLIENT_TBL R WITH (NOLOCK)"
+					SET @SQL = @SQL + "				ON (C2.PARTY_CODE = R.PARTYCODE),"
+					SET @SQL = @SQL + "		CLIENT1 C1 WITH (NOLOCK)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		C1.CL_CODE = C2.CL_CODE"
+					SET @SQL = @SQL + "		AND I.PARTY_CODE = C2.PARTY_CODE"
+					SET @SQL = @SQL + "		AND SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND SELL_BUY = " + LTRIM(RTRIM(CONVERT(VARCHAR, @SELL_BUY)))
+					SET @SQL = @SQL + "		AND I.TRADEQTY > 0"
+					IF LTRIM(RTRIM(@SETTNO)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SETT_NO = '" + @SETTNO + "'"
+							SET @SQL = @SQL + "		AND I.SETT_TYPE = '" + @SETTTYPE + "'"
+						END
+					IF @CONTRACTNO <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.CONTRACTNO = '" + @CONTRACTNO + "'"
+						END
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND I.DUMMY2 = 1"
+						END
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.USER_ID = '" + @FROMTERM + "'"
+						END
+
+					IF @PARTICIPANT <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.PARTIPANTCODE = '" + @PARTICIPANT + "'"
+						END
+
+					IF @ORDER_NO <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND I.ORDER_NO = '" + @ORDER_NO + "'"
+						END
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.TRADE_NO,"
+					SET @SQL = @SQL + "		I.SETT_NO,"
+					SET @SQL = @SQL + "		I.SETT_TYPE,"
+					SET @SQL = @SQL + "		C1.LONG_NAME,"
+					SET @SQL = @SQL + "		I.CONTRACTNO,"
+					SET @SQL = @SQL + "		I.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		I.USER_ID,"
+					SET @SQL = @SQL + "		I.BRANCH_ID,"
+					SET @SQL = @SQL + "		I.DUMMY2,"
+					SET @SQL = @SQL + "		I.ORDER_NO,"
+					SET @SQL = @SQL + "		ISNULL(R.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(R.NETRATE, 4)"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		I.PARTY_CODE,"
+					SET @SQL = @SQL + "		I.TRADE_NO,"
+					SET @SQL = @SQL + "		I.BRANCH_ID"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 1 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN I.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN I.SELL_BUY = 2 THEN (I.TRADEQTY * I.MARKETRATE) ELSE 0 END))"*/
+				END
+			ELSE
+				BEGIN
+					SET @SQL = "	SELECT"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.TRADE_NO,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		QTY = SUM(T.TRADEQTY),"
+					SET @SQL = @SQL + "		AMOUNT = SUM((T.TRADEQTY * T.MARKETRATE)),"
+--					SET @SQL = @SQL + "		DEALTICKETPRICE = ((SUM(I.TRADEQTY * I.MARKETRATE)) / (SUM(I.TRADEQTY))),"
+					SET @SQL = @SQL + "		DEALTICKETPRICE = CONVERT(NUMERIC(12, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 2, 1) WHEN 4 THEN ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) ELSE ROUND(((SUM(T.MARKETRATE*T.TRADEQTY)) / (SUM(T.TRADEQTY))), 4, 1) END),"
+					SET @SQL = @SQL + "		MKTRATE = ((SUM(T.DUMMY1*T.TRADEQTY)) / (SUM(T.TRADEQTY))),"
+					SET @SQL = @SQL + "		T.ORDER_NO,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.USER_ID,"
+					SET @SQL = @SQL + "		T.BRANCH_ID,"
+					SET @SQL = @SQL + "		PARTY_NAME = isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		R_MKTRATE = ISNULL(C.MARKETRATE, 4),"
+					SET @SQL = @SQL + "		R_BROKERAGE = ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		R_NETRATE = ISNULL(C.NETRATE, 4)"
+					SET @SQL = @SQL + "	FROM"
+					SET @SQL = @SQL + "		TRADE T WITH (NOLOCK)"
+					SET @SQL = @SQL + "		LEFT OUTER JOIN ( SELECT PARTY_CODE, LONG_NAME, CL_TYPE, MARKETRATE, BROKERAGE, NETRATE FROM CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK)"
+					SET @SQL = @SQL + "		ON (C1.CL_CODE = C2.CL_CODE ) INNER JOIN  INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)) C"
+					SET @SQL = @SQL + "		ON (T.PARTY_CODE = C.PARTY_CODE)"
+					SET @SQL = @SQL + "	WHERE"
+					SET @SQL = @SQL + "		SAUDA_DATE LIKE '" + @TDATE + "%'"
+					SET @SQL = @SQL + "		AND SELL_BUY = " + LTRIM(RTRIM(CONVERT(VARCHAR, @SELL_BUY)))
+					SET @SQL = @SQL + "		AND T.TRADEQTY > 0"
+					SET @SQL = @SQL + "		AND (ISNULL(C.CL_TYPE,'') = 'INS' OR T.PARTIPANTCODE <> '" + @MEMBER + "')"
+					IF @CONSOLIDATE = 0
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 0"
+						END
+					ELSE IF @CONSOLIDATE = 1
+						BEGIN
+							SET @SQL = @SQL + "		AND T.DUMMY2 = 1"
+						END
+
+
+					IF @FROMPARTY <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTY_CODE = '" + @FROMPARTY + "'"
+						END
+
+					IF @FROMSCRIP <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.SCRIP_CD = '" + @FROMSCRIP + "'"
+						END
+
+					IF @FROMTERM <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.USER_ID = '" + @FROMTERM + "'"
+						END
+
+					IF @PARTICIPANT <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.PARTIPANTCODE = '" + @PARTICIPANT + "'"
+						END
+
+					IF @ORDER_NO <> ''
+						BEGIN
+							SET @SQL = @SQL + "		AND T.ORDER_NO = '" + @ORDER_NO + "'"
+						END
+
+
+					SET @SQL = @SQL + "	GROUP BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.TRADE_NO,"
+					SET @SQL = @SQL + "		T.DUMMY2,"
+					SET @SQL = @SQL + "		T.ORDER_NO,"
+					SET @SQL = @SQL + "		T.PARTIPANTCODE,"
+					SET @SQL = @SQL + "		T.USER_ID,"
+					SET @SQL = @SQL + "		T.BRANCH_ID,"
+					SET @SQL = @SQL + "		isNull(C.LONG_NAME, 'Client Code Not Found'),"
+					SET @SQL = @SQL + "		C.MARKETRATE,"
+					SET @SQL = @SQL + "		ISNULL(C.BROKERAGE, 4),"
+					SET @SQL = @SQL + "		ISNULL(C.NETRATE, 4)"
+					SET @SQL = @SQL + "	ORDER BY"
+					SET @SQL = @SQL + "		T.PARTY_CODE,"
+					SET @SQL = @SQL + "		T.TRADE_NO,"
+					SET @SQL = @SQL + "		T.BRANCH_ID"
+/*					SET @SQL = @SQL + "	COMPUTE"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 1 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN T.TRADEQTY ELSE 0 END)),"
+					SET @SQL = @SQL + "		SUM(SUM(CASE WHEN T.SELL_BUY = 2 THEN (T.TRADEQTY * T.MARKETRATE) ELSE 0 END))"*/
+				END
+		END
+	ELSE IF @LEVEL = 101
+		BEGIN
+			IF @TRFTABLE = 'TRADE'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	T.PARTY_CODE, "
+					SET @SQL = @SQL + "	LONG_NAME = ISNULL(C.LONG_NAME, 'Client Code Not Found'), "
+					SET @SQL = @SQL + "	T.SCRIP_CD, "
+					SET @SQL = @SQL + "	T.SERIES, "
+					SET @SQL = @SQL + "	T.SELL_BUY, "
+					SET @SQL = @SQL + "	CONTRACTNO = '', "
+					SET @SQL = @SQL + "	MKTAMOUNT = SUM(T.TRADEQTY * T.MARKETRATE), "
+					SET @SQL = @SQL + "	NETAMOUNT = CONVERT(NUMERIC(18,4), 0), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) ELSE ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) END), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18,4), 0), "
+					SET @SQL = @SQL + "	QTY = SUM(T.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRND = ISNULL(C.MARKETRATE, 4), "
+					SET @SQL = @SQL + "	NETRND = ISNULL(C.NETRATE, 4), "
+					SET @SQL = @SQL + "	BRKRND = ISNULL(C.BROKERAGE, 4) "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	TRADE T WITH (NOLOCK) "
+					SET @SQL = @SQL + "		LEFT OUTER JOIN "
+					SET @SQL = @SQL + "			(SELECT "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "				INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE >= '" + @FROMPARTY + "' "
+					SET @SQL = @SQL + "				AND C2.PARTY_CODE <= '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "				AND (C1.CL_TYPE = 'INS' OR C1.CL_TYPE <> (SELECT MEMBERCODE FROM OWNER)) "
+					SET @SQL = @SQL + "			) C "
+					SET @SQL = @SQL + "	ON (T.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	T.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND T.TRADEQTY > 0 "
+					SET @SQL = @SQL + "	AND T.PARTY_CODE >= '" + @FROMPARTY + "' "
+					SET @SQL = @SQL + "	AND T.PARTY_CODE <= '" + @TOPARTY + "' "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND T.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND T.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND T.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND T.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	T.PARTY_CODE, "
+					SET @SQL = @SQL + "	ISNULL(C.LONG_NAME, 'Client Code Not Found'), "
+					SET @SQL = @SQL + "	T.SCRIP_CD, "
+					SET @SQL = @SQL + "	T.SERIES, "
+					SET @SQL = @SQL + "	T.SELL_BUY, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	ISNULL(C.NETRATE, 4), "
+					SET @SQL = @SQL + "	ISNULL(C.BROKERAGE, 4) "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	T.PARTY_CODE, "
+					SET @SQL = @SQL + "	T.SCRIP_CD, "
+					SET @SQL = @SQL + "	T.SERIES, "
+					SET @SQL = @SQL + "	T.SELL_BUY "
+				END
+			ELSE IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)), "
+					SET @SQL = @SQL + "	NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END), "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	ISETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "			(SELECT "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "				INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE >= '" + @FROMPARTY + "' "
+					SET @SQL = @SQL + "				AND C2.PARTY_CODE <= '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "			) C "
+					SET @SQL = @SQL + "	ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)), "
+					SET @SQL = @SQL + "	NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END), "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	SETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "			(SELECT "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "				INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE >= '" + @FROMPARTY + "' "
+					SET @SQL = @SQL + "				AND C2.PARTY_CODE <= '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "			) C "
+					SET @SQL = @SQL + "	ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "	AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+		END
+	ELSE IF @LEVEL = 102
+		BEGIN
+			IF @TRFTABLE = 'TRADE'
+				BEGIN
+					SELECT
+						T.PARTY_CODE,
+						LONG_NAME = ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+						T.SCRIP_CD,
+						T.SERIES,
+						T.SELL_BUY,
+						T.ORDER_NO,
+						T.PARTIPANTCODE,
+						T.BRANCH_ID,
+						MKTAMOUNT = SUM(T.TRADEQTY * T.MARKETRATE),
+						NETAMOUNT = CONVERT(NUMERIC(18,4), 0),
+						MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) ELSE ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) END),
+						NETRATE = CONVERT(NUMERIC(18,4), 0),
+						QTY = SUM(T.TRADEQTY),
+						MKTRND = ISNULL(C.MARKETRATE, 4),
+						NETRND = ISNULL(C.NETRATE, 4),
+						BRKRND = ISNULL(C.BROKERAGE, 4)
+					FROM
+						TRADE T WITH (NOLOCK)
+							LEFT OUTER JOIN
+								(SELECT
+									C1.LONG_NAME,
+									C2.PARTY_CODE,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+									INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE >= @FROMPARTY
+									AND C2.PARTY_CODE <= @TOPARTY
+									AND (C1.CL_TYPE = 'INS' OR C1.CL_TYPE <> (SELECT MEMBERCODE FROM OWNER))
+								) C
+						ON (T.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						T.SAUDA_DATE LIKE @TDATE + '%'
+						AND T.TRADEQTY > 0
+						AND T.PARTY_CODE >= @FROMPARTY
+						AND T.PARTY_CODE <= @TOPARTY
+						AND T.SCRIP_CD >= @FROMSCRIP
+						AND T.SCRIP_CD <= @TOSCRIP
+					GROUP BY
+						T.PARTY_CODE,
+						ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+						T.SCRIP_CD,
+						T.SERIES,
+						T.SELL_BUY,
+						T.ORDER_NO,
+						T.BRANCH_ID,
+						C.MARKETRATE,
+						T.PARTIPANTCODE,
+						ISNULL(C.NETRATE, 4),
+						ISNULL(C.BROKERAGE, 4)
+					ORDER BY
+						T.PARTY_CODE,
+						T.SCRIP_CD,
+						T.SERIES,
+						T.SELL_BUY,
+						T.ORDER_NO,
+						T.BRANCH_ID
+				END
+			ELSE IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					--PRINT 'CAME HERE'
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.PARTIPANTCODE,
+						I.BRANCH_ID,
+						MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+						NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+						MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+						NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+						QTY = SUM(I.TRADEQTY),
+						MKTRND = ISNULL(C.MARKETRATE, 4),
+						NETRND = ISNULL(C.NETRATE, 4),
+						BRKRND = ISNULL(C.BROKERAGE, 4)
+					FROM
+						ISETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+								(SELECT
+									C1.LONG_NAME,
+									C2.PARTY_CODE,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+									INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE >= @FROMPARTY
+									AND C2.PARTY_CODE <= @TOPARTY
+								) C
+						ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.PARTIPANTCODE,
+						I.BRANCH_ID,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.BRANCH_ID
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.PARTIPANTCODE,
+						I.BRANCH_ID,
+						MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+						NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+						MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+						NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+						QTY = SUM(I.TRADEQTY),
+						MKTRND = C.MARKETRATE,
+						NETRND = C.NETRATE,
+						BRKRND = C.BROKERAGE
+					FROM
+						SETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+								(SELECT
+									C1.LONG_NAME,
+									C2.PARTY_CODE,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+									INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE >= @FROMPARTY
+									AND C2.PARTY_CODE <= @TOPARTY
+								) C
+						ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.PARTIPANTCODE,
+						I.BRANCH_ID,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.ORDER_NO,
+						I.BRANCH_ID
+				END
+		END
+	ELSE IF @LEVEL = 103
+		BEGIN
+			IF @TRFTABLE = 'TRADE'
+				BEGIN
+					IF @ORDER_NO <> ''
+						BEGIN
+							SELECT
+								T.PARTY_CODE,
+								LONG_NAME = ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.ORDER_NO,
+								T.TRADE_NO,
+								T.USER_ID,
+								T.PARTIPANTCODE,
+								T.BRANCH_ID,
+								MKTAMOUNT = SUM(T.TRADEQTY * T.MARKETRATE),
+								NETAMOUNT = CONVERT(NUMERIC(18,4), 0),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) ELSE ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18,4), 0),
+								QTY = SUM(T.TRADEQTY),
+								MKTRND = ISNULL(C.MARKETRATE, 4),
+								NETRND = ISNULL(C.NETRATE, 4),
+								BRKRND = ISNULL(C.BROKERAGE, 4)
+							FROM
+								TRADE T WITH (NOLOCK)
+									LEFT OUTER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+											AND (C1.CL_TYPE = 'INS' OR C1.CL_TYPE <> (SELECT MEMBERCODE FROM OWNER))
+										) C
+								ON (T.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								T.SAUDA_DATE LIKE @TDATE + '%'
+								AND T.TRADEQTY > 0
+								AND T.PARTY_CODE >= @FROMPARTY
+								AND T.PARTY_CODE <= @TOPARTY
+								AND T.SCRIP_CD >= @FROMSCRIP
+								AND T.SCRIP_CD <= @TOSCRIP
+								AND T.ORDER_NO = @ORDER_NO
+--								AND T.PARTIPANTCODE = @PARTICIPANT
+							GROUP BY
+								T.PARTY_CODE,
+								ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.ORDER_NO,
+								T.TRADE_NO,
+								T.USER_ID,
+								T.PARTIPANTCODE,
+								T.BRANCH_ID,
+								C.MARKETRATE,
+								ISNULL(C.NETRATE, 4),
+								ISNULL(C.BROKERAGE, 4)
+							ORDER BY
+								T.PARTY_CODE,
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.ORDER_NO,
+								T.TRADE_NO,
+								T.BRANCH_ID
+						END
+					ELSE
+						BEGIN
+							SELECT
+								T.PARTY_CODE,
+								LONG_NAME = ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.TRADE_NO,
+								T.USER_ID,
+								T.PARTIPANTCODE,
+								T.BRANCH_ID,
+								MKTAMOUNT = SUM(T.TRADEQTY * T.MARKETRATE),
+								NETAMOUNT = CONVERT(NUMERIC(18,4), 0),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) ELSE ROUND((SUM(T.TRADEQTY * T.MARKETRATE) / SUM(T.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18,4), 0),
+								QTY = SUM(T.TRADEQTY),
+								MKTRND = ISNULL(C.MARKETRATE, 4),
+								NETRND = ISNULL(C.NETRATE, 4),
+								BRKRND = ISNULL(C.BROKERAGE, 4)
+							FROM
+								TRADE T WITH (NOLOCK)
+									LEFT OUTER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+											AND (C1.CL_TYPE = 'INS' OR C1.CL_TYPE <> (SELECT MEMBERCODE FROM OWNER))
+										) C
+								ON (T.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								T.SAUDA_DATE LIKE @TDATE + '%'
+								AND T.TRADEQTY > 0
+								AND T.PARTY_CODE >= @FROMPARTY
+								AND T.PARTY_CODE <= @TOPARTY
+								AND T.SCRIP_CD >= @FROMSCRIP
+								AND T.SCRIP_CD <= @TOSCRIP
+--								AND T.PARTIPANTCODE = @PARTICIPANT
+							GROUP BY
+								T.PARTY_CODE,
+								ISNULL(C.LONG_NAME, 'Client Code Not Found'),
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.TRADE_NO,
+								T.USER_ID,
+								T.PARTIPANTCODE,
+								T.BRANCH_ID,
+								C.MARKETRATE,
+								ISNULL(C.NETRATE, 4),
+								ISNULL(C.BROKERAGE, 4)
+							ORDER BY
+								T.PARTY_CODE,
+								T.SCRIP_CD,
+								T.SERIES,
+								T.SELL_BUY,
+								T.TRADE_NO,
+								T.BRANCH_ID
+						END
+				END
+			ELSE IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					IF @ORDER_NO <> ''
+						BEGIN
+							SELECT
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+								NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								QTY = SUM(I.TRADEQTY),
+								MKTRND = C.MARKETRATE,
+								NETRND = C.NETRATE,
+								BRKRND = C.BROKERAGE
+							FROM
+								ISETTLEMENT I WITH (NOLOCK)
+									INNER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+										) C
+								ON (I.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								I.SAUDA_DATE LIKE @TDATE + '%'
+								AND I.TRADEQTY > 0
+								AND I.SCRIP_CD >= @FROMSCRIP
+								AND I.SCRIP_CD <= @TOSCRIP
+								AND I.ORDER_NO = @ORDER_NO
+--								AND I.PARTIPANTCODE = @PARTICIPANT
+								AND I.SETT_NO = @SETTNO
+								AND I.SETT_TYPE = @SETTTYPE
+							GROUP BY
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								C.MARKETRATE,
+								C.NETRATE,
+								C.BROKERAGE
+							ORDER BY
+								I.PARTY_CODE,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.BRANCH_ID
+						END
+					ELSE
+						BEGIN
+							SELECT
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+								NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								QTY = SUM(I.TRADEQTY),
+								MKTRND = C.MARKETRATE,
+								NETRND = C.NETRATE,
+								BRKRND = C.BROKERAGE
+							FROM
+								ISETTLEMENT I WITH (NOLOCK)
+									INNER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+										) C
+								ON (I.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								I.SAUDA_DATE LIKE @TDATE + '%'
+								AND I.TRADEQTY > 0
+								AND I.SCRIP_CD >= @FROMSCRIP
+								AND I.SCRIP_CD <= @TOSCRIP
+--								AND I.PARTIPANTCODE = @PARTICIPANT
+								AND I.SETT_NO = @SETTNO
+								AND I.SETT_TYPE = @SETTTYPE
+							GROUP BY
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								C.MARKETRATE,
+								C.NETRATE,
+								C.BROKERAGE
+							ORDER BY
+								I.PARTY_CODE,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.BRANCH_ID
+						END
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					IF @ORDER_NO <> ''
+						BEGIN
+							SELECT
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+								NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								QTY = SUM(I.TRADEQTY),
+								MKTRND = C.MARKETRATE,
+								NETRND = C.NETRATE,
+								BRKRND = C.BROKERAGE
+							FROM
+								SETTLEMENT I WITH (NOLOCK)
+									INNER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+										) C
+								ON (I.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								I.SAUDA_DATE LIKE @TDATE + '%'
+								AND I.TRADEQTY > 0
+								AND I.SCRIP_CD >= @FROMSCRIP
+								AND I.SCRIP_CD <= @TOSCRIP
+								AND I.ORDER_NO = @ORDER_NO
+--								AND I.PARTIPANTCODE = @PARTICIPANT
+								AND I.SETT_NO = @SETTNO
+								AND I.SETT_TYPE = @SETTTYPE
+							GROUP BY
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								C.MARKETRATE,
+								C.NETRATE,
+								C.BROKERAGE
+							ORDER BY
+								I.PARTY_CODE,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.ORDER_NO,
+								I.TRADE_NO,
+								I.BRANCH_ID
+						END
+					ELSE
+						BEGIN
+							SELECT
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								MKTAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.MARKETRATE)),
+								NETAMOUNT = CONVERT(NUMERIC(18, 4), SUM(I.TRADEQTY * I.NETRATE)),
+								MKTRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.MARKETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								NETRATE = CONVERT(NUMERIC(18, 4), CASE ISNULL(C.NETRATE, 4) WHEN 2 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 2, 1) WHEN 4 THEN ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) ELSE ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), 4, 1) END),
+								QTY = SUM(I.TRADEQTY),
+								MKTRND = C.MARKETRATE,
+								NETRND = C.NETRATE,
+								BRKRND = C.BROKERAGE
+							FROM
+								SETTLEMENT I WITH (NOLOCK)
+									INNER JOIN
+										(SELECT
+											C1.LONG_NAME,
+											C2.PARTY_CODE,
+											R.MARKETRATE,
+											R.NETRATE,
+											R.BROKERAGE
+										FROM
+											CLIENT1 C1 WITH (NOLOCK) INNER JOIN CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+										WHERE
+											C2.PARTY_CODE >= @FROMPARTY
+											AND C2.PARTY_CODE <= @TOPARTY
+										) C
+								ON (I.PARTY_CODE = C.PARTY_CODE)
+							WHERE
+								I.SAUDA_DATE LIKE @TDATE + '%'
+								AND I.TRADEQTY > 0
+								AND I.SCRIP_CD >= @FROMSCRIP
+								AND I.SCRIP_CD <= @TOSCRIP
+--								AND I.PARTIPANTCODE = @PARTICIPANT
+								AND I.SETT_NO = @SETTNO
+								AND I.SETT_TYPE = @SETTTYPE
+							GROUP BY
+								I.PARTY_CODE,
+								C.LONG_NAME,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.USER_ID,
+								I.PARTIPANTCODE,
+								I.BRANCH_ID,
+								I.SETT_NO,
+								I.SETT_TYPE,
+								C.MARKETRATE,
+								C.NETRATE,
+								C.BROKERAGE
+							ORDER BY
+								I.PARTY_CODE,
+								I.SCRIP_CD,
+								I.SERIES,
+								I.SELL_BUY,
+								I.TRADE_NO,
+								I.BRANCH_ID
+						END
+				END
+		END
+	ELSE IF @LEVEL = 201		-- FOR CONFIRMATION i.e. FROM SETTLEMENT TO ISETTLEMENT
+		BEGIN
+			SET @SQL = ""
+			SET @SQL = @SQL + "SELECT "
+			SET @SQL = @SQL + "	I.PARTY_CODE, "
+			SET @SQL = @SQL + "	PARTY_NAME = C.LONG_NAME, "
+			SET @SQL = @SQL + "	I.SCRIP_CD, "
+			SET @SQL = @SQL + "	SCRIP_NAME = S.LONG_NAME, "
+			SET @SQL = @SQL + "	S.SERIES, "
+			SET @SQL = @SQL + "	I.SETT_NO, "
+			SET @SQL = @SQL + "	I.SETT_TYPE, "
+			SET @SQL = @SQL + "	I.CONTRACTNO, "
+			SET @SQL = @SQL + "	I.SELL_BUY, "
+			SET @SQL = @SQL + "	PARTICIPANTCODE = I.PARTIPANTCODE, "
+			SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+			SET @SQL = @SQL + "	MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+			SET @SQL = @SQL + "	R_MKTRATE = ISNULL(C.MARKETRATE, 4) "
+			SET @SQL = @SQL + "FROM "
+			SET @SQL = @SQL + "	SETTLEMENT I WITH (NOLOCK) "
+			SET @SQL = @SQL + "		INNER JOIN "
+			SET @SQL = @SQL + "		( "
+			SET @SQL = @SQL + "			SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK) "
+			SET @SQL = @SQL + "				INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE "
+			SET @SQL = @SQL + "				AND S1.SERIES = S2.SERIES "
+			IF LTRIM(RTRIM(@FROMSCRIP)) <> '' OR LTRIM(RTRIM(@TOSCRIP)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "WHERE "
+				END
+/*			IF LTRIM(RTRIM(@FROMSCRIP)) <> '' AND LTRIM(RTRIM(@TOSCRIP)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "WHERE S2.SCRIP_CD >= '" + @FROMSCRIP + "' "
+					SET @SQL = @SQL + "AND S2.SCRIP_CD <= '" + @TOSCRIP + "' "
+				END*/
+			IF LTRIM(RTRIM(@FROMSCRIP)) <> '' --AND LTRIM(RTRIM(@TOSCRIP)) = ''
+				BEGIN
+					SET @SQL = @SQL + "S2.SCRIP_CD >= '" + @FROMSCRIP + "' "
+				END
+			IF /*LTRIM(RTRIM(@FROMSCRIP)) = '' AND */LTRIM(RTRIM(@TOSCRIP)) <> ''
+				BEGIN
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND S2.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					ELSE
+						BEGIN
+							SET @SQL = @SQL + "S2.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+				END
+			SET @SQL = @SQL + "		) S "
+			SET @SQL = @SQL + "		ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES) "
+			SET @SQL = @SQL + "		INNER JOIN "
+			SET @SQL = @SQL + "		( "
+			SET @SQL = @SQL + "			SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE "
+			SET @SQL = @SQL + "			FROM CLIENT2 C2 WITH (NOLOCK) "
+			SET @SQL = @SQL + "				INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+			SET @SQL = @SQL + "				INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+			SET @SQL = @SQL + "			WHERE "
+			SET @SQL = @SQL + "				C2.PARTY_CODE >= '" + @FROMPARTY + "' "
+			SET @SQL = @SQL + "				AND C2.PARTY_CODE <= '" + @TOPARTY + "' "
+			SET @SQL = @SQL + "		) C "
+			SET @SQL = @SQL + "		ON I.PARTY_CODE = C.PARTY_CODE "
+			SET @SQL = @SQL + "WHERE "
+			SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+			SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+			IF LTRIM(RTRIM(@FROMTERM)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+				END
+			IF LTRIM(RTRIM(@TOTERM)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+				END
+			SET @SQL = @SQL + "GROUP BY "
+			SET @SQL = @SQL + "	I.PARTY_CODE, "
+			SET @SQL = @SQL + "	C.LONG_NAME, "
+			SET @SQL = @SQL + "	I.SCRIP_CD, "
+			SET @SQL = @SQL + "	S.LONG_NAME, "
+			SET @SQL = @SQL + "	S.SERIES, "
+			SET @SQL = @SQL + "	I.SETT_NO, "
+			SET @SQL = @SQL + "	I.SETT_TYPE, "
+			SET @SQL = @SQL + "	I.CONTRACTNO, "
+			SET @SQL = @SQL + "	I.SELL_BUY, "
+			SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+			SET @SQL = @SQL + "	C.MARKETRATE "
+		END
+	ELSE IF @LEVEL = 202		-- FOR CONFIRMATION i.e. FROM SETTLEMENT TO ISETTLEMENT ORDER WISE
+		BEGIN
+			SELECT
+				I.PARTY_CODE,
+				PARTY_NAME = C.LONG_NAME,
+				I.SCRIP_CD,
+				SCRIP_NAME = S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.SELL_BUY,
+				PARTICIPANTCODE = I.PARTIPANTCODE,
+				QTY = SUM(I.TRADEQTY),
+				MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+				R_MKTRATE = ISNULL(C.MARKETRATE, 4)
+			FROM
+				SETTLEMENT I WITH (NOLOCK)
+					INNER JOIN
+					(
+						SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK)
+							INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE
+							AND S1.SERIES = S2.SERIES
+						WHERE
+							S2.SCRIP_CD >= @FROMSCRIP
+							AND S2.SCRIP_CD <= @TOSCRIP
+					) S
+					ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES)
+					INNER JOIN
+					(
+						SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE
+						FROM CLIENT2 C2 WITH (NOLOCK)
+							INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+							INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+						WHERE
+							C2.PARTY_CODE >= @FROMPARTY
+							AND C2.PARTY_CODE <= @TOPARTY
+					) C
+					ON I.PARTY_CODE = C.PARTY_CODE
+			WHERE
+				I.SAUDA_DATE LIKE @TDATE + '%'
+				AND I.TRADEQTY > 0
+				AND I.CONTRACTNO = @CONTRACTNO
+				AND I.SELL_BUY = @SELL_BUY
+			GROUP BY
+				I.PARTY_CODE,
+				C.LONG_NAME,
+				I.SCRIP_CD,
+				S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.SELL_BUY,
+				I.PARTIPANTCODE,
+				C.MARKETRATE
+		END
+	ELSE IF @LEVEL = 203		-- FOR CONFIRMATION i.e. FROM SETTLEMENT TO ISETTLEMENT TRADE WISE
+		BEGIN
+			SELECT
+				I.PARTY_CODE,
+				PARTY_NAME = C.LONG_NAME,
+				I.SCRIP_CD,
+				SCRIP_NAME = S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.TRADE_NO,
+				I.SELL_BUY,
+				PARTICIPANTCODE = I.PARTIPANTCODE,
+				QTY = SUM(I.TRADEQTY),
+				MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+				R_MKTRATE = ISNULL(C.MARKETRATE, 4)
+			FROM
+				SETTLEMENT I WITH (NOLOCK)
+					INNER JOIN
+					(
+						SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK)
+							INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE
+							AND S1.SERIES = S2.SERIES
+						WHERE
+							S2.SCRIP_CD >= @FROMSCRIP
+							AND S2.SCRIP_CD <= @TOSCRIP
+					) S
+					ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES)
+					INNER JOIN
+					(
+						SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE
+						FROM CLIENT2 C2 WITH (NOLOCK)
+							INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+							INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+						WHERE
+							C2.PARTY_CODE >= @FROMPARTY
+							AND C2.PARTY_CODE <= @TOPARTY
+					) C
+					ON I.PARTY_CODE = C.PARTY_CODE
+			WHERE
+				I.SAUDA_DATE LIKE @TDATE + '%'
+				AND I.TRADEQTY > 0
+				AND I.CONTRACTNO = @CONTRACTNO
+				AND I.SELL_BUY = @SELL_BUY
+				AND I.ORDER_NO = @ORDER_NO
+			GROUP BY
+				I.PARTY_CODE,
+				C.LONG_NAME,
+				I.SCRIP_CD,
+				S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.TRADE_NO,
+				I.SELL_BUY,
+				I.PARTIPANTCODE,
+				C.MARKETRATE
+		END
+	ELSE IF @LEVEL = 301		-- FOR REJECTION i.e. FROM ISETTLEMENT TO SETTLEMENT
+		BEGIN
+			SET @SQL = ""
+			SET @SQL = @SQL + "SELECT "
+			SET @SQL = @SQL + "	I.PARTY_CODE, "
+			SET @SQL = @SQL + "	PARTY_NAME = C.LONG_NAME, "
+			SET @SQL = @SQL + "	I.SCRIP_CD, "
+			SET @SQL = @SQL + "	SCRIP_NAME = S.LONG_NAME, "
+			SET @SQL = @SQL + "	S.SERIES, "
+			SET @SQL = @SQL + "	I.SETT_NO, "
+			SET @SQL = @SQL + "	I.SETT_TYPE, "
+			SET @SQL = @SQL + "	I.CONTRACTNO, "
+			SET @SQL = @SQL + "	I.SELL_BUY, "
+			SET @SQL = @SQL + "	PARTICIPANTCODE = I.PARTIPANTCODE, "
+			SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+			SET @SQL = @SQL + "	MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+			SET @SQL = @SQL + "	R_MKTRATE = ISNULL(C.MARKETRATE, 4) "
+			SET @SQL = @SQL + "FROM "
+			SET @SQL = @SQL + "	ISETTLEMENT I WITH (NOLOCK) "
+			SET @SQL = @SQL + "		INNER JOIN "
+			SET @SQL = @SQL + "		( "
+			SET @SQL = @SQL + "			SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK) "
+			SET @SQL = @SQL + "				INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE "
+			SET @SQL = @SQL + "				AND S1.SERIES = S2.SERIES "
+			IF LTRIM(RTRIM(@FROMSCRIP)) <> '' OR LTRIM(RTRIM(@TOSCRIP)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "WHERE "
+				END
+			IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "S2.SCRIP_CD >= '" + @FROMSCRIP + "' "
+				END
+			IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+				BEGIN
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND S2.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					ELSE
+						BEGIN
+							SET @SQL = @SQL + "S2.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+				END
+			SET @SQL = @SQL + "		) S "
+			SET @SQL = @SQL + "		ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES) "
+			SET @SQL = @SQL + "		INNER JOIN "
+			SET @SQL = @SQL + "		( "
+			SET @SQL = @SQL + "			SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE "
+			SET @SQL = @SQL + "			FROM CLIENT2 C2 WITH (NOLOCK) "
+			SET @SQL = @SQL + "				INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+			SET @SQL = @SQL + "				INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+			SET @SQL = @SQL + "			WHERE "
+			SET @SQL = @SQL + "				C2.PARTY_CODE >= '" + @FROMPARTY + "' "
+			SET @SQL = @SQL + "				AND C2.PARTY_CODE <= '" + @TOPARTY + "' "
+			SET @SQL = @SQL + "		) C "
+			SET @SQL = @SQL + "		ON I.PARTY_CODE = C.PARTY_CODE "
+			SET @SQL = @SQL + "WHERE "
+			SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+			SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+			IF LTRIM(RTRIM(@FROMTERM)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+				END
+			IF LTRIM(RTRIM(@TOTERM)) <> ''
+				BEGIN
+					SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+				END
+			SET @SQL = @SQL + "GROUP BY "
+			SET @SQL = @SQL + "	I.PARTY_CODE, "
+			SET @SQL = @SQL + "	C.LONG_NAME, "
+			SET @SQL = @SQL + "	I.SCRIP_CD, "
+			SET @SQL = @SQL + "	S.LONG_NAME, "
+			SET @SQL = @SQL + "	S.SERIES, "
+			SET @SQL = @SQL + "	I.SETT_NO, "
+			SET @SQL = @SQL + "	I.SETT_TYPE, "
+			SET @SQL = @SQL + "	I.CONTRACTNO, "
+			SET @SQL = @SQL + "	I.SELL_BUY, "
+			SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+			SET @SQL = @SQL + "	C.MARKETRATE "
+		END
+	ELSE IF @LEVEL = 302		-- FOR CONFIRMATION i.e. FROM SETTLEMENT TO ISETTLEMENT ORDER WISE
+		BEGIN
+			SELECT
+				I.PARTY_CODE,
+				PARTY_NAME = C.LONG_NAME,
+				I.SCRIP_CD,
+				SCRIP_NAME = S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.SELL_BUY,
+				PARTICIPANTCODE = I.PARTIPANTCODE,
+				QTY = SUM(I.TRADEQTY),
+				MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+				R_MKTRATE = ISNULL(C.MARKETRATE, 4)
+			FROM
+				ISETTLEMENT I WITH (NOLOCK)
+					INNER JOIN
+					(
+						SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK)
+							INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE
+							AND S1.SERIES = S2.SERIES
+						WHERE
+							S2.SCRIP_CD >= @FROMSCRIP
+							AND S2.SCRIP_CD <= @TOSCRIP
+					) S
+					ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES)
+					INNER JOIN
+					(
+						SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE
+						FROM CLIENT2 C2 WITH (NOLOCK)
+							INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+							INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+						WHERE
+							C2.PARTY_CODE >= @FROMPARTY
+							AND C2.PARTY_CODE <= @TOPARTY
+					) C
+					ON I.PARTY_CODE = C.PARTY_CODE
+			WHERE
+				I.SAUDA_DATE LIKE @TDATE + '%'
+				AND I.TRADEQTY > 0
+				AND I.CONTRACTNO = @CONTRACTNO
+				AND I.SELL_BUY = @SELL_BUY
+			GROUP BY
+				I.PARTY_CODE,
+				C.LONG_NAME,
+				I.SCRIP_CD,
+				S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.SELL_BUY,
+				I.PARTIPANTCODE,
+				C.MARKETRATE
+		END
+	ELSE IF @LEVEL = 303		-- FOR CONFIRMATION i.e. FROM SETTLEMENT TO ISETTLEMENT TRADE WISE
+		BEGIN
+			SELECT
+				I.PARTY_CODE,
+				PARTY_NAME = C.LONG_NAME,
+				I.SCRIP_CD,
+				SCRIP_NAME = S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.TRADE_NO,
+				I.SELL_BUY,
+				QTY = SUM(I.TRADEQTY),
+				MARKETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+				R_MKTRATE = ISNULL(C.MARKETRATE, 4)
+			FROM
+				ISETTLEMENT I WITH (NOLOCK)
+					INNER JOIN
+					(
+						SELECT S2.SCRIP_CD, S1.LONG_NAME, S2.SERIES FROM SCRIP1 S1 WITH (NOLOCK)
+							INNER JOIN SCRIP2 S2 WITH (NOLOCK) ON S1.CO_CODE = S2.CO_CODE
+							AND S1.SERIES = S2.SERIES
+						WHERE
+							S2.SCRIP_CD >= @FROMSCRIP
+							AND S2.SCRIP_CD <= @TOSCRIP
+					) S
+					ON (I.SCRIP_CD = S.SCRIP_CD AND I.SERIES = S.SERIES)
+					INNER JOIN
+					(
+						SELECT C1.LONG_NAME, C2.PARTY_CODE, R.MARKETRATE, R.NETRATE, R.BROKERAGE
+						FROM CLIENT2 C2 WITH (NOLOCK)
+							INNER JOIN CLIENT1 C1 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+							INNER JOIN INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+						WHERE
+							C2.PARTY_CODE >= @FROMPARTY
+							AND C2.PARTY_CODE <= @TOPARTY
+					) C
+					ON I.PARTY_CODE = C.PARTY_CODE
+			WHERE
+				I.SAUDA_DATE LIKE @TDATE + '%'
+				AND I.TRADEQTY > 0
+				AND I.CONTRACTNO = @CONTRACTNO
+				AND I.SELL_BUY = @SELL_BUY
+				AND I.ORDER_NO = @ORDER_NO
+			GROUP BY
+				I.PARTY_CODE,
+				C.LONG_NAME,
+				I.SCRIP_CD,
+				S.LONG_NAME,
+				S.SERIES,
+				I.SETT_NO,
+				I.SETT_TYPE,
+				I.CONTRACTNO,
+				I.ORDER_NO,
+				I.TRADE_NO,
+				I.SELL_BUY,
+				C.MARKETRATE
+		END
+	ELSE IF @LEVEL = 401
+		BEGIN
+			IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	ISETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "		( "
+					SET @SQL = @SQL + "			SELECT "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) "
+					SET @SQL = @SQL + "					INNER JOIN "
+					SET @SQL = @SQL + "					CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "						INNER JOIN "
+					SET @SQL = @SQL + "						INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE BETWEEN '" + @FROMPARTY + "' AND '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "		) C ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "	AND I.DUMMY2 = 1 "
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	SETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "		( "
+					SET @SQL = @SQL + "			SELECT "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) "
+					SET @SQL = @SQL + "					INNER JOIN "
+					SET @SQL = @SQL + "					CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "						INNER JOIN "
+					SET @SQL = @SQL + "						INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE BETWEEN '" + @FROMPARTY + "' AND '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "		) C ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "	AND I.DUMMY2 = 1 "
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+		END
+	ELSE IF @LEVEL = 501
+		BEGIN
+			IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL + "	MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	ISETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "		( "
+					SET @SQL = @SQL + "			SELECT "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) "
+					SET @SQL = @SQL + "					INNER JOIN "
+					SET @SQL = @SQL + "					CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "						INNER JOIN "
+					SET @SQL = @SQL + "						INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE BETWEEN '" + @FROMPARTY + "' AND '" + @TOPARTY +"' "
+					SET @SQL = @SQL + "		) C ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+						--AND I.DUMMY2 = 1
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SET @SQL = ""
+					SET @SQL = @SQL + "SELECT "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	QTY = SUM(I.TRADEQTY), "
+					SET @SQL = @SQL +"	MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)), "
+					SET @SQL = @SQL + "	MKTRND = C.MARKETRATE, "
+					SET @SQL = @SQL + "	NETRND = C.NETRATE, "
+					SET @SQL = @SQL + "	BRKRND = C.BROKERAGE "
+					SET @SQL = @SQL + "FROM "
+					SET @SQL = @SQL + "	SETTLEMENT I WITH (NOLOCK) "
+					SET @SQL = @SQL + "		INNER JOIN "
+					SET @SQL = @SQL + "		( "
+					SET @SQL = @SQL + "			SELECT "
+					SET @SQL = @SQL + "				C2.PARTY_CODE, "
+					SET @SQL = @SQL + "				C1.LONG_NAME, "
+					SET @SQL = @SQL + "				R.MARKETRATE, "
+					SET @SQL = @SQL + "				R.NETRATE, "
+					SET @SQL = @SQL + "				R.BROKERAGE "
+					SET @SQL = @SQL + "			FROM "
+					SET @SQL = @SQL + "				CLIENT1 C1 WITH (NOLOCK) "
+					SET @SQL = @SQL + "					INNER JOIN "
+					SET @SQL = @SQL + "					CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE) "
+					SET @SQL = @SQL + "						INNER JOIN "
+					SET @SQL = @SQL + "						INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE) "
+					SET @SQL = @SQL + "			WHERE "
+					SET @SQL = @SQL + "				C2.PARTY_CODE BETWEEN '" + @FROMPARTY + "' AND '" + @TOPARTY + "' "
+					SET @SQL = @SQL + "		) C ON (I.PARTY_CODE = C.PARTY_CODE) "
+					SET @SQL = @SQL + "WHERE "
+					SET @SQL = @SQL + "	I.SAUDA_DATE LIKE '" + @TDATE + "%' "
+					SET @SQL = @SQL + "	AND I.TRADEQTY > 0 "
+					IF LTRIM(RTRIM(@FROMSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD >= '" + @FROMSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@TOSCRIP)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.SCRIP_CD <= '" + @TOSCRIP + "' "
+						END
+					IF LTRIM(RTRIM(@FROMTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID >= '" + @FROMTERM + "' "
+						END
+					IF LTRIM(RTRIM(@TOTERM)) <> ''
+						BEGIN
+							SET @SQL = @SQL + "AND I.USER_ID <= '" + @TOTERM + "' "
+						END
+						--AND I.DUMMY2 = 1
+					SET @SQL = @SQL + "GROUP BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.PARTIPANTCODE, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	C.MARKETRATE, "
+					SET @SQL = @SQL + "	C.NETRATE, "
+					SET @SQL = @SQL + "	C.BROKERAGE "
+					SET @SQL = @SQL + "ORDER BY "
+					SET @SQL = @SQL + "	I.PARTY_CODE, "
+					SET @SQL = @SQL + "	C.LONG_NAME, "
+					SET @SQL = @SQL + "	I.SETT_NO, "
+					SET @SQL = @SQL + "	I.SETT_TYPE, "
+					SET @SQL = @SQL + "	I.CONTRACTNO, "
+					SET @SQL = @SQL + "	I.SCRIP_CD, "
+					SET @SQL = @SQL + "	I.SERIES, "
+					SET @SQL = @SQL + "	I.SELL_BUY "
+				END
+		END
+	ELSE IF @LEVEL = 502
+		BEGIN
+			IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						QTY = SUM(I.TRADEQTY),
+						MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)),
+						MKTRND = C.MARKETRATE,
+						NETRND = C.NETRATE,
+						BRKRND = C.BROKERAGE
+					FROM
+						ISETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+							(
+								SELECT
+									C2.PARTY_CODE,
+									C1.LONG_NAME,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK)
+										INNER JOIN
+										CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN
+											INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE BETWEEN @FROMPARTY AND @TOPARTY
+							) C ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						--AND I.DUMMY2 = 1
+						AND I.SETT_NO = @SETTNO
+						AND I.SETT_TYPE = @SETTTYPE
+						AND I.CONTRACTNO = @CONTRACTNO
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+						AND I.SELL_BUY = @SELL_BUY
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						QTY = SUM(I.TRADEQTY),
+						MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)),
+						MKTRND = C.MARKETRATE,
+						NETRND = C.NETRATE,
+						BRKRND = C.BROKERAGE
+					FROM
+						SETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+							(
+								SELECT
+									C2.PARTY_CODE,
+									C1.LONG_NAME,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK)
+										INNER JOIN
+										CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN
+											INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE BETWEEN @FROMPARTY AND @TOPARTY
+							) C ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						--AND I.DUMMY2 = 1
+						AND I.SETT_NO = @SETTNO
+						AND I.SETT_TYPE = @SETTTYPE
+						AND I.CONTRACTNO = @CONTRACTNO
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+						AND I.SELL_BUY = @SELL_BUY
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY
+				END
+		END
+	ELSE IF @LEVEL = 503
+		BEGIN
+			IF @TRFTABLE = 'ISETTLEMENT'
+				BEGIN
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						QTY = SUM(I.TRADEQTY),
+						MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)),
+						MKTRND = C.MARKETRATE,
+						NETRND = C.NETRATE,
+						BRKRND = C.BROKERAGE
+					FROM
+						ISETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+							(
+								SELECT
+									C2.PARTY_CODE,
+									C1.LONG_NAME,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK)
+										INNER JOIN
+										CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN
+											INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE BETWEEN @FROMPARTY AND @TOPARTY
+							) C ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						--AND I.DUMMY2 = 1
+						AND I.SETT_NO = @SETTNO
+						AND I.SETT_TYPE = @SETTTYPE
+						AND I.CONTRACTNO = @CONTRACTNO
+						AND I.ORDER_NO = @ORDER_NO
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+						AND I.SELL_BUY = @SELL_BUY
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY
+				END
+			ELSE IF @TRFTABLE = 'SETTLEMENT'
+				BEGIN
+					SELECT
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						QTY = SUM(I.TRADEQTY),
+						MKTRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.MARKETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						AVGRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.DUMMY1) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.MARKETRATE, 4))), 1)),
+						NETRATE = CONVERT(NUMERIC(18, 4), ROUND((SUM(I.TRADEQTY * I.NETRATE) / SUM(I.TRADEQTY)), CONVERT(NUMERIC(4), (ISNULL(C.NETRATE, 4))), 1)),
+						MKTRND = C.MARKETRATE,
+						NETRND = C.NETRATE,
+						BRKRND = C.BROKERAGE
+					FROM
+						SETTLEMENT I WITH (NOLOCK)
+							INNER JOIN
+							(
+								SELECT
+									C2.PARTY_CODE,
+									C1.LONG_NAME,
+									R.MARKETRATE,
+									R.NETRATE,
+									R.BROKERAGE
+								FROM
+									CLIENT1 C1 WITH (NOLOCK)
+										INNER JOIN
+										CLIENT2 C2 WITH (NOLOCK) ON (C1.CL_CODE = C2.CL_CODE)
+											INNER JOIN
+											INSTCLIENT_TBL R WITH (NOLOCK) ON (C2.PARTY_CODE = R.PARTYCODE)
+								WHERE
+									C2.PARTY_CODE BETWEEN @FROMPARTY AND @TOPARTY
+							) C ON (I.PARTY_CODE = C.PARTY_CODE)
+					WHERE
+						I.SAUDA_DATE LIKE @TDATE + '%'
+						AND I.TRADEQTY > 0
+						--AND I.DUMMY2 = 1
+						AND I.SETT_NO = @SETTNO
+						AND I.SETT_TYPE = @SETTTYPE
+						AND I.CONTRACTNO = @CONTRACTNO
+						AND I.ORDER_NO = @ORDER_NO
+						AND I.SCRIP_CD >= @FROMSCRIP
+						AND I.SCRIP_CD <= @TOSCRIP
+						AND I.SELL_BUY = @SELL_BUY
+					GROUP BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.PARTIPANTCODE,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						C.MARKETRATE,
+						C.NETRATE,
+						C.BROKERAGE
+					ORDER BY
+						I.PARTY_CODE,
+						C.LONG_NAME,
+						I.SETT_NO,
+						I.SETT_TYPE,
+						I.CONTRACTNO,
+						I.ORDER_NO,
+						I.TRADE_NO,
+						I.SCRIP_CD,
+						I.SERIES,
+						I.SELL_BUY
+				END
+		END
+PRINT @SQL
+EXEC (@SQL)
+
+GO

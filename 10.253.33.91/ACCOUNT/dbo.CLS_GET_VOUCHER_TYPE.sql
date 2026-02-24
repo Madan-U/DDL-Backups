@@ -1,0 +1,12 @@
+-- Object: PROCEDURE dbo.CLS_GET_VOUCHER_TYPE
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+
+
+CREATE PROC [dbo].[CLS_GET_VOUCHER_TYPE]
+AS
+SELECT VTYPE, VDESC FROM VMAST WHERE VTYPE NOT IN (14,15,18,21,55,80,300,30) ORDER BY VTYPE
+
+GO

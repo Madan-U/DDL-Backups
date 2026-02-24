@@ -1,0 +1,158 @@
+-- Object: PROCEDURE dbo.SEBI_AUDIT_ISIN_DETAILS_BSE
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+
+
+
+
+
+--EXEC SEBI_AUDIT_ISIN_DETAILS_BSE 'feb 28 2018'
+CREATE PROC [dbo].[SEBI_AUDIT_ISIN_DETAILS_BSE]
+(
+	@REPORTDATE	VARCHAR(11)
+)
+AS
+
+DECLARE @NSEMEMBERCODE VARCHAR(10),        
+  @BSEMEMBERCODE VARCHAR(10),
+  @SEGMENT VARCHAR(3)
+  
+SELECT @NSEMEMBERCODE = MEMBERCODE FROM MSAJAG.DBO.OWNER          
+SELECT @BSEMEMBERCODE = MEMBERCODE FROM [AngelBSECM].BSEDB_AB.DBO.OWNER 
+
+SET @SEGMENT = ''  
+SET @SEGMENT = 'BSE'  
+
+CREATE TABLE #CLIENT_LIST
+(
+	CLTCODE VARCHAR(10)
+)
+
+INSERT INTO #CLIENT_LIST
+SELECT CL_CODE FROM MSAJAG..Client_Brok_Details WHERE Exchange = 'BSE'
+
+SELECT PARTY_CODE, ISIN = CERTNO, Name_of_the_Securities = Scrip_Cd, Quantity_of_securities_ISINwise = SUM(DEBITQTY + FUTQTY + PAYQTY),
+Quantity_of_securities_pledged_ISINwise = 0,
+Funds_raised_from_Pledging_ISIN_wise = 0,ACTION='A'
+INTO #ISIN
+FROM  MSAJAG.DBO.DELDEBITSUMMARYNEW
+WHERE RUNDATE >= @REPORTDATE AND RUNDATE <= @REPORTDATE + ' 23:59:59'
+AND Party_Code NOT IN ('BSE')
+--and holdflag in ('POOL', 'PAY', 'HOLD')
+and holdflag in ('HOLD')
+--AND BRANCH_CD = CASE WHEN @SEGMENT <> '' THEN @SEGMENT ELSE BRANCH_CD END
+GROUP BY PARTY_CODE, CERTNO, SCRIP_CD
+ORDER BY PARTY_CODE
+
+INSERT INTO #ISIN
+SELECT PARTY_CODE, ISIN, Name_of_the_Securities = SCRIP_CD, Quantity_of_securities_ISINwise = SUM(QTY),
+Quantity_of_securities_pledged_ISINwise = 0,
+Funds_raised_from_Pledging_ISIN_wise = 0,ACTION='A'
+FROM MSAJAG.DBO.COLLATERALDETAILS
+WHERE EFFDATE >= @REPORTDATE AND EFFDATE <= @REPORTDATE + ' 23:59:59'
+AND Party_Code NOT IN ('BSE')
+--AND EXCHANGE = CASE WHEN @SEGMENT <> '' THEN @SEGMENT ELSE EXCHANGE END
+GROUP BY PARTY_CODE, ISIN, SCRIP_CD
+HAVING SUM(QTY) > 0
+ORDER BY PARTY_CODE
+
+INSERT INTO #ISIN
+SELECT D.PARTY_CODE, D.CERTNO, SCRIP_CD, Quantity_of_securities_ISINwise = SUM(QTY),
+Quantity_of_securities_pledged_ISINwise = 0,
+Funds_raised_from_Pledging_ISIN_wise = 0,ACTION='A'
+FROM [AngelBSECM].BSEDB_ab.dbo.DELTRANS D , [AngelBSECM].BSEDB_ab.dbo.SETT_MST S WHERE DRCR='C' AND FILLER2='1'
+AND SHARETYPE<>'AUCTION' AND D.SETT_TYPE=S.SETT_TYPE
+AND D.SETT_NO=S.SETT_NO AND S.SEC_PAYIN > @REPORTDATE AND START_DATE <= @REPORTDATE
+AND Party_Code NOT IN ('BSE')
+GROUP BY D.PARTY_CODE, D.CERTNO,Scrip_Cd
+ORDER BY PARTY_CODE
+
+
+
+INSERT INTO #ISIN
+SELECT D.PARTY_CODE, D.CERTNO, SCRIP_CD, Quantity_of_securities_ISINwise = SUM(QTY),
+Quantity_of_securities_pledged_ISINwise = 0,
+Funds_raised_from_Pledging_ISIN_wise = 0,ACTION='A'
+FROM Msajag..DELTRANS D ,Msajag..SETT_MST S WHERE DRCR='C' AND FILLER2='1'  
+AND SHARETYPE<>'AUCTION' AND D.SETT_TYPE=S.SETT_TYPE  
+AND D.SETT_NO=S.SETT_NO AND S.SEC_PAYIN > @REPORTDATE AND START_DATE <= @REPORTDATE 
+AND D.Party_Code IN  (sELECT Party_Code FROM #ISIN)
+AND Party_Code NOT IN ('NSE')
+GROUP BY D.PARTY_CODE, D.CERTNO,SCRIP_CD 
+
+/*
+SELECT PARTY_CODE, ISIN, Name_of_the_Securities, Quantity_of_securities_ISINwise = sum(Quantity_of_securities_ISINwise), Quantity_of_securities_pledged_ISINwise, Funds_raised_from_Pledging_ISIN_wise, ACTION
+FROM #ISIN 
+group by PARTY_CODE, ISIN, Name_of_the_Securities, Quantity_of_securities_pledged_ISINwise, Funds_raised_from_Pledging_ISIN_wise,ACTION
+ORDER BY PARTY_CODE
+*/
+
+ DECLARE  
+ @@REC_COUNT INT  
+  
+SET @@REC_COUNT = 0  
+
+SELECT @@REC_COUNT = COUNT(1) FROM #ISIN 
+ /* 
+SELECT @@REC_COUNT = COUNT(1) FROM #DATA  
+ */ 
+CREATE TABLE #FILE_DATA  
+(  
+ FILENAME varchar(100),  
+ DATA VARCHAR(2000),  
+ SRNO INT IDENTITY(1, 1)  
+)  
+ 
+ 
+  
+   
+DECLARE  
+ @BATCHNO INT    
+  
+SELECT @BATCHNO = 0    
+     
+ 
+IF @@REC_COUNT > 0  
+BEGIN  
+ SELECT @BATCHNO = ISNULL(MAX(FLDBATCHNO),0) FROM ASIANFILEBATCHNO    
+ WHERE FLDFILENO = 'BI'    
+ AND FLDFILEDATE = @REPORTDATE    
+  
+ SET @BATCHNO = @BATCHNO + 1    
+  
+ INSERT INTO ASIANFILEBATCHNO    
+ SELECT 'BI', @BATCHNO, @REPORTDATE, GETDATE()  
+ 
+ 
+ INSERT INTO #FILE_DATA  
+ SELECT FILENAME = @BSEMEMBERCODE + '_' + REPLACE(RIGHT(CONVERT(VARCHAR(9), 
+ CONVERT(DATETIME, @REPORTDATE,103), 6), 6), ' ', '_') + '_B_' + RIGHT('00' + CONVERT(VARCHAR,@BATCHNO),2) + '.csv', 
+ DATA = CONVERT(VARCHAR(3), CONVERT(DATETIME, @REPORTDATE) )+
+ '-'+RIGHT(CONVERT(VARCHAR(11), CONVERT(DATETIME, @REPORTDATE)),2) + ',' + CONVERT(VARCHAR, @@REC_COUNT)
+   
+INSERT INTO #FILE_DATA  
+SELECT FILENAME =  @BSEMEMBERCODE + '_' +REPLACE(RIGHT(CONVERT(VARCHAR(9), 
+CONVERT(DATETIME, @REPORTDATE,103), 6), 6), ' ', '_') + '_B_' + RIGHT('00' + CONVERT(VARCHAR,@BATCHNO),2) + '.csv',
+DATA = PARTY_CODE + ',' + ISIN + ',' + convert(varchar, Name_of_the_Securities) + ',' + convert(varchar,Quantity_of_securities_ISINwise) + ',' + convert(varchar, Quantity_of_securities_pledged_ISINwise) + ',' 
++ CONVERT(VARCHAR, Funds_raised_from_Pledging_ISIN_wise) + ',' + ACTION
+FROM #ISIN I
+WHERE EXISTS(SELECT CLTCODE FROM #CLIENT_LIST WHERE PARTY_CODE = CLTCODE)
+GROUP BY PARTY_CODE, ISIN,convert(varchar, Name_of_the_Securities),convert(varchar,Quantity_of_securities_ISINwise),convert(varchar, Quantity_of_securities_pledged_ISINwise),CONVERT(VARCHAR, Funds_raised_from_Pledging_ISIN_wise),ACTION
+ 
+ SELECT FILENAME,  DATA FROM #FILE_DATA ORDER BY SRNO  
+END 
+/* 
+ELSE  
+BEGIN  
+ SELECT DATA = PARTY_NAME + ',' + PARTY_CODE + ',' + PAN_GIR_NO + ',' + EMAIL_ID + ',' + MOBILENO + ',' + CONVERT(VARCHAR, BSECMBAL) + ',' + CONVERT(VARCHAR, TOTAL_VDTBAL) + ',' + CONVERT(VARCHAR, TOT_ISIN) + ',' + CONVERT(VARCHAR, TOT_ISIN_QTY) + ',' + CONVERT(VARCHAR, QTY_PLEDGE) + ',' + CONVERT(VARCHAR, FUND_RAISE) + ',' + LAST_SETT_DATE + ',A'  
+ FROM #DATA  
+END  
+*/   
+DROP TABLE #ISIN
+  
+DROP TABLE #FILE_DATA
+
+GO

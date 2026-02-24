@@ -1,0 +1,19 @@
+-- Object: PROCEDURE dbo.CLS_GETSQLCONTROLDATA
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+
+
+CREATE PROC [dbo].[CLS_GETSQLCONTROLDATA]
+AS
+SELECT
+	SQL_KEY,
+	SQL_SUPPLEMENT
+FROM
+	CLS_SQLCONTROL
+ORDER BY
+	SNO
+
+GO

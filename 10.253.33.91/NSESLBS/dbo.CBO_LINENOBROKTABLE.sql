@@ -1,0 +1,9 @@
+-- Object: PROCEDURE dbo.CBO_LINENOBROKTABLE
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+CREATE PROCEDURE CBO_LINENOBROKTABLE
+AS  
+SELECT MAX(LINE_NO+1)AS LINENOS FROM BROKTABLE
+
+GO

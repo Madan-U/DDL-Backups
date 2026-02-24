@@ -1,0 +1,21 @@
+-- Object: PROCEDURE dbo.CLS_BRANCH
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+
+CREATE PROC [dbo].[CLS_BRANCH]
+AS 
+SELECT 
+	DISTINCT COSTNAME 
+FROM 
+	COSTMAST C, CATEGORY CT 
+WHERE  
+	C.CATCODE =CT.CATCODE 	AND CT.CATEGORY='BRANCH' 
+UNION 
+SELECT 
+	'ALL'  
+ORDER BY 
+	COSTNAME
+
+GO

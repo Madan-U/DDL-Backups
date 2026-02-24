@@ -1,0 +1,243 @@
+-- Object: PROCEDURE dbo.IMPORTOPENINGBAL
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+--EXEC IMPORTOPENINGBAL 'D:\BackOffice\OPENINGBALANE\OPENING.csv', 'ASHOKS'
+CREATE PROC IMPORTOPENINGBAL
+(  
+      @FILENAME VARCHAR(500),  
+      @UPLOADBY VARCHAR(100)  
+)  
+AS  
+  
+DECLARE     
+      @@ERROR_COUNT INT  
+  
+BEGIN TRAN  
+  
+CREATE TABLE [#OPENING_BALANCE_LNO]    
+(    
+SNO INT ,    
+LNO INT IDENTITY (1, 1) NOT NULL    
+) ON [PRIMARY]    
+  
+UPDATE     
+ V2_OPENING_BALANCE     
+ SET    
+                  BRANCHCODE = A.BRANCHCODE,  
+  FYSTART = P.SDTCUR,      
+  FYEND = P.LDTCUR,    
+  UPDFLAG = 'Y',    
+  ACNAME = LONGNAME,     
+  COSTCODE = C.COSTCODE    
+      FROM ACMAST A, PARAMETER P, COSTMAST C        
+      WHERE A.CLTCODE = V2_OPENING_BALANCE.CLTCODE     
+      AND P.CURYEAR = 1     
+      AND A.BRANCHCODE = C.COSTNAME    
+  
+UPDATE     
+ V2_OPENING_BALANCE     
+ SET    
+                  BRANCHCODE = 'HO',  
+  FYSTART = P.SDTCUR,      
+  FYEND = P.LDTCUR,    
+  UPDFLAG = 'Y',    
+  ACNAME = LONGNAME,     
+  COSTCODE = (SELECT TOP 1 COSTCODE FROM COSTMAST WHERE COSTNAME = 'HO')  
+      FROM ACMAST A, PARAMETER P  
+      WHERE A.CLTCODE = V2_OPENING_BALANCE.CLTCODE     
+      AND P.CURYEAR = 1     
+      AND A.BRANCHCODE = 'ALL'  
+  
+  
+/* '--------------------------DECLARATION OF VARIABLES FOR VALIDATIONS ------------------------*/   
+  
+      DECLARE     
+            @@STD_DATE VARCHAR(11),    
+            @@LST_DATE VARCHAR(11),    
+            @@VNOMETHOD INT,     
+            @@ACNAME CHAR(100),     
+            @@BOOKTYPE CHAR(2),     
+            @@MICRNO VARCHAR(10),    
+            @@DRCR VARCHAR(1),    
+            @@VTYP SMALLINT,  
+            @@MONTHLYVDT  VARCHAR(11),  
+            @@BACKDAYS SMALLINT,  
+            @@BACKDATE VARCHAR(11)  
+  
+  
+/* '--------------------------UPDATE OF COST CODE ------------------------*/   
+  
+UPDATE V2_OPENING_BALANCE   
+ SET COSTCODE = (SELECT TOP 1 COSTCODE FROM COSTMAST WHERE COSTNAME = 'HO')   
+WHERE COSTCODE IS NULL   
+  
+/*--------------------------VALIDATION FOR AMOUNT SHOLD NOT BE ZERO OR NEGATIVE------------------------*/    
+  
+SELECT @@ERROR_COUNT = COUNT(1) FROM  
+         (SELECT AMOUNT   
+ FROM V2_OPENING_BALANCE    
+         WHERE AMOUNT <= 0) A  
+  
+IF @@ERROR_COUNT > 0      
+ BEGIN      
+  SELECT 'VOUCHER AMOUNT CANNOT BE ZERO OR NEGATIVE.', 'NA', 'NA'     
+  ROLLBACK TRAN     
+  DELETE FROM V2_UPLOADED_FILES     
+  WHERE U_FILENAME = @FILENAME AND U_MODULE = 'OPENING UPLOAD'     
+  RETURN     
+ END     
+  
+  
+/*--------------------------VALIDATION FOR DRCR MISMATCH IN SAME VOUCHER ------------------------*/    
+  
+SELECT @@ERROR_COUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)    
+ FROM V2_OPENING_BALANCE    
+  
+IF @@ERROR_COUNT <> 0      
+ BEGIN      
+  SELECT 'DEBIT AND CREDIT TOTALS DO NOT MATCH IN SOME VOUCHERS.', 'NA', 'NA'     
+  ROLLBACK TRAN     
+  DELETE FROM V2_UPLOADED_FILES     
+  WHERE U_FILENAME = @FILENAME AND U_MODULE = 'OPENING UPLOAD'     
+  RETURN     
+ END     
+  
+/*-------------------------- VALIDATION FOR DUPLICATE CLIENT_CODES EXISTS IN FILE ---------------------*/  
+SELECT @@ERROR_COUNT = COUNT(1) FROM  
+(  
+      SELECT CLTCODE   
+      FROM V2_OPENING_BALANCE    
+      GROUP BY CLTCODE  
+      HAVING COUNT(CLTCODE) > 1  
+) A  
+  
+IF @@ERROR_COUNT > 0     
+ BEGIN     
+  SELECT 'FILE CANNOT BE UPLOADED AS THE FOLLOWING CLIENTS ARE DULICATED IN EXISTING FILE', 'NA', 'NA'    UNION ALL    
+                  SELECT CLTCODE, 'NA', 'NA'      
+                  FROM V2_OPENING_BALANCE    
+                  GROUP BY CLTCODE  
+                  HAVING COUNT(CLTCODE) > 1  
+  ROLLBACK TRAN    
+  DELETE FROM V2_UPLOADED_FILES    
+   WHERE U_FILENAME = @FILENAME AND U_MODULE = 'RECEIPT/PAYMENT UPLOAD'    
+  RETURN    
+ END    
+  
+  
+  
+/* '--------------------------FINAL VALIDATION BASED ON UPDFLAG ------------------------*/   
+  
+SELECT @@ERROR_COUNT = COUNT(1) FROM    
+(    
+ SELECT DISTINCT    
+  CLTCODE    
+ FROM V2_OPENING_BALANCE    
+ WHERE UPDFLAG = 'N'    
+) A    
+  
+  
+        
+IF @@ERROR_COUNT > 0     
+ BEGIN     
+  SELECT 'FILE CANNOT BE UPLOADED AS THE FOLLOWING CLIENTS DO NOT EXIST', 'NA', 'NA'    UNION ALL    
+  SELECT DISTINCT   
+   CLTCODE, 'NA', 'NA'       
+  FROM V2_OPENING_BALANCE    
+  WHERE UPDFLAG = 'N'    
+  ROLLBACK TRAN    
+  DELETE FROM V2_UPLOADED_FILES    
+   WHERE U_FILENAME = @FILENAME AND U_MODULE = 'RECEIPT/PAYMENT UPLOAD'    
+  RETURN    
+ END    
+  
+DECLARE     
+ @@NEWVNO AS VARCHAR(12),  
+ @@VDT AS VARCHAR(11),     
+ @@LNOCUR AS CURSOR,     
+ @@LNOVNO AS INT     
+  
+  
+/* '--------------------------AUTO GENERATION OF VNO ------------------------*/   
+  
+SELECT     
+ @@STD_DATE = LEFT(SDTCUR, 11),     
+ @@LST_DATE = LEFT(LDTCUR, 11),     
+ @@VNOMETHOD = VNOFLAG     
+FROM PARAMETER     
+WHERE CURYEAR = 1     
+  
+SET @@NEWVNO = (SELECT CONVERT(VARCHAR,YEAR(@@STD_DATE)) + RIGHT('0'+LTRIM(CONVERT(VARCHAR,MONTH(@@STD_DATE))),2) + RIGHT('00'+LTRIM(CONVERT(VARCHAR,DAY(@@STD_DATE))),2))+'0001'  
+  
+UPDATE    
+ V2_OPENING_BALANCE     
+ SET VNO = CONVERT(VARCHAR(12),CONVERT(NUMERIC,@@NEWVNO))     
+  
+  
+/* '--------------------------AUTO GENERATION OF LNO ------------------------*/   
+  
+  INSERT INTO #OPENING_BALANCE_LNO    
+   (SNO)    
+  SELECT SNO FROM V2_OPENING_BALANCE   
+  UPDATE RP    
+   SET LNO = RL.LNO    
+  FROM V2_OPENING_BALANCE RP, #OPENING_BALANCE_LNO RL    
+  WHERE RP.SNO = RL.SNO    
+DROP TABLE #OPENING_BALANCE_LNO    
+  
+/*---------------- DELETE EXISTING OPENING BALANCE ENTRY ---------------------------*/  
+  
+      DELETE FROM LEDGER WHERE VNO = @@NEWVNO AND VTYP = '18' AND BOOKTYPE = '01'  
+      DELETE FROM LEDGER2 WHERE VNO = @@NEWVNO AND VTYPE = '18' AND BOOKTYPE = '01'  
+  
+  
+/* '--------------------------BEGIN POSTING TO TRANSACTION TABLES ------------------------*/    
+/*==============================    
+      LEDGER RECORD    
+==============================*/    
+INSERT     
+INTO LEDGER     
+SELECT     
+ VTYP = '18',     
+ VNO,     
+ EDT,     
+ LNO,    
+ ACNAME,     
+ DRCR,    
+ VAMT = AMOUNT,     
+ VDT,     
+ VNO1 = VNO,     
+ REFNO = 0,     
+ BALAMT = (CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END),     
+ NODAYS = 0,     
+ CDT = GETDATE(),     
+ CLTCODE,     
+ BOOKTYPE = '01',     
+ ENTEREDBY = @UPLOADBY,     
+ PDT = GETDATE(),     
+ CHECKEDBY = @UPLOADBY,     
+ ACTNODAYS = 0,     
+ NARRATION    
+FROM     
+ V2_OPENING_BALANCE     
+  
+INSERT INTO LEDGER2  
+      SELECT   
+            VTYP = '18',  
+            VNO,  
+            LNO,  
+            DRCR,  
+            AMOUNT,  
+            COSTCODE,  
+            BOOKTYPE = '01',  
+            CLTCODE  
+      FROM  
+            V2_OPENING_BALANCE  
+  
+COMMIT TRAN   
+SELECT 'DATA UPLOADED SUCCESSFULLY', 'NA','NA' AS RESULT UNION ALL   
+SELECT CLTCODE, CONVERT(VARCHAR, AMOUNT) , VNO AS RESULT FROM V2_OPENING_BALANCE
+
+GO

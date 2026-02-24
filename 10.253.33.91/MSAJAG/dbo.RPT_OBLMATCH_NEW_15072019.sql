@@ -1,0 +1,88 @@
+-- Object: PROCEDURE dbo.RPT_OBLMATCH_NEW_15072019
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+create PROC [dbo].[RPT_OBLMATCH_NEW_15072019]               
+(@SETT_NO VARCHAR(7), @SETT_TYPE VARCHAR(2), @TDATE VARCHAR(11), @OBLFLAG VARCHAR(1))              
+AS              
+        
+DECLARE @MEMBERCODE VARCHAR(15)        
+        
+SELECT @MEMBERCODE = MEMBERCODE FROM OWNER        
+        
+SELECT               
+PARTICIPANTCODE=(CASE WHEN PARTICIPANTCODE = '' OR PARTICIPANTCODE = '0' THEN MEMBERCODE ELSE PARTICIPANTCODE END), SCRIP_CD, SERIES,               
+C_PQTY = SUM(C_PQTY), C_SQTY = SUM(C_SQTY),               
+C_PAMT = SUM(C_PAMT), C_SAMT = SUM(C_SAMT),              
+O_D_PQTY = 0, O_D_SQTY = 0,               
+O_D_PAMT = CONVERT(NUMERIC(18, 4), 0),               
+O_D_SAMT = CONVERT(NUMERIC(18, 4), 0)              
+INTO #TBL_NSE_OBL              
+FROM TBL_NSE_OBL, OWNER              
+WHERE SETT_NO = @SETT_NO              
+AND SETT_TYPE = @SETT_TYPE        
+GROUP BY PARTICIPANTCODE, SCRIP_CD, SERIES, MEMBERCODE              
+              
+SELECT PARTIPANTCODE=CONVERT(VARCHAR(15),@MEMBERCODE), SCRIP_CD, SERIES,               
+PQTY = SUM(CASE WHEN SELL_BUY = 1 THEN TRADEQTY ELSE 0 END),              
+SQTY = SUM(CASE WHEN SELL_BUY = 2 THEN TRADEQTY ELSE 0 END),              
+PAMT = SUM(CASE WHEN SELL_BUY = 1 THEN TRADEQTY*MARKETRATE ELSE 0 END),              
+SAMT = SUM(CASE WHEN SELL_BUY = 2 THEN TRADEQTY*MARKETRATE ELSE 0 END)              
+INTO #SETT               
+FROM SETTLEMENT (NOLOCK)              
+WHERE SETT_NO = @SETT_NO              
+AND SETT_TYPE = @SETT_TYPE              
+AND SAUDA_DATE <= @TDATE + ' 23:59:59'              
+AND AUCTIONPART NOT IN ('AP', 'AR', 'FP', 'FL', 'FC')              
+AND MARKETRATE > 0               
+GROUP BY SCRIP_CD, SERIES              
+              
+IF @OBLFLAG = 'N'               
+BEGIN              
+ INSERT INTO #SETT              
+ SELECT PARTIPANTCODE, SCRIP_CD, SERIES,               
+ PQTY = SUM(CASE WHEN SELL_BUY = 1 THEN TRADEQTY ELSE 0 END),              
+ SQTY = SUM(CASE WHEN SELL_BUY = 2 THEN TRADEQTY ELSE 0 END),              
+ PAMT = SUM(CASE WHEN SELL_BUY = 1 THEN TRADEQTY*DUMMY1 ELSE 0 END),              
+ SAMT = SUM(CASE WHEN SELL_BUY = 2 THEN TRADEQTY*DUMMY1 ELSE 0 END)              
+ FROM ISETTLEMENT   (NOLOCK)           
+ WHERE SETT_NO = @SETT_NO              
+ AND SETT_TYPE = @SETT_TYPE              
+ AND SAUDA_DATE <= @TDATE + ' 23:59:59'              
+ GROUP BY PARTIPANTCODE, SCRIP_CD, SERIES              
+END        
+ELSE        
+BEGIN        
+ DELETE FROM #TBL_NSE_OBL WHERE PARTICIPANTCODE <> @MEMBERCODE             
+END        
+         
+UPDATE #TBL_NSE_OBL SET O_D_PQTY = PQTY, O_D_SQTY = SQTY, O_D_PAMT = PAMT, O_D_SAMT = SAMT              
+FROM #SETT S              
+WHERE #TBL_NSE_OBL.SCRIP_CD = S.SCRIP_CD              
+AND #TBL_NSE_OBL.SERIES = S.SERIES              
+AND #TBL_NSE_OBL.PARTICIPANTCODE = S.PARTIPANTCODE              
+              
+INSERT INTO #TBL_NSE_OBL              
+SELECT PARTIPANTCODE, SCRIP_CD, SERIES, 0, 0, 0, 0, PQTY, SQTY, PAMT, SAMT              
+FROM #SETT S              
+WHERE NOT EXISTS (              
+ SELECT SCRIP_CD FROM #TBL_NSE_OBL              
+ WHERE #TBL_NSE_OBL.SCRIP_CD = S.SCRIP_CD              
+ AND #TBL_NSE_OBL.SERIES = S.SERIES              
+ AND #TBL_NSE_OBL.PARTICIPANTCODE = S.PARTIPANTCODE)              
+      
+ALTER TABLE #TBL_NSE_OBL      
+ADD MATCHSTATUS INT      
+      
+UPDATE #TBL_NSE_OBL SET MATCHSTATUS = 1      
+  
+UPDATE #TBL_NSE_OBL SET MATCHSTATUS = 0              
+WHERE ( ( C_PQTY <> O_D_PQTY )              
+ OR ( C_SQTY <> O_D_SQTY )              
+ OR ( C_PAMT <> O_D_PAMT )              
+ OR ( C_SAMT <> O_D_SAMT ))        
+              
+SELECT *, @SETT_NO, @SETT_TYPE FROM #TBL_NSE_OBL              
+ORDER BY PARTICIPANTCODE, SCRIP_CD, SERIES
+
+GO

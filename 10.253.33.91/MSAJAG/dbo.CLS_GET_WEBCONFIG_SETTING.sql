@@ -1,0 +1,12 @@
+-- Object: PROCEDURE dbo.CLS_GET_WEBCONFIG_SETTING
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+CREATE PROC CLS_GET_WEBCONFIG_SETTING
+
+AS
+
+SELECT * FROM CLS_WEBCONFIG_SETTING
+
+GO

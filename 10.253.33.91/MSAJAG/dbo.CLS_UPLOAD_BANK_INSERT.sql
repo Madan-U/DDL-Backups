@@ -1,0 +1,160 @@
+-- Object: PROCEDURE dbo.CLS_UPLOAD_BANK_INSERT
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+--SRE-38175-- SP CREATED BY VK -----
+
+
+CREATE PROCEDURE [dbo].[CLS_UPLOAD_BANK_INSERT]
+	@PROCID [varchar](100),
+	@FILENAME [varchar](1000),
+	@SPNAME [varchar](100),
+	@SPPARAMS [varchar](max),
+	@FILEDATA [varchar](max),
+	@LASTBATCH [varchar](1),
+	@BULKINSERT [varchar](1),
+	@CONTINUED [varchar](1) = 'N',
+	@DELDATA [varchar](1) = 'Y',
+	@ERR_NO [int] OUTPUT,
+	@ERR_MSG [nvarchar](2048) OUTPUT
+AS
+
+/*
+EXEC CLS_UPLOAD_INSERT @PROCID='30464112011',@FILENAME='D:\BACKOFFICE\UBIRECOTAB.TSV',@SPNAME='AUTORECOUPDATE_ALLBANKS',@SPPARAMS='A236,UBI,TSV,BROKER,BROKER,DEMO DEMO,0,1',@FILEDATA='',@LASTBATCH='1'
+
+EXEC CLS_UPLOAD_INSERT @PROCID='123',@FILENAME='D:\BACKOFFICE\ANAGMCXXXX.CSV',@SPNAME='',@SPPARAMS='',@FILEDATA='',@LASTBATCH='',@ERR_NO='',@ERR_MSG=''
+
+SELECT * FROM FILEDATA where progid = '15715115'
+
+declare @p9 int
+set @p9=NULL
+declare @p10 nvarchar(2048)
+set @p10=N'UPLOADED SUCCESSFULLY'
+exec CLS_UPLOAD_INSERT_Bhrt @PROCID='15715775',@FILENAME='D:\Backoffice\BhNSEDPM_Copy1.txt',@SPNAME='',@SPPARAMS='',@FILEDATA='',
+@LASTBATCH='1',@BULKINSERT='N',@DELDATA='Y',@ERR_NO=@p9 output,@ERR_MSG=@p10 output
+select @p9, @p10
+
+select * from cls_fileupload_setting
+
+*/
+--DECLARE @ERR_MSG [nvarchar](2048)
+
+ 
+SET NOCOUNT ON
+BEGIN TRY
+if (@PROCID = '')
+begin
+select @PROCID = sessionid from account..vw_sessionid
+end
+
+	DECLARE @SQL VARCHAR(MAX)
+	DECLARE @STR VARCHAR(MAX)
+	DECLARE @DATE DATETIME
+	DECLARE @UNAME VARCHAR(25)
+	DECLARE @ROWTERMINATOR VARCHAR(10)
+	DECLARE @ISHEADER CHAR(1)
+	DECLARE @ROLLFLAG INT
+	DECLARE @PARAMS VARCHAR(8000)
+	DECLARE @MYSPID INT
+
+	SET @MYSPID = @@SPID
+	SET @DATE = GETDATE()
+	SET @UNAME = 'BANK_RECO'
+	SET @ROWTERMINATOR = lower('''0X0A''')
+	SET @ISHEADER = 'N'
+	SELECT @UNAME = UploadBy FROM FILEDATA WHERE PROGID = @PROCID
+	
+	SET @PARAMS = '''' + CONVERT(VARCHAR,ISNULL(@PROCID,'')) + ''',''' + CONVERT(VARCHAR(200),ISNULL(@FILENAME,'')) + ''',''' + CONVERT(VARCHAR(200),ISNULL(@SPNAME,'')) + ''',''' + CONVERT(VARCHAR(200),ISNULL(@SPPARAMS,'')) + ''',''' + CONVERT(VARCHAR,ISNULL(@FILEDATA,'')) + ''',''' + CONVERT(VARCHAR,ISNULL(@LASTBATCH,'')) + ''',''' + CONVERT(VARCHAR,ISNULL(@BULKINSERT,'')) + ''',''' + CONVERT(VARCHAR,ISNULL(@CONTINUED,'')) + ''',''' + CONVERT(VARCHAR,ISNULL(@DELDATA,'')) + ''''
+	print 333
+	-------------------------------------------------------------
+	-------------------------------------------------------------
+	--## normal upload is written in page and              ------
+	--## Bulk insert is written in respective procedures,  ------
+	--## As well as in Below Patch				           ------ 
+	-------------------------------------------------------------
+	-------------------------------------------------------------
+	--IF (SELECT COUNT(*) FROM CLS_DBLOG WHERE INPROC = 1 AND CHARINDEX(@SPNAME, PARAMS) > 0) > 0 
+	-- BEGIN
+	--	SET @ERR_MSG = 'File Upload Process is running on another system, Wait sometime, Still Blocking is persist then'
+	--	RETURN
+	-- END
+	print 22
+	
+	INSERT INTO CLS_DBLOG VALUES (@PROCID, GETDATE(),0,UPPER(.dbo.CLS_PIECE(@FILEDATA,'#',2)),UPPER(.dbo.CLS_PIECE(@FILEDATA,'#',1)),@SPNAME,@PARAMS, 'INITIATED BUT NOT COMPLETED', 0, 1,@MYSPID)
+	--SELECT @PROCID
+	IF(@PROCID!='')
+	 BEGIN
+		CREATE TABLE #FILELIST (FNAME VARCHAR(MAX))	
+		--SELECT @BULKINSERT
+		IF @BULKINSERT='N'
+		 BEGIN
+		 print 888
+			SET @FILENAME = '' 
+		 END
+		ELSE --Bulk Insert in FILE_DATA. 
+		 BEGIN 
+		 print 777
+		 	SET @SQL = " SELECT FILE_DATA INTO #FILE FROM MSAJAG..FILEDATA WHERE 1 = 2  "
+			SET @SQL = @SQL + "BULK INSERT #FILE FROM '" + @FILENAME + "' WITH  (ROWTERMINATOR = " + @ROWTERMINATOR + ", FIRSTROW = 1) "
+			IF @ISHEADER = 'Y' 
+			 BEGIN 
+			 print 8989
+				SET @SQL = @SQL + "	DELETE FROM #FILE WHERE SNO = (SELECT MIN(SNO) FROM #FILELIST) "
+			 END 
+			 print 666
+			SET @SQL = @SQL + "INSERT INTO MSAJAG..FILEDATA SELECT '" + @PROCID + "', FILE_DATA, '" + CONVERT(VARCHAR,@DATE,109) + "', '" + @UNAME + "' "
+			SET @SQL = @SQL + "FROM #FILE "
+			SET @SQL = @SQL + "DROP TABLE #FILE "
+		 END
+		PRINT(@SQL)
+		EXEC(@SQL)
+	 END
+	 
+	--select @LASTBATCH
+	IF(@LASTBATCH='1')
+	 BEGIN
+		IF @SPNAME <> ''
+			BEGIN
+				SET @SPPARAMS = REPLACE(REPLACE(UPPER(@SPPARAMS),'@FILEPATH', @FILENAME),'@FILENAME',@FILENAME)
+				SET @SPPARAMS = REPLACE(UPPER(@SPPARAMS),'@FNAME',@FILENAME)
+				SET @SPPARAMS = REPLACE(REPLACE(UPPER(@SPPARAMS),'@PROCID',@PROCID),'@PROGID',@PROCID)
+				SET @SPPARAMS = REPLACE(UPPER(@SPPARAMS),'@UNAME',@UNAME)
+				SET @SPPARAMS = REPLACE(UPPER(@SPPARAMS),'@SNO',0)
+				
+				--PRINT "INNER PROC EXECUTING"
+				
+				print 656565
+				IF @SPPARAMS = ''
+					SET @SQL = "EXEC " + @SPNAME + " '" + @PROCID + "'"
+				IF @SPPARAMS <> ''
+					BEGIN
+					print 888989
+					--select @SPPARAMS
+						SET @SQL = "EXEC " + @SPNAME + ""
+						SET @SQL = @SQL + " '" + REPLACE(@SPPARAMS, ',', ''',''') + "'"
+						--SET @SQL = @SQL + " '" + REPLACE(LTRIM(RTRIM(@SPPARAMS)), ',', ''',''') + ''''
+					END
+				--PRINT "@SPNAME "  + @SPNAME
+				PRINT @SQL
+				EXEC(@SQL)
+			END
+		
+			--IF @DELDATA='Y'
+				--DELETE FROM FILEDATA WHERE PROGID = @PROCID
+
+			SET @ERR_MSG = 'UPLOADED SUCCESSFULLY'
+			PRINT 77
+			UPDATE CLS_DBLOG SET ISERROR = 0, INPROC = 0, ERROR = @ERR_MSG ,END_TIMESTAMP = GETDATE() WHERE SESSIONID = @PROCID
+			PRINT 67
+	END
+END TRY
+BEGIN CATCH
+	SET @ERR_MSG=ERROR_MESSAGE()
+	UPDATE CLS_DBLOG SET ISERROR = -1, INPROC = 0, ERROR = @ERR_MSG ,END_TIMESTAMP = GETDATE() WHERE SESSIONID = @PROCID
+		DELETE FROM MSAJAG..FILEDATA WHERE PROGID = @PROCID
+	--SELECT @ERR_MSG
+END CATCH
+
+GO

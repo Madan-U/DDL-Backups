@@ -1,0 +1,15 @@
+-- Object: PROCEDURE dbo.B2B_SB_DATA
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE PROCEDURE [dbo].[B2B_SB_DATA]
+( @CL_cODE VARCHAR(20))
+AS
+BEGIN
+
+SELECT A.Cl_Code,SUB_BROKER,EXCHANGE,Segment,Active_Date,InActive_From,Deactive_Remarks,(CASE WHEN B2C='Y'THEN 'B2C'ELSE 'B2B'END)AS B2B_B2C
+ FROM INTRANET.RISK.DBO.CLIENT_DETAILS A,CLIENT_BROK_DETAILS B 
+WHERE A.CL_CODE=B.Cl_Code AND A.cl_code =@CL_cODE
+END
+
+GO

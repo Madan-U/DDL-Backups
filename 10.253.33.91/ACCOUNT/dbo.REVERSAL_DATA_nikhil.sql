@@ -1,0 +1,333 @@
+-- Object: PROCEDURE dbo.REVERSAL_DATA_nikhil
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+  
+--REVERSAL_DATA_NIKHIL 'JUN  1 2015' , 'JUN 10 2015'  
+  
+CREATE PROC [DBO].[REVERSAL_DATA_nikhil]    
+(    
+  @FROMDATE VARCHAR(11),    
+  @TODATE VARCHAR(11)    
+ )             
+ AS    
+ BEGIN  SELECT * INTO  #TEMP2 from (     
+  
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSE'    
+ FROM    
+ LEDGER(NOLOCK) A,    
+  
+ LEDGER1(NOLOCK) C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+  UNION ALL  
+  SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSE'    
+ FROM    
+ LEDGER(NOLOCK) A,    
+  
+ LEDGER1(NOLOCK) C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO   
+   
+---BSE---------------  
+  
+UNION ALL  
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='BSE'    
+ FROM    
+ [ANAND].ACCOUNT_AB.DBO.LEDGER A,    
+  
+ [ANAND].ACCOUNT_AB.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='BSE'    
+ FROM    
+ [ANAND].ACCOUNT_AB.DBO.LEDGER A,    
+  
+ [ANAND].ACCOUNT_AB.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO   
+   
+   
+ ----NSEFO-----  
+   
+UNION ALL  
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSEFO'    
+ FROM    
+ [ANGELFO].ACCOUNTFO.DBO.LEDGER A,    
+  
+ [ANGELFO].ACCOUNTFO.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSEFO'    
+ FROM    
+ [ANGELFO].ACCOUNTFO.DBO.LEDGER A,    
+  
+ [ANGELFO].ACCOUNTFO.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO   
+     
+  ----NSECURFO-----------  
+  UNION ALL  
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSECURFO'    
+ FROM    
+ [ANGELFO].ACCOUNTCURFO.DBO.LEDGER A,    
+  
+ [ANGELFO].ACCOUNTCURFO.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NSECURFO'    
+ FROM    
+ [ANGELFO].ACCOUNTCURFO.DBO.LEDGER A,    
+  
+ [ANGELFO].ACCOUNTCURFO.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+     
+   
+ -----MCDX---------  
+UNION ALL  
+  SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='MCDX'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='MCDX'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTMCDX.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+     
+  -----MCDXCDS---------  
+  UNION ALL  
+  SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='MCDXCDS'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='MCDXCDS'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTMCDXCDS.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO     
+     
+     
+   ---------NCDX--------  
+   UNION ALL  
+  SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NCDX'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='C' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO    
+   
+  UNION ALL  
+    
+ SELECT     
+ [CLTCODE] = A.CLTCODE,    
+   
+ [VDATE] = A.VDT,    
+ [V_NO] = A.VNO,    
+ [NARRATION] = A.NARRATION,    
+ [VAMT] = A.VAMT,    
+ [DDNO] = C.DDNO,    
+ [VTYP] = A.VTYP,    
+ [RELDT] = C.RELDT,  
+ [DRCR]=A.DRCR,  
+ [EXCHANGE]='NCDX'    
+ FROM    
+ [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER A,    
+  
+ [ANGELCOMMODITY].ACCOUNTNCDX.DBO.LEDGER1 C    
+ WHERE A.VTYP='3' AND A.DRCR='D' AND A.VDT >= @FROMDATE AND A.VDT < =@TODATE + ' 23:59:59:999'      
+ AND A.NARRATION LIKE '%REV%'  AND    
+   A.VTYP = C.VTYP AND A.VNO = C.VNO     
+     
+ ) A  
+    
+ SELECT B.region,B.branch_cd,B.sub_broker,b.short_name,A.*  
+ FROM #TEMP2 A LEFT OUTER JOIN MSAJAG.DBO.CLIENT_DETAILS B ON A.CLTCODE=B.cl_code    
+ ORDER BY EXCHANGE  
+     
+END
+
+GO

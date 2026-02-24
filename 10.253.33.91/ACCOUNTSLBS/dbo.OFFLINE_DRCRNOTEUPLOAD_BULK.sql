@@ -1,0 +1,324 @@
+-- Object: PROCEDURE dbo.OFFLINE_DRCRNOTEUPLOAD_BULK
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+ CREATE PROC OFFLINE_DRCRNOTEUPLOAD_BULK    
+ @FNAME VARCHAR(100),    
+ @UNAME VARCHAR(25),    
+ @VTYP SMALLINT,    
+ @BOOKTYPE VARCHAR(2),  
+ @STRUPLOADBY VARCHAR(25),   
+ @STATUSID VARCHAR(25),   
+ @STATUSNAME  VARCHAR(25)  
+AS    
+/*    
+ DELETE FROM V2_UPLOADED_FILES WHERE U_FILENAME = 'D:\Backoffice\DrCrNotes\CR TAMMANA2.csv'    
+ EXEC DRCRNOTEUPLOAD_BULK 'd:\Backoffice\DrCrNotes\CR TAMMANA2.csv', 'TEST', 6, '01'    
+ EXEC DRCRNOTEUPLOAD_BULK 'd:\Backoffice\DrCrNotes\CR TAMMANA2.csv', 'TEST', 6, '01'    
+*/    
+ SET NOCOUNT ON    
+    
+ DECLARE    
+  @@ERROR_COUNT AS INT,    
+  @@SQL AS VARCHAR(2000)    
+/* '--------------------------VALIDATION FOR SINGLE VOUCHER TYPE BASED ON DRCR ------------------------*/    
+ IF LTRIM(RTRIM(@FNAME)) = ''    
+  BEGIN    
+   SELECT RESULT = 'INVALID FILENAME SPECIFIED. PLEASE TRY AGAIN.'    
+   RETURN    
+  END    
+    
+ CREATE TABLE #FEXIST    
+  (F1 INT, F2 INT, F3 INT)    
+     
+ SELECT @@SQL = "INSERT INTO #FEXIST EXEC MASTER.DBO.XP_FILEEXIST  '" + @FNAME + "' "    
+ EXEC (@@SQL)    
+    
+ SELECT @@ERROR_COUNT = F1 FROM #FEXIST    
+ IF @@ERROR_COUNT = 0    
+  BEGIN    
+   SELECT RESULT = 'THE FILE SPECIFIED DOES NOT EXIST. PLEASE TYPE CORRECT FILENAME.'    
+   DROP TABLE #FEXIST    
+   RETURN    
+  END    
+    
+ BEGIN TRAN    
+    
+ SELECT     
+  @@ERROR_COUNT = COUNT(1)     
+ FROM    
+  (SELECT     
+   U_FILENAME     
+  FROM     
+   V2_UPLOADED_FILES    
+  WHERE     
+   U_FILENAME = @FNAME     
+   AND U_MODULE = 'DRCR NOTE UPLOAD') A    
+    
+ IF @@ERROR_COUNT > 0    
+  BEGIN    
+   SELECT 'THE FILE YOU ARE UPLOADING IS ALREADY UPLOADED. PLEASE UPLOAD ANOTHER FILE.' + @FNAME    
+   ROLLBACK TRAN    
+   RETURN    
+  END    
+    
+    
+ CREATE TABLE #RECPAY_TABLE_TMP    
+ (    
+  SRNO INT,    
+  VVDT VARCHAR(10),    
+  EEDT VARCHAR(10),    
+  CLTCODE VARCHAR(10),    
+  DRCR VARCHAR(1),    
+  AMOUNT MONEY,    
+  NARRATION VARCHAR(500)    
+ )    
+    
+ CREATE TABLE [#RECPAY_TABLE]    
+ (    
+  SRNO INT,    
+  VVDT VARCHAR(10),    
+  EEDT VARCHAR(10),    
+  CLTCODE VARCHAR(10),    
+  DRCR VARCHAR(1),    
+  AMOUNT MONEY,    
+  NARRATION VARCHAR(255),    
+  SNO INT IDENTITY (1, 1) NOT NULL ,    
+  VDT DATETIME NULL ,    
+  UPDFLAG VARCHAR (1)  NOT NULL DEFAULT('N'),    
+  EDT DATETIME NULL ,    
+  VNO VARCHAR (12)  NULL ,    
+  ACNAME VARCHAR (100)  NULL ,    
+  FYSTART DATETIME NULL,    
+  FYEND DATETIME NULL,    
+  COSTCODE SMALLINT NULL,    
+  LNO SMALLINT NOT NULL DEFAULT(0),  
+  BRANCHCODE VARCHAR(10)    
+ ) ON [PRIMARY]    
+    
+ CREATE TABLE [#RECPAY_TABLE_LNO]    
+ (    
+  SNO INT ,    
+  LNO INT IDENTITY (1, 1) NOT NULL    
+ ) ON [PRIMARY]    
+    
+ SELECT @@SQL = "BULK INSERT #RECPAY_TABLE_TMP FROM '"+ @FNAME + "' WITH (FIELDTERMINATOR = ',', FIRSTROW = 2) "    
+ EXEC(@@SQL)    
+    
+SELECT * FROM #RECPAY_TABLE_TMP  
+  
+INSERT INTO V2_UPLOADED_FILES    
+SELECT    
+  @FNAME,    
+  @FNAME,    
+  COUNT(1),    
+  'B',    
+  GETDATE(),    
+  @UNAME,    
+  'DRCR NOTE UPLOAD'    
+    
+ INSERT INTO #RECPAY_TABLE    
+  (SRNO,    
+  VVDT,    
+  EEDT,    
+  CLTCODE,    
+  DRCR,    
+  AMOUNT,    
+  NARRATION)    
+ SELECT    
+  SRNO,    
+  VVDT,    
+  EEDT,    
+  UPPER(CLTCODE),    
+  DRCR,    
+  AMOUNT,    
+  LEFT(NARRATION, 234)    
+ FROM #RECPAY_TABLE_TMP    
+    
+ UPDATE    
+  #RECPAY_TABLE    
+  SET    
+   VDT = CONVERT(DATETIME, RIGHT(VVDT,4) + '-' + SUBSTRING(VVDT,4,2) + '-' + LEFT(VVDT,2)),    
+   EDT = CONVERT(DATETIME, RIGHT(EEDT,4) + '-' + SUBSTRING(EEDT,4,2) + '-' + LEFT(EEDT,2)),    
+   FYSTART = P.SDTCUR,    
+   FYEND = P.LDTCUR,    
+   UPDFLAG = 'Y',    
+   ACNAME = LONGNAME,    
+   BRANCHCODE = A.BRANCHCODE  
+      FROM ACMAST A, PARAMETER P  
+      WHERE A.CLTCODE = #RECPAY_TABLE.CLTCODE    
+      AND P.CURYEAR = 1    
+      AND A.ACCAT IN ('3','4','104')    
+    
+/*  
+ UPDATE    
+  #RECPAY_TABLE    
+  SET    
+   VDT = CONVERT(DATETIME, RIGHT(VVDT,4) + '-' + SUBSTRING(VVDT,4,2) + '-' + LEFT(VVDT,2)),    
+   EDT = CONVERT(DATETIME, RIGHT(EEDT,4) + '-' + SUBSTRING(EEDT,4,2) + '-' + LEFT(EEDT,2)),    
+   FYSTART = P.SDTCUR,    
+   FYEND = P.LDTCUR,    
+   UPDFLAG = 'Y',    
+   ACNAME = LONGNAME,    
+   COSTCODE = (SELECT TOP 1 COSTCODE FROM COSTMAST WHERE COSTNAME = 'HO')    
+      FROM ACMAST A, PARAMETER P    
+      WHERE A.CLTCODE = #RECPAY_TABLE.CLTCODE    
+      AND P.CURYEAR = 1    
+      AND A.ACCAT IN ('3','4','104')    
+      AND A.BRANCHCODE = 'ALL'    
+*/    
+    
+/* '--------------------------DECLARATION OF VARIABLES FOR VALIDATIONS ------------------------*/    
+    
+ DECLARE    
+  @@STD_DATE VARCHAR(11),    
+  @@LST_DATE VARCHAR(11),    
+  @@VNOMETHOD INT,    
+  @@ACNAME CHAR(100),    
+  @@MICRNO VARCHAR(10),    
+  @@DRCR VARCHAR(1),  
+  @@BRANCHCODE VARCHAR(10),  
+  @@MySessionID VARCHAR(12)  
+    
+Select @@MySessionID = convert(varchar,getdate(),12)+right(replace(convert(varchar,getdate(),114),':',''),6)   
+    
+/* '--------------------------VALIDATION FOR VOUCHER DATE NOT IN CURRENT FIN YEAR ------------------------*/    
+    
+ SELECT @@ERROR_COUNT = COUNT(1) FROM #RECPAY_TABLE WHERE VDT NOT BETWEEN FYSTART AND FYEND    
+    
+ IF @@ERROR_COUNT > 0    
+  BEGIN    
+   SELECT 'DATE MISMATCH'    
+   DROP TABLE #RECPAY_TABLE_TMP    
+   DROP TABLE #RECPAY_TABLE    
+   ROLLBACK TRAN    
+   DELETE FROM V2_UPLOADED_FILES    
+    WHERE U_FILENAME = @FNAME AND U_MODULE = 'DRCR NOTE UPLOAD'    
+   RETURN    
+  END    
+    
+/* '--------------------------UPDATE OF COST CODE ------------------------*/    
+    
+ UPDATE #RECPAY_TABLE    
+  SET COSTCODE = (SELECT TOP 1 COSTCODE FROM COSTMAST WHERE COSTNAME = 'HO')    
+ WHERE COSTCODE IS NULL    
+    
+/*--------------------------VALIDATION FOR DIFFERENT VDTS IN SAME VOUCHER ------------------------*/    
+    
+ SELECT @@ERROR_COUNT = COUNT(DISTINCT VDT) FROM  #RECPAY_TABLE WHERE SRNO IN (SELECT DISTINCT SRNO FROM #RECPAY_TABLE)    
+ GROUP BY SRNO HAVING COUNT(DISTINCT VDT) > 1    
+ IF @@ERROR_COUNT > 0    
+  BEGIN    
+   SELECT 'SOME OF THE VOUCHERS ARE HAVING DIFFERENT VOUCHER DATES'    
+   DROP TABLE #RECPAY_TABLE_TMP    
+   DROP TABLE #RECPAY_TABLE    
+   ROLLBACK TRAN    
+   DELETE FROM V2_UPLOADED_FILES    
+   WHERE U_FILENAME = @FNAME AND U_MODULE = 'DRCR NOTE UPLOAD'    
+   RETURN    
+  END    
+    
+/*--------------------------VALIDATION FOR DRCR MISMATCH IN SAME VOUCHER ------------------------*/    
+    
+ SELECT @@ERROR_COUNT = COUNT(1) FROM    
+  (SELECT AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)    
+  FROM #RECPAY_TABLE    
+  GROUP BY SRNO    
+  HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) <> 0) A    
+ IF @@ERROR_COUNT > 0    
+  BEGIN    
+   SELECT 'DEBIT AND CREDIT TOTALS DO NOT MATCH IN SOME VOUCHERS.'    
+   DROP TABLE #RECPAY_TABLE_TMP    
+   DROP TABLE #RECPAY_TABLE    
+   ROLLBACK TRAN    
+   DELETE FROM V2_UPLOADED_FILES    
+   WHERE U_FILENAME = @FNAME AND U_MODULE = 'DRCR NOTE UPLOAD'    
+   RETURN    
+  END    
+    
+/* '--------------------------FINAL VALIDATION BASED ON UPDFLAG ------------------------*/    
+    
+ SELECT @@ERROR_COUNT = COUNT(1) FROM    
+ (    
+  SELECT DISTINCT    
+   CLTCODE    
+  FROM #RECPAY_TABLE    
+  WHERE UPDFLAG = 'N'    
+ ) A    
+    
+ IF @@ERROR_COUNT > 0    
+  BEGIN    
+   SELECT 'FILE CANNOT BE UPLOADED AS THE FOLLOWING CLIENTS DO NOT EXIST' UNION ALL    
+   SELECT DISTINCT    
+    CLTCODE    
+   FROM #RECPAY_TABLE    
+   WHERE UPDFLAG = 'N'    
+   DROP TABLE #RECPAY_TABLE_TMP    
+   DROP TABLE #RECPAY_TABLE    
+   ROLLBACK TRAN    
+   DELETE FROM V2_UPLOADED_FILES    
+    WHERE U_FILENAME = @FNAME AND U_MODULE = 'DRCR NOTE UPLOAD'    
+   RETURN    
+  END    
+    
+ DECLARE    
+  @@NEWVNO AS VARCHAR(12),    
+  @@VDT AS VARCHAR(11),    
+  @@LNOCUR AS CURSOR,    
+  @@LNOVNO AS INT,    
+  @@NOREC AS INT    
+    
+    
+  
+/* '--------------------------AUTO GENERATION OF LNO ------------------------*/    
+/*    
+ SET @@LNOCUR = CURSOR FOR    
+  SELECT DISTINCT SRNO FROM #RECPAY_TABLE    
+ OPEN @@LNOCUR    
+  FETCH NEXT FROM @@LNOCUR INTO @@LNOVNO    
+ WHILE @@FETCH_STATUS = 0    
+  BEGIN    
+   INSERT INTO #RECPAY_TABLE_LNO    
+    (SNO)    
+   SELECT SNO FROM #RECPAY_TABLE WHERE SRNO = @@LNOVNO    
+   UPDATE RP    
+    SET LNO = RL.LNO    
+   FROM #RECPAY_TABLE RP, #RECPAY_TABLE_LNO RL    
+   WHERE RP.SNO = RL.SNO    
+   TRUNCATE TABLE #RECPAY_TABLE_LNO    
+   FETCH NEXT FROM @@LNOCUR INTO @@LNOVNO    
+  END    
+ CLOSE @@LNOCUR    
+ DEALLOCATE @@LNOCUR    
+ DROP TABLE #RECPAY_TABLE_LNO    
+  */
+    
+Insert into V2_Offline_Ledger_Entries   
+(   
+VoucherType, BookType, SNo, VDate, EDate,   
+CltCode, CreditAmt, DebitAmt, Narration,   
+OppCode, BranchCode, Exchange, Segment, TPFlag,   
+AddDt, AddBy, StatusID, StatusName, RowState,   
+ApprovalFlag, VoucherNo, ClientName,   
+OppCodeName   
+)   
+Select @VTYP, @BOOKTYPE, LNO, convert(datetime,VVDt,105), convert(datetime,EEDT,105), CLTCODE,   
+CreditAmt = (Case when drcr = 'C' then Amount else 0 end),   
+DebitAmt = (Case when drcr = 'D' then Amount else 0 end),   
+Narration,'', BranchCode, 'NSE','CAPITAL',   
+TPFlag = 0, getdate(), @STRUPLOADBY, @STATUSID, @STATUSNAME,  
+RowState = 0, ApprovalFlag = 0, @@MySessionID, AcName, ''   
+from #RecPay_Table   
+  
+
+  
+COMMIT  
+    
+ SELECT RESULT = 'Data Uploaded Successfully'    
+ UNION ALL    
+ SELECT RESULT = CLTCODE + ', ' + CONVERT(VARCHAR, AMOUNT) + ', ' + VNO FROM #RECPAY_TABLE    
+ DROP TABLE #RECPAY_TABLE_TMP    
+ DROP TABLE #RECPAY_TABLE
+
+GO

@@ -1,0 +1,27 @@
+-- Object: PROCEDURE dbo.SELTRDCUR
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE PROC SELTRDCUR AS 
+DECLARE @@TRADE_NO VARCHAR(14),
+@@FLAG INT,
+@@TRD CURSOR
+SELECT @@TRADE_NO = '164647'
+SELECT @@FLAG = 1 
+WHILE @@FLAG = 1 
+BEGIN
+	SET @@TRD = CURSOR FOR
+	SELECT TRADE_NO FROM SETTLEMENT WHERE TRADE_NO = 'B' + @@TRADE_NO
+	AND party_code = 'S190' and scrip_cd = 'SATYAMCOMP' and series = 'EQ' and sell_buy = 2 
+	AND PartiPantCode = '06002'	
+	OPEN @@TRD
+	FETCH NEXT FROM @@TRD INTO @@TRADE_NO
+	IF @@FETCH_STATUS = 0 
+		SELECT @@FLAG = 1
+	ELSE
+		SELECT @@FLAG = 0	
+		
+END
+SELECT @@TRADE_NO
+
+GO

@@ -1,0 +1,162 @@
+-- Object: PROCEDURE dbo.Newupdbilltax
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+        
+CREATE PROC [DBO].[NEWUPDBILLTAX](@SETTNO VARCHAR(7),@SETTYPE VARCHAR(2)) AS              
+        
+DECLARE @SAUDA_DATE VARCHAR(11)        
+            
+SELECT DISTINCT PARTY_CODE             
+INTO #SETT                
+FROM SETTLEMENT                
+WHERE SETT_NO = @SETTNO AND SETT_TYPE = @SETTYPE                
+AND BILLFLAG > 3                
+  
+CREATE CLUSTERED INDEX SETTPARTY ON #SETT  
+(  
+ PARTY_CODE   
+)        
+SELECT @SAUDA_DATE = LEFT(START_DATE,11) FROM SETT_MST WHERE SETT_NO = @SETTNO AND SETT_TYPE = @SETTYPE        
+          
+TRUNCATE TABLE TRD_CLIENTTAXES_NEW          
+INSERT INTO TRD_CLIENTTAXES_NEW                
+SELECT C.*  FROM CLIENTTAXES_NEW C          
+WHERE EXISTS (SELECT PARTY_CODE FROM #SETT WHERE #SETT.PARTY_CODE = C.PARTY_CODE   
+        AND @SAUDA_DATE BETWEEN FROMDATE AND TODATE AND TRANS_CAT = 'DEL'  )          
+  
+TRUNCATE TABLE TRD_CLIENTBROK_SCHEME          
+INSERT INTO TRD_CLIENTBROK_SCHEME                   
+SELECT C.SCHEME_ID,C.PARTY_CODE,C.TABLE_NO,C.SCHEME_TYPE,C.SCRIP_CD,C.TRADE_TYPE,C.BROKSCHEME,C.FROM_DATE,C.TO_DATE          
+FROM CLIENTBROK_SCHEME C          
+WHERE   
+EXISTS (SELECT PARTY_CODE FROM #SETT WHERE @SAUDA_DATE BETWEEN FROM_DATE AND TO_DATE AND #SETT.PARTY_CODE = C.PARTY_CODE  
+AND SCHEME_TYPE = 'DEL' AND Trade_Type = 'NRM'          )  
+      
+TRUNCATE TABLE TRD_CLIENT2          
+INSERT INTO TRD_CLIENT2          
+SELECT CL_CODE,EXCHANGE,TRAN_CAT,SCRIP_CAT,PARTY_CODE,TABLE_NO,SUB_TABLENO,MARGIN,TURNOVER_TAX,          
+SEBI_TURN_TAX,INSURANCE_CHRG,SERVICE_CHRG,STD_RATE,P_TO_P,EXPOSURE_LIM,DEMAT_TABLENO,BANKID,          
+CLTDPNO,PRINTF,ALBMDELCHRG,ALBMDELIVERY,ALBMCF_TABLENO,MF_TABLENO,SB_TABLENO,BROK1_TABLENO,          
+BROK2_TABLENO,BROK3_TABLENO,BROKERNOTE,OTHER_CHRG,BROK_SCHEME,CONTCHARGE,MINCONTAMT,ADDLEDGERBAL,          
+DUMMY1,DUMMY2,INSCONT,SERTAXMETHOD,DUMMY6,DUMMY7,DUMMY8,DUMMY9,DUMMY10          
+FROM CLIENT2          
+WHERE EXISTS (SELECT PARTY_CODE FROM #SETT WHERE #SETT.PARTY_CODE = CLIENT2.Cl_Code)          
+          
+TRUNCATE TABLE TRD_BROKTABLE            
+INSERT INTO TRD_BROKTABLE            
+SELECT *           
+FROM BROKTABLE WHERE TABLE_NO IN (SELECT DISTINCT TABLE_NO FROM TRD_CLIENTBROK_SCHEME)            
+            
+UPDATE SETTLEMENT SET                 
+      NBROKAPP = (  CASE                
+    WHEN (  BROKTABLE.VAL_PERC ='V' )              
+                             THEN               
+  ((FLOOR(( BROKTABLE.NORMAL * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /                
+              
+  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  /               
+              
+  POWER(10,CT.ROUND_TO))              
+              
+                        WHEN (  BROKTABLE.VAL_PERC ='P' )              
+                             THEN      ((FLOOR ( (((BROKTABLE.NORMAL /100 ) * SETTLEMENT.MARKETRATE)  * POWER(10,CT.ROUND_TO) + CT.ROFIG + CT.ERRNUM ) /  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10,CT.ROUND_TO))              
+   ELSE                
+          BROKAPPLIED               
+                        END               
+                         ),              
+       N_NETRATE = (  CASE                
+                      WHEN (  BROKTABLE.VAL_PERC ='V' AND SETTLEMENT.SELL_BUY = 1)              
+                             THEN              
+                                  SETTLEMENT.MARKETRATE + ((FLOOR((  (( BROKTABLE.NORMAL)) * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /(CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10,CT.ROUND_TO))              
+                      WHEN (  BROKTABLE.VAL_PERC ='P' AND SETTLEMENT.SELL_BUY = 1 )              
+                             THEN SETTLEMENT.MARKETRATE + ((FLOOR(( (((BROKTABLE.NORMAL /100 )* SETTLEMENT.MARKETRATE)) * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10,CT.ROUND_TO))        
+
+  
+  
+    
+ 
+              
+     WHEN (BROKTABLE.VAL_PERC ='V' AND SETTLEMENT.SELL_BUY =2 )              
+                             THEN SETTLEMENT.MARKETRATE - ((FLOOR(( (( BROKTABLE.NORMAL )) * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10,CT.ROUND_TO))              
+                      WHEN ( BROKTABLE.VAL_PERC ='P' AND SETTLEMENT.SELL_BUY = 2 )              
+               THEN                 
+                      SETTLEMENT.MARKETRATE - ((FLOOR(( (((BROKTABLE.NORMAL /100 )* SETTLEMENT.MARKETRATE)) * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10,CT.ROUND_TO))              
+   ELSE                
+             NETRATE               
+                        END               
+                         ),/*MODIFIED BY BHAYASHREE ON 27-12-2000*/              
+              
+        NSERTAX = (CASE WHEN CLIENT2.SERVICE_CHRG = 1 AND CLIENT2.SERTAXMETHOD = 1               
+        THEN 0              
+        ELSE (CASE                
+   WHEN ( BROKTABLE.VAL_PERC ='V' ) THEN              
+      ( ( ((FLOOR(( BROKTABLE.NORMAL * POWER(10,CT.ROUND_TO)+CT.ROFIG + CT.ERRNUM ) /                
+  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  /               
+  POWER(10,CT.ROUND_TO)) ) * ( SETTLEMENT.TRADEQTY * GLOBALS.SERVICE_TAX) )  / ( CASE WHEN CLIENT2.SERVICE_CHRG <>  3 THEN 100 ELSE (100 + GLOBALS.SERVICE_TAX)  END )              
+              
+                      WHEN (BROKTABLE.VAL_PERC ='P' )              
+                           THEN                                       ((    ((FLOOR ( (((BROKTABLE.NORMAL /100 ) * SETTLEMENT.MARKETRATE)  * POWER(10,CT.ROUND_TO) + CT.ROFIG + CT.ERRNUM ) /  (CT.ROFIG + CT.NOZERO )) * (CT.ROFIG +CT.NOZERO ) )  / POWER(10 
+
+  
+  
+   
+,      
+        
+        
+          
+            
+CT.ROUND_TO)) ) * ( SETTLEMENT.TRADEQTY * GLOBALS.SERVICE_TAX) )  / ( CASE WHEN CLIENT2.SERVICE_CHRG <>  3 THEN 100 ELSE (100 + GLOBALS.SERVICE_TAX)  END )              
+              
+   ELSE                
+       SETTLEMENT.SERVICE_TAX              
+                        END ) END              
+                ) /*  /  ( CASE WHEN CLIENT2.SERVICE_CHRG =  0 THEN 100 ELSE (100 + SETTLEMENT.SERVICE_TAX)  END )*/,              
+/*              
+INS_CHRG  =(CASE              
+  WHEN SETTLEMENT.STATUS = 'N' THEN 0              
+   ELSE ((CT.INSURANCE_CHRG * SETTLEMENT.MARKETRATE * SETTLEMENT.TRADEQTY)/100) END),               
+*/              
+TURN_TAX  = (CASE              
+  WHEN SETTLEMENT.STATUS = 'N' THEN 0              
+   ELSE ((CT.TURNOVER_TAX * SETTLEMENT.MARKETRATE * SETTLEMENT.TRADEQTY)/100 ) END),                            
+OTHER_CHRG =(CASE              
+  WHEN SETTLEMENT.STATUS = 'N' THEN 0              
+   ELSE ((CT.OTHER_CHRG * SETTLEMENT.MARKETRATE * SETTLEMENT.TRADEQTY)/100 ) END),               
+SEBI_TAX = (CASE              
+  WHEN SETTLEMENT.STATUS = 'N' THEN 0              
+   ELSE ((CT.SEBITURN_TAX * SETTLEMENT.MARKETRATE * SETTLEMENT.TRADEQTY)/100) END),                            
+BROKER_CHRG =(CASE              
+  WHEN SETTLEMENT.STATUS = 'N' THEN 0              
+ELSE ((CT.BROKER_NOTE * SETTLEMENT.MARKETRATE * SETTLEMENT.TRADEQTY)/100) END)              
+              
+FROM SETTLEMENT WITH (Index (DELPOS)), TRD_BROKTABLE BROKTABLE(NOLOCK), TRD_CLIENT2 CLIENT2(NOLOCK), GLOBALS(NOLOCK), TRD_CLIENTBROK_SCHEME S, TRD_CLIENTTAXES_NEW CT, OWNER              
+              
+WHERE SETTLEMENT.SETT_NO = @SETTNO              
+      AND SETTLEMENT.SETT_TYPE = @SETTYPE          
+      AND SETTLEMENT.PARTY_CODE = CLIENT2.PARTY_CODE          
+      AND CLIENT2.PARTY_CODE = CT.PARTY_CODE              
+      AND CT.TRANS_CAT = 'DEL'               
+      AND SETTLEMENT.SAUDA_DATE BETWEEN FROMDATE AND TODATE               
+      AND S.SCHEME_TYPE = 'DEL'              
+      --AND S.SCRIP_CD = 'ALL'              
+      AND S.PARTY_CODE = SETTLEMENT.PARTY_CODE          
+      AND SETTLEMENT.SAUDA_DATE BETWEEN S.FROM_DATE AND S.TO_DATE           
+      AND S.TRADE_TYPE = 'NRM'        
+      AND S.TABLE_NO = BROKTABLE.TABLE_NO              
+      AND SETTLEMENT.MARKETRATE > BROKTABLE.LOWER_LIM                    
+      AND SETTLEMENT.MARKETRATE <= BROKTABLE.UPPER_LIM                    
+      AND TRD_DEL = 'D'            
+   AND GLOBALS.EXCHANGE = 'NSE'          
+      AND SETTLEMENT.BILLFLAG IN(4,5)               
+      AND SETTLEMENT.STATUS <> 'E'              
+      AND SAUDA_DATE BETWEEN GLOBALS.YEAR_START_DT  AND  GLOBALS.YEAR_END_DT      
+      --AND SAUDA_DATE < GLOBALS.YEAR_END_DT              
+      AND AUCTIONPART NOT LIKE 'A%'          
+      AND AUCTIONPART NOT LIKE 'F%'               
+        
+--UPDATE SETTLEMENT SET NBROKAPP = BROKAPPLIED, N_NETRATE = NETRATE         
+--WHERE SETT_NO = @SETTNO AND SETT_TYPE = @SETTYPE         
+--AND NBROKAPP < BROKAPPLIED
+
+GO

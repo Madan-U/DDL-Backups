@@ -1,0 +1,247 @@
+-- Object: PROCEDURE dbo.RPT_CLIENT_SCRIP_DETAIL_Test
+-- Server: 10.253.33.91 | DB: MTFTRADE
+--------------------------------------------------
+
+  
+  
+CREATE PROC [dbo].[RPT_CLIENT_SCRIP_DETAIL_Test]                     
+(                    
+@STATUSID VARCHAR(25),                    
+@STATUSNAME VARCHAR(50),                    
+@FROMCODE VARCHAR(10),                    
+@TOCODE  VARCHAR(10),                    
+@SAUDA_DATE VARCHAR(11),        
+@RPTBY  VARCHAR(1) = 'D'        
+)                    
+                    
+AS                    
+        
+-- EXEC RPT_CLIENT_SCRIP_DETAIL 'BROKER' , 'BROKER' , 'C69696' , 'C69696', 'SEP 29 2017'          
+SELECT @TOCODE = (CASE WHEN @TOCODE = '' AND @FROMCODE <> '' THEN @FROMCODE               
+      WHEN @TOCODE = '' AND @FROMCODE = '' THEN 'ZZZZZZZZZZ'              
+      ELSE @TOCODE END)               
+                  
+                            
+SELECT                
+PROCESSDATE=CONVERT(VARCHAR,CONVERT(DATETIME,@SAUDA_DATE),103),          
+PARTY_CODE, LONG_NAME, SCRIP_NAME = CONVERT(VARCHAR(100),''),              
+SCRIP_CD, SERIES, BSECODE, ISIN, QTY=SUM(QTY), MARKETVALUE=SUM(MKTAMT), NETVALUE = SUM(NETAMT),               
+CL_RATE = CURR_CL_RATE,              
+HAIRCUT,              
+MTOM_LOSS=SUM(MTOM_LOSS),               
+MARG_REQ = SUM(MARGIN_REQ),            
+FIN_MARG_REQ = SUM(MARGIN_REQ) + SUM(MTOM_LOSS),               
+FLAG='POSITION',         
+TOT_FUND_AMT = CONVERT(NUMERIC(18,4),0),        
+TOT_MTOM_LOSS = CONVERT(NUMERIC(18,4),0),               
+TOT_MARG_REQ = CONVERT(NUMERIC(18,4),0),            
+TOT_FIN_MARG_REQ = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFCASHCOLLATERAL = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFCASHEQCOLLATERAL = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFNONCASHCOLLATERAL = MTFNONCASHCOLLATERAL,          
+TOT_AVAL_COLL_MTF = CONVERT(NUMERIC(18,4),0),          
+TOT_EXCESS_SHORT = CONVERT(NUMERIC(18,4),0),        
+MTFLEDBAL            
+INTO #DATA              
+FROM TBL_MTF_DATA T, MSAJAG.DBO.CLIENT1 C1              
+WHERE SAUDA_DATE = @SAUDA_DATE               
+AND C1.CL_CODE = PARTY_CODE              
+AND PARTY_CODE BETWEEN @FROMCODE AND @TOCODE              
+AND @STATUSNAME =                        
+                  (CASE                        
+                        WHEN @STATUSID = 'BRANCH' THEN C1.BRANCH_CD                        
+                        WHEN @STATUSID = 'SUBBROKER' THEN C1.SUB_BROKER                        
+                        WHEN @STATUSID = 'TRADER' THEN C1.TRADER                        
+                        WHEN @STATUSID = 'FAMILY' THEN C1.FAMILY                        
+                        WHEN @STATUSID = 'AREA' THEN C1.AREA                        
+                        WHEN @STATUSID = 'REGION' THEN C1.REGION                        
+                        WHEN @STATUSID = 'CLIENT' THEN C1.CL_CODE                        
+                  ELSE                        
+                        'BROKER'                        
+                  END)                  
+AND QTY > 0 AND NETAMT > 0            
+GROUP BY PARTY_CODE, LONG_NAME,              
+SCRIP_CD, SERIES, BSECODE, ISIN,CURR_CL_RATE,HAIRCUT,MTFNONCASHCOLLATERAL,MTFLEDBAL            
+    
+    
+SELECT PARTY_CODE, LEDBAL = SUM(LEDBAL)     
+INTO #LEDBAL    
+FROM (    
+SELECT PARTY_CODE, LEDBAL = SUM(CASE WHEN DRCR = 'C' THEN VAMT ELSE -VAMT END)    
+FROM LEDGER L, PARAMETER P, TBLCLIENTMARGIN T    
+WHERE T.PARTY_CODE = L.CLTCODE     
+AND @SAUDA_DATE BETWEEN SDTCUR AND LDTCUR     
+AND @SAUDA_DATE BETWEEN FROM_DATE AND TO_DATE    
+AND VDT BETWEEN SDTCUR AND LDTCUR     
+AND VDT <= @SAUDA_DATE + ' 23:59:59'    
+AND PARTY_CODE NOT IN (SELECT PARTY_CODE FROM #DATA)    
+AND PARTY_CODE BETWEEN @FROMCODE AND @TOCODE    
+GROUP BY PARTY_CODE     
+UNION ALL    
+SELECT PARTY_CODE, LEDBAL = 0    
+FROM TBLCLIENTMARGIN    
+WHERE  @SAUDA_DATE BETWEEN FROM_DATE AND TO_DATE    
+AND PARTY_CODE NOT IN (SELECT PARTY_CODE FROM #DATA)    
+AND PARTY_CODE BETWEEN @FROMCODE AND @TOCODE ) A    
+GROUP BY PARTY_CODE    
+    
+INSERT INTO #DATA     
+SELECT CONVERT(VARCHAR,CONVERT(DATETIME,@SAUDA_DATE),103),      
+PARTY_CODE, LONG_NAME, SCRIP_NAME = CONVERT(VARCHAR(100),''),          
+SCRIP_CD = '', SERIES = '', BSECODE = '', ISIN = '', QTY=0, MARKETVALUE=0, NETVALUE = 0,           
+CL_RATE = 0,          
+HAIRCUT = 0,          
+MTOM_LOSS=0,           
+MARG_REQ = 0,        
+FIN_MARG_REQ = 0,           
+FLAG='POSITION',     
+TOT_FUND_AMT = CONVERT(NUMERIC(18,4),0),    
+TOT_MTOM_LOSS = CONVERT(NUMERIC(18,4),0),           
+TOT_MARG_REQ = CONVERT(NUMERIC(18,4),0),        
+TOT_FIN_MARG_REQ = CONVERT(NUMERIC(18,4),0),      
+TOT_MTFCASHCOLLATERAL = CONVERT(NUMERIC(18,4),0),      
+TOT_MTFCASHEQCOLLATERAL = CONVERT(NUMERIC(18,4),0),      
+TOT_MTFNONCASHCOLLATERAL = 0,      
+TOT_AVAL_COLL_MTF = CONVERT(NUMERIC(18,4),0),      
+TOT_EXCESS_SHORT = CONVERT(NUMERIC(18,4),0),    
+MTFLEDBAL = LEDBAL       
+FROM #LEDBAL , MSAJAG.DBO.CLIENT1 C1     
+WHERE #LEDBAL.PARTY_CODE = C1.CL_CODE     
+AND PARTY_CODE BETWEEN @FROMCODE AND @TOCODE          
+AND @STATUSNAME =                    
+                  (CASE                    
+                        WHEN @STATUSID = 'BRANCH' THEN C1.BRANCH_CD                    
+                        WHEN @STATUSID = 'SUBBROKER' THEN C1.SUB_BROKER                    
+                        WHEN @STATUSID = 'TRADER' THEN C1.TRADER                    
+                        WHEN @STATUSID = 'FAMILY' THEN C1.FAMILY                    
+                        WHEN @STATUSID = 'AREA' THEN C1.AREA                    
+                        WHEN @STATUSID = 'REGION' THEN C1.REGION                    
+                        WHEN @STATUSID = 'CLIENT' THEN C1.CL_CODE                    
+                  ELSE                    
+                        'BROKER'                    
+                  END)        
+        
+INSERT INTO  #DATA        
+SELECT               
+PROCESSDATE=CONVERT(VARCHAR,CONVERT(DATETIME,@SAUDA_DATE),103),        
+PARTY_CODE,LONG_NAME, SCRIP_NAME = CONVERT(VARCHAR(100),''),SCRIP_CD,SERIES,BSECODE,ISIN,        
+QTY=SUM(QTY),        
+MARKETVALUE=SUM(QTY*CL_RATE), NETVALUE = SUM(QTY*CL_RATE - QTY*CL_RATE*HAIRCUT/100),        
+CL_RATE,HAIRCUT,MTOM_LOSS=0,        
+MARG_REQ = CONVERT(NUMERIC(18,4),0),            
+FIN_MARG_REQ = CONVERT(NUMERIC(18,4),0),            
+FLAG='COLL',         
+TOT_FUND_AMT = CONVERT(NUMERIC(18,4),0),        
+TOT_MTOM_LOSS = CONVERT(NUMERIC(18,4),0),               
+TOT_MARG_REQ = CONVERT(NUMERIC(18,4),0),            
+TOT_FIN_MARG_REQ = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFCASHCOLLATERAL = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFCASHEQCOLLATERAL = CONVERT(NUMERIC(18,4),0),          
+TOT_MTFNONCASHCOLLATERAL = CONVERT(NUMERIC(18,4),0),          
+TOT_AVAL_COLL_MTF = CONVERT(NUMERIC(18,4),0),          
+TOT_EXCESS_SHORT = CONVERT(NUMERIC(18,4),0),        
+MTFLEDBAL  = CONVERT(NUMERIC(18,4),0)           
+FROM TBL_PRODUCT_HOLD_DATA T, MSAJAG.DBO.CLIENT1 C1              
+WHERE SAUDA_DATE = @SAUDA_DATE               
+AND C1.CL_CODE = PARTY_CODE              
+AND PARTY_CODE BETWEEN @FROMCODE AND @TOCODE              
+AND @STATUSNAME =                        
+     (CASE                        
+                        WHEN @STATUSID = 'BRANCH' THEN C1.BRANCH_CD                        
+                        WHEN @STATUSID = 'SUBBROKER' THEN C1.SUB_BROKER                        
+                        WHEN @STATUSID = 'TRADER' THEN C1.TRADER                        
+                        WHEN @STATUSID = 'FAMILY' THEN C1.FAMILY                        
+                        WHEN @STATUSID = 'AREA' THEN C1.AREA                        
+                        WHEN @STATUSID = 'REGION' THEN C1.REGION                        
+                        WHEN @STATUSID = 'CLIENT' THEN C1.CL_CODE                        
+                  ELSE                        
+                        'BROKER'                        
+                  END)              
+AND HOLDFLAG = 'MTFCOLL'        
+GROUP BY PARTY_CODE,LONG_NAME, SCRIP_CD,SERIES,BSECODE,ISIN,CL_RATE,HAIRCUT        
+        
+UPDATE #DATA SET TOT_FUND_AMT = T.TOT_FUND_AMT, TOT_MTOM_LOSS = T.TOT_MTOM_LOSS,        
+TOT_MARG_REQ = T.TOT_MARG_REQ, TOT_FIN_MARG_REQ = T.TOT_FIN_MARG_REQ,        
+TOT_MTFCASHCOLLATERAL = T.TOT_FUND_AMT + T.MTFLEDBAL,         
+TOT_AVAL_COLL_MTF = T.TOT_FUND_AMT + T.MTFLEDBAL + TOT_MTFNONCASHCOLLATERAL,        
+TOT_EXCESS_SHORT = - T.TOT_FIN_MARG_REQ + (T.TOT_FUND_AMT + T.MTFLEDBAL + TOT_MTFNONCASHCOLLATERAL),        
+MTFLEDBAL = T.MTFLEDBAL        
+FROM (SELECT PARTY_CODE,  TOT_FUND_AMT = SUM(NETVALUE), TOT_MTOM_LOSS = SUM(MTOM_LOSS),        
+       TOT_MARG_REQ = SUM(MARG_REQ), TOT_FIN_MARG_REQ = SUM(FIN_MARG_REQ),        
+       MTFLEDBAL        
+   FROM #DATA WHERE FLAG = 'POSITION'        
+   GROUP BY PARTY_CODE,MTFLEDBAL ) T        
+WHERE T.PARTY_CODE = #DATA.PARTY_CODE              
+              
+UPDATE #DATA SET SCRIP_NAME = S1.LONG_NAME FROM angeldemat.MSAJAG.DBO.SCRIP1 S1, angeldemat.MSAJAG.DBO.SCRIP2 S2                          
+WHERE S1.CO_CODE = S2.CO_CODE AND S1.SERIES = S2.SERIES                          
+AND S2.SCRIP_CD = #DATA.SCRIP_CD AND S2.SERIES = #DATA.SERIES                          
+                          
+UPDATE #DATA SET SCRIP_NAME = S1.LONG_NAME FROM angeldemat.BSEDB.DBO.SCRIP1 S1, angeldemat.BSEDB.DBO.SCRIP2 S2                          
+WHERE S1.CO_CODE = S2.CO_CODE AND S1.SERIES = S2.SERIES                          
+AND S2.BSECODE = #DATA.BSECODE                         
+AND SCRIP_NAME = ''                   
+/*        
+SELECT PARTY_CODE, BSECODE, ISIN, QTY = SUM(QTY)        
+FROM #DATA WHERE EXCHANGE = 'BSE'        
+GROUP BY  PARTY_CODE, BSECODE, ISIN        
+        
+RETURN    */           
+  
+ALTER TABLE #DATA ADD   
+ COMPANYHEADER1 VARCHAR(MAX),  
+ COMPANYHEADER2 VARCHAR(MAX),  
+ COMPANYHEADER3 VARCHAR(MAX),  
+ COMPANYHEADER4 VARCHAR(MAX),  
+ COMPANYHEADER5 VARCHAR(MAX),  
+ COMPANYHEADER6 VARCHAR(MAX),  
+ COMPANYHEADER7 VARCHAR(MAX)  
+  
+UPDATE #DATA  
+SET  COMPANYHEADER1 = 'Corporate Office: '+ Addr1 +' '+ Addr2 +' '+ City +' - '+ Zip + '(India)',  
+  COMPANYHEADER2 = 'Visit us at: '+ WEBSITE_ID +'  Phone No: '+ PHONE +' Fax: '+ FAX +' Email: '+ EMAIL,  
+  COMPANYHEADER3 = COMMONMEMBERNAME,  
+  COMPANYHEADER4 = 'SEBI Regn.No.(BSE/NSE/MSE): '+ COMMONSEBINO +', CIN. No.: '+ CIN,  
+  COMPANYHEADER5 = 'SEBI Investment Advisers: '+ SEBI_INV_ADV_NO +' | SEBI Research Analyst: '+ SEBI_RES_ANLY_NO,  
+  COMPANYHEADER6 = BR_CMDPID,  
+  COMPANYHEADER7 = ''  
+FROM MSAJAG.DBO.OWNER  
+  
+  
+UPDATE #DATA SET PARTY_CODE = UPPER(LTRIM(RTRIM(PARTY_CODE)))  
+  
+SELECT   
+ PROCESSDATE,PARTY_CODE,LONG_NAME,SCRIP_NAME,SCRIP_CD,SERIES,BSECODE,ISIN,QTY,        
+ TRADE_VALUE=MARKETVALUE,FUNDED_VALUE=NETVALUE,CL_RATE,MARKET_VALUE=CL_RATE*QTY,HAIRCUT,        
+ MARG_REQ=-MARG_REQ,MTOM_LOSS=-MTOM_LOSS,FIN_MARG_REQ=-FIN_MARG_REQ,        
+ FLAG,         
+ MTFLEDBAL,        
+ TOT_FUND_AMT,        
+ TOT_MTOM_LOSS=-TOT_MTOM_LOSS,               
+ TOT_MARG_REQ=-TOT_MARG_REQ,            
+ TOT_FIN_MARG_REQ=-TOT_FIN_MARG_REQ,          
+ TOT_MTFCASHCOLLATERAL,          
+ TOT_MTFCASHEQCOLLATERAL,          
+ TOT_MTFNONCASHCOLLATERAL,          
+ TOT_AVAL_COLL_MTF,          
+ TOT_EXCESS_SHORT,        
+ OPENDAY='-',  
+ FILENAME='MTF_'+PARTY_CODE+'_'+CONVERT(VARCHAR,CONVERT(DATETIME,PROCESSDATE,103),112),  
+ COMPANYHEADER1 = ISNULL(COMPANYHEADER1,''),  
+ COMPANYHEADER2 = ISNULL(COMPANYHEADER2,''),  
+ COMPANYHEADER3 = ISNULL(COMPANYHEADER3,''),  
+ COMPANYHEADER4 = ISNULL(COMPANYHEADER4,''),  
+ COMPANYHEADER5 = ISNULL(COMPANYHEADER5,''),  
+ COMPANYHEADER6 = ISNULL(COMPANYHEADER6,''),  
+ COMPANYHEADER7 = ISNULL(COMPANYHEADER7,'')  
+FROM #DATA    
+WHERE PARTY_CODE IN (SELECT PARTY_CODE FROM #DATA  
+         WHERE ABS(MTFLEDBAL) > 0 OR ABS(TOT_FUND_AMT) > 0   
+         OR ABS(TOT_AVAL_COLL_MTF) > 0 OR ABS(TOT_FIN_MARG_REQ) > 0   
+         OR ABS(TOT_MTFCASHCOLLATERAL) > 0 OR ABS(TOT_EXCESS_SHORT) > 0)                        
+ORDER BY   
+ PARTY_CODE,   
+ FLAG DESC,   
+ SCRIP_NAME
+
+GO

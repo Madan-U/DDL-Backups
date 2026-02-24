@@ -1,0 +1,173 @@
+-- Object: PROCEDURE dbo.CLS_COMBINED_DELHOLDINGASONDATE
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+      
+
+
+      
+      
+CREATE PROC [dbo].[CLS_COMBINED_DELHOLDINGASONDATE] (      
+ @STATUSID VARCHAR(25),      
+ @STATUSNAME VARCHAR(25),      
+ @TRANSDATE VARCHAR(11),      
+ @DPID VARCHAR(8),      
+ @CLTDPID VARCHAR(16),      
+ @FROMPARTY VARCHAR(10),      
+ @TOPARTY VARCHAR(10),      
+ @FLAG INT,      
+ @RPTFOR VARCHAR(1) = 'S'       
+ )      
+      
+       
+ AS      
+       
+ /* 
+ 
+ exec cls_combined_delholdingasondate @STATUSID='Broker',@STATUSNAME='Broker',@TRANSDATE='09/12/2022',@DPID='12033200',@CLTDPID='1203320006951435',@FROMPARTY='05ALWA',@TOPARTY='A100002'
+	  ,@FLAG='1',@RPTFOR='S'
+ 
+      
+exec cls_combined_delholdingasondate       
+@STATUSID='Broker',@STATUSNAME='Broker',@TRANSDATE='11/08/2006',@DPID='',@CLTDPID='',@FROMPARTY='00',@TOPARTY='zz',@FLAG='1',@RPTFOR='S'      
+exec cls_combined_delholdingasondate       
+@STATUSID='Broker',@STATUSNAME='Broker',@TRANSDATE='11/08/2006',@DPID='',@CLTDPID='',@FROMPARTY='0A146',@TOPARTY='0A146',@FLAG='1',@RPTFOR='P'      
+ EXEC CLS_COMBINED_DELHOLDINGASONDATE 'BROKER','BROKER','08/11/2006','','','','',1,'D'      
+ EXEC CLS_COMBINED_DELHOLDINGASONDATE 'BROKER','BROKER','01/04/2008','','','','',1,'D'      
+ EXEC CLS_COMBINED_DELHOLDINGASONDATE 'BROKER','BROKER','04/11/2009','','','','',1,'D'      
+ */      
+      
+ IF (@RPTFOR = 'S')      
+ BEGIN      
+  CREATE TABLE #ASONHOLDING_S (      
+   CLIENT_CODE VARCHAR(20),      
+   CLIENT_NAME VARCHAR(100)      
+   )      
+      Print 'C'    
+  INSERT INTO #ASONHOLDING_S      
+  EXEC ANGELDEMAT.BSEDB.DBO.CLS_DELHOLDINGASONDATE_NEW @STATUSID, @STATUSNAME, @TRANSDATE, @DPID, @CLTDPID, @FROMPARTY, @TOPARTY, @FLAG, @RPTFOR       
+    Print 'D'    
+  INSERT INTO #ASONHOLDING_S      
+  EXEC MSAJAG.DBO.CLS_DELHOLDINGASONDATE_NEW @STATUSID, @STATUSNAME, @TRANSDATE, @DPID, @CLTDPID, @FROMPARTY, @TOPARTY, @FLAG, @RPTFOR       
+        
+  SELECT DISTINCT CLIENT_CODE, CLIENT_NAME FROM #ASONHOLDING_S      
+  ORDER BY      
+   CLIENT_CODE      
+        
+  DROP TABLE #ASONHOLDING_S      
+         
+ END      
+ ELSE      
+ BEGIN      
+  CREATE TABLE #ASONHOLDING_D (      
+   CLIENT_CODE VARCHAR(20),      
+   CLIENT_NAME VARCHAR(100),      
+   SCRIPNAME VARCHAR(100),      
+   SCRIP_CD VARCHAR(50),      
+   SERIES  VARCHAR(5),      
+   ISIN  VARCHAR(20),      
+   QTY   INT,      
+   BDPID  VARCHAR(20),      
+   BCLTDPID VARCHAR(20),      
+   TYPE_DACCOUNT VARCHAR(100),      
+   DEPOSITORY_NAME VARCHAR(100),      
+   L_ADDRESS1 VARCHAR(100),      
+   L_ADDRESS2 VARCHAR(100),      
+   L_ADDRESS3 VARCHAR(100),      
+   L_CITY  VARCHAR(50),      
+   L_STATE  VARCHAR(50),      
+   L_NATION VARCHAR(50),      
+   L_ZIP  VARCHAR(20)      
+   )      
+         
+  CREATE TABLE #ASONHOLDING_B (      
+   CLIENT_CODE VARCHAR(20),      
+   CLIENT_NAME VARCHAR(100),      
+   SCRIPNAME VARCHAR(100),      
+   SCRIP_CD VARCHAR(50),      
+   SERIES  VARCHAR(5),      
+   ISIN  VARCHAR(20),      
+   QTY   INT,      
+   BDPID  VARCHAR(20),      
+   BCLTDPID VARCHAR(20),      
+   TYPE_DACCOUNT VARCHAR(100),      
+   DEPOSITORY_NAME VARCHAR(100),      
+   L_ADDRESS1 VARCHAR(100),      
+   L_ADDRESS2 VARCHAR(100),      
+   L_ADDRESS3 VARCHAR(100),      
+   L_CITY  VARCHAR(50),      
+   L_STATE  VARCHAR(50),      
+   L_NATION VARCHAR(50),      
+   L_ZIP  VARCHAR(20)      
+   )      
+      
+  INSERT INTO #ASONHOLDING_D      
+  EXEC MSAJAG.DBO.CLS_DELHOLDINGASONDATE_NEW @STATUSID, @STATUSNAME, @TRANSDATE, @DPID, @CLTDPID, @FROMPARTY, @TOPARTY, @FLAG, @RPTFOR       
+  Print 'A'    
+  INSERT INTO #ASONHOLDING_B      
+  EXEC ANGELDEMAT.BSEDB.DBO.CLS_DELHOLDINGASONDATE_NEW @STATUSID, @STATUSNAME, @TRANSDATE, @DPID, @CLTDPID, @FROMPARTY, @TOPARTY, @FLAG, @RPTFOR       
+      Print 'B'    
+  UPDATE #ASONHOLDING_D      
+  SET  QTY = (#ASONHOLDING_D.QTY + B.QTY)      
+  FROM #ASONHOLDING_B B      
+  WHERE #ASONHOLDING_D.CLIENT_CODE = B.CLIENT_CODE      
+  AND  #ASONHOLDING_D.ISIN = B.ISIN      
+        
+  INSERT INTO #ASONHOLDING_D      
+  SELECT * FROM #ASONHOLDING_B      
+  WHERE NOT EXISTS (SELECT DISTINCT ISIN FROM #ASONHOLDING_D D WHERE D.CLIENT_CODE = #ASONHOLDING_B.CLIENT_CODE AND D.ISIN = #ASONHOLDING_B.ISIN)      
+        
+  SELECT      
+   CLIENT_CODE,      
+   CLIENT_NAME,      
+   SCRIPNAME,      
+   SCRIP_CD,      
+   SERIES,      
+   ISIN,      
+   QTY = SUM(QTY),      
+   BDPID,      
+   BCLTDPID,      
+   TYPE_DACCOUNT,      
+   DEPOSITORY_NAME,      
+   L_ADDRESS1,      
+   L_ADDRESS2,      
+   L_ADDRESS3,      
+   L_CITY,      
+   L_STATE,      
+   L_NATION,      
+   L_ZIP,      
+   TODAYS=CONVERT(VARCHAR(11),GETDATE(),103)      
+  FROM #ASONHOLDING_D      
+  GROUP BY      
+   CLIENT_CODE,      
+   CLIENT_NAME,      
+   SCRIPNAME,      
+   SCRIP_CD,      
+   SERIES,      
+   ISIN,      
+   BDPID,      
+   BCLTDPID,      
+   TYPE_DACCOUNT,      
+   DEPOSITORY_NAME,      
+   L_ADDRESS1,      
+   L_ADDRESS2,      
+   L_ADDRESS3,      
+   L_CITY,      
+   L_STATE,      
+   L_NATION,      
+   L_ZIP      
+  ORDER BY      
+   CLIENT_CODE,      
+   SCRIPNAME,      
+   SCRIP_CD,      
+   SERIES,      
+   ISIN,      
+   BDPID,      
+   BCLTDPID      
+        
+  --DROP TABLE #ASONHOLDING_D      
+  --DROP TABLE #ASONHOLDING_B      
+         
+ END
+
+GO

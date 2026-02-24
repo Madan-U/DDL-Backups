@@ -1,0 +1,356 @@
+-- Object: PROCEDURE dbo.V2_ACC_MONEYPAYOUTADHOC_NEW
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+
+CREATE PROCEDURE V2_ACC_MONEYPAYOUTADHOC_NEW
+	@STLTYPNO VARCHAR (16),
+	@STRPAYMODE VARCHAR (4),
+	@EFFDATE VARCHAR(11),
+	@SDATE VARCHAR(11),
+	@SETTTYPE1 VARCHAR(2),
+	@SETTTYPE2 VARCHAR(2),
+	@STATUSNAME VARCHAR(30),
+	@BRANCHCODE VARCHAR(10),
+	@NOREC VARCHAR(5) = '250',
+	@REMARK VARCHAR(2) = '',
+	@FPARTY VARCHAR(10),
+	@TPARTY VARCHAR(10),
+	@CLTYPE VARCHAR(4) = 'ALL', -- CLTYPE -> [WEB / NON-WEB / ALL]
+	@PAYMODE CHAR(1),
+	@EXCHANGE VARCHAR(3),
+	@SEGMENT VARCHAR(7)
+
+AS
+
+	/*
+	EXEC V2_ACC_MONEYPAYOUTADHOC_NEW
+		@STLTYPNO = '2005125',
+		@STRPAYMODE = 'BOTH',
+		@EFFDATE = 'FEB 17 2006',
+		@SDATE = 'APR  1 2005',
+		@SETTTYPE1 = 'N',
+		@SETTTYPE2 = 'W',
+		@STATUSNAME = 'BROKER',
+		@BRANCHCODE = 'ALL',
+		@NOREC = '1000',
+		@REMARK = '',
+		@FPARTY = '0',
+		@TPARTY = 'zz',
+		@CLTYPE = 'ALL',
+		@PAYMODE = 'C'
+	*/
+
+	DECLARE
+		@@SETTNO VARCHAR(7),
+		@@PENDINGCNT VARCHAR(11),
+		@@MAXDATE VARCHAR(11),
+		@@SQL VARCHAR(3000)
+
+	SET @@SETTNO = LEFT(@STLTYPNO, 7)
+	SET @@PENDINGCNT = 0
+	SET @@MAXDATE = 'JAN  1 1900'
+
+	SET NOCOUNT ON
+
+	IF @FPARTY = ''
+	BEGIN
+		SET @FPARTY = '0000000000'
+	END
+
+	IF @TPARTY = ''
+	BEGIN
+		SET @TPARTY = 'ZZZZZZZZZZ'
+	END
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+
+	/*=============================================================================
+   LOOP FOR BROKER LOGIN TO REJECTION OF REQUESTS
+         1. ALL OLD DATE PENDING REQUESTS
+         2. MULTIPLE REQUESTS. ALL REQUESTS OTHER THAN THE FIRST REQUEST OF THE LOWEST AMOUNT ARE REJECTED.
+	=============================================================================*/
+
+	IF UPPER(@STATUSNAME) = 'BROKER'
+	BEGIN
+		SET @@PENDINGCNT =
+		(
+			SELECT
+			COUNT(*)
+			FROM SETTPAYOUT WITH(NOLOCK)
+			WHERE STATUS='P'
+			AND GENFLAG='A'
+		)
+
+		IF @@PENDINGCNT <> 0
+		BEGIN
+			SET @@MAXDATE =
+			(
+				SELECT
+				LEFT(CONVERT(VARCHAR, MAX(REQUESTDT), 109), 11)
+				FROM SETTPAYOUT WITH(NOLOCK)
+				WHERE STATUS='P'
+				AND GENFLAG='A'
+			)
+		END
+
+   /*=============================================================================
+               1. ALL OLD DATE PENDING REQUESTS
+   =============================================================================*/
+		UPDATE
+			SETTPAYOUT
+		SET
+			STATUS = 'R'
+		WHERE
+			STATUS='P'
+			AND GENFLAG='A'
+			AND REQUESTDT < @@MAXDATE
+
+		SELECT
+			CLTCODE,
+			AMT = MIN(AMOUNTTOBEPAID),
+			SRNO = 0
+		INTO
+			#PAYOUT_REJECT
+		FROM
+			SETTPAYOUT WITH(NOLOCK)
+		WHERE
+			STATUS='P'
+			AND GENFLAG='A'
+		GROUP BY
+			CLTCODE
+		HAVING
+			COUNT(*) > 1
+
+		UPDATE
+			#PAYOUT_REJECT
+		SET
+			SRNO = S.SRNO
+		FROM
+			(
+				SELECT
+					#PAYOUT_REJECT.CLTCODE,
+					SRNO = MIN(SETTPAYOUT.SRNO)
+				FROM
+					SETTPAYOUT WITH(NOLOCK),
+					#PAYOUT_REJECT WITH(NOLOCK)
+				WHERE
+					STATUS='P'
+					AND GENFLAG='A'
+					AND SETTPAYOUT.CLTCODE = #PAYOUT_REJECT.CLTCODE
+					AND AMOUNTTOBEPAID = AMT
+				GROUP BY
+					#PAYOUT_REJECT.CLTCODE
+			)
+			S,
+			#PAYOUT_REJECT P WITH(NOLOCK)
+		WHERE
+			S.CLTCODE = P.CLTCODE
+
+		/*=============================================================================
+		2. MULTIPLE REQUESTS. ALL REQUESTS OTHER THAN THE FIRST REQUEST OF THE LOWEST AMOUNT ARE REJECTED.
+		=============================================================================*/
+		UPDATE
+			SETTPAYOUT
+		SET
+			STATUS = 'R'
+		WHERE
+			STATUS='P'
+			AND GENFLAG='A'
+			AND CLTCODE IN
+			(
+				SELECT
+				   CLTCODE
+				FROM
+					#PAYOUT_REJECT WITH(NOLOCK)
+			)
+			AND SRNO NOT IN
+			(
+				SELECT
+				   SRNO
+				FROM
+					#PAYOUT_REJECT WITH(NOLOCK)
+			)
+	END
+
+	/*=============================================================================
+	TEMP TABLE CREATION:
+	      1. #LEDGERTMP: FINAL TABLE FOR LEDGER BALANCES AND BILL AMOUNT
+	      2. #LEDGERBILLTMP: TABLE FOR POPULATING BILL AMOUNTS AS POSTED IN SETTPAYOUT TABLE FOR PENDING REQUESTS.
+	=============================================================================*/
+	CREATE TABLE [#LedgerBalanceUp]
+	(
+		[PartyCode] [varchar] (10) NULL ,
+		[PartyName] [varchar] (100) NULL ,
+		[ChequeName] [varchar] (100) NULL ,
+		[branchcode] [varchar] (10) NULL ,
+		[accat] [varchar] (10) NULL ,
+		[BtoBPayment] [int] NULL ,
+		[TOTLedBal] [money] NULL ,
+		[NSELedBal] [money] NULL ,
+		[BSELedBal] [money] NULL ,
+		[FNOLedBal] [money] NULL ,
+		[NETLedBal] [money] NULL ,
+		[FAMLedBal] [money] NULL ,
+		[Sett_No] [varchar] (7) NULL ,
+		[NormalBillAmt] [money] NULL ,
+		[T2TBillAmt] [money] NULL ,
+		[BillAmt] [money] NULL ,
+		[futurepayout] [money] NULL ,
+		[shortage] [money] NULL ,
+		[Amounttobepaid] [money] NULL ,
+		[Paymode] [varchar] (1) NULL ,
+		[Bankcode] [varchar] (10) NULL ,
+		[GenFlag] [varchar] (1) NULL ,
+		[CL_TYPE] [varchar] (3) NULL,
+		[FAMILYCODE] [varchar] (10) NULL,
+		[RunDate] [datetime] NULL ,
+	)
+
+	INSERT INTO
+		#LedgerBalanceUp
+	EXEC V2_GETLEDGERBALANCE_NEW
+		@SDATE,
+		@FPARTY,
+		@TPARTY,
+		'', --@STLNO
+		'A', --@GENFLAG
+		'HO', --@USER
+		@EXCHANGE,
+		@SEGMENT,
+		@EFFDATE,
+		'HO' --@COMP_FOR
+	
+	CREATE TABLE #LEDGERTMP
+	(
+		CLTCODE VARCHAR(10),
+		ACNAME VARCHAR(100),
+		CHEQUENAME VARCHAR(100),
+		BRANCHCODE VARCHAR(10),
+		ACCAT VARCHAR(10),
+		BTOBPAYMENT INT,
+		LEDGERBALANCE MONEY,
+		LEDGERBALANCENSE MONEY,
+		LEDGERBALANCEBSE MONEY,
+		LEDGERBALANCEFNO MONEY,
+		NETLEDBAL MONEY NULL,
+		FAMLEDBAL MONEY NULL,
+		BILLAMT MONEY,
+		FUTUREPAYOUT MONEY,
+		SHORTAGE MONEY,
+		AMOUNTTOBEPAID MONEY,
+		NARRATION VARCHAR (234) NULL,
+		REMARK VARCHAR (234) NULL,
+		PAYMODE VARCHAR(1),
+		BANKCODE VARCHAR(10)
+	)
+
+
+	SELECT @@SQL = "	INSERT INTO #LEDGERTMP "
+	SELECT @@SQL = @@SQL + "	SELECT "
+	SELECT @@SQL = @@SQL + "		CLTCODE = L.PartyCode, "
+	SELECT @@SQL = @@SQL + "		ACNAME = L.PartyName, "
+	SELECT @@SQL = @@SQL + "		CHEQUENAME = L.ChequeName, "
+	SELECT @@SQL = @@SQL + "		BRANCHCODE = L.branchcode, "
+	SELECT @@SQL = @@SQL + "		ACCAT = L.accat, "
+	SELECT @@SQL = @@SQL + "		BTOBPAYMENT = L.BtoBPayment, "
+	SELECT @@SQL = @@SQL + "		LEDGERBALANCE = L.TOTLedBal, "
+	SELECT @@SQL = @@SQL + "		LEDGERBALANCENSE = L.NSELedBal, "
+	SELECT @@SQL = @@SQL + "		LEDGERBALANCEBSE = L.BSELedBal, "
+	SELECT @@SQL = @@SQL + "		LEDGERBALANCEFNO = L.FNOLedBal, "
+	SELECT @@SQL = @@SQL + "		NETLEDBAL = L.NETLEDBAL, "
+	SELECT @@SQL = @@SQL + "		FAMLEDBAL = L.FAMLEDBAL, "
+	SELECT @@SQL = @@SQL + "		BILLAMT = S.BILLAMT, "
+	SELECT @@SQL = @@SQL + "		FUTUREPAYOUT = L.futurepayout, "
+	SELECT @@SQL = @@SQL + "		SHORTAGE = L.shortage, "
+	SELECT @@SQL = @@SQL + "		AMOUNTTOBEPAID = S.AMOUNTTOBEPAID, "
+	SELECT @@SQL = @@SQL + "		S.NARRATION, "
+	SELECT @@SQL = @@SQL + "		S.REMARK, "
+	SELECT @@SQL = @@SQL + "		PAYMODE = L.Paymode, "
+	SELECT @@SQL = @@SQL + "		BANKCODE = L.Bankcode "
+	SELECT @@SQL = @@SQL + "	FROM "
+	SELECT @@SQL = @@SQL + "		#LedgerBalanceUp L WITH(NOLOCK), "
+	SELECT @@SQL = @@SQL + "		SETTPAYOUT S WITH(NOLOCK) "
+	SELECT @@SQL = @@SQL + "	WHERE S.CLTCODE = L.PARTYCODE "
+	SELECT @@SQL = @@SQL + "		AND STATUS = 'P' "
+	SELECT @@SQL = @@SQL + "		AND S.GENFLAG = 'A' "
+	SELECT @@SQL = @@SQL + "		AND UPPER(S.BRANCHCODE) LIKE (CASE WHEN UPPER('" + @BRANCHCODE + "') = 'ALL' THEN '%' ELSE UPPER('" + @BRANCHCODE + "') END) "
+
+	IF @CLTYPE = 'WEB'
+	BEGIN
+		SELECT @@SQL = @@SQL + "	AND L.CL_TYPE = 'WEB' "
+	END
+	ELSE IF @CLTYPE = 'NWEB'
+	BEGIN
+		SELECT @@SQL = @@SQL + "	AND L.CL_TYPE <> 'WEB' "
+	END
+
+	IF @PAYMODE <> 'A'
+	BEGIN
+		SELECT @@SQL = @@SQL + "	AND L.PAYMODE = '" + @PAYMODE + "' "
+	END
+
+	IF @REMARK = 'ON'
+	BEGIN
+		SELECT @@SQL = @@SQL + "	AND S.REMARK <> '' "
+	END
+
+	EXEC (@@SQL)
+
+	UPDATE
+		TMP
+	SET 
+		CHEQUENAME = M.CHEQUENAME
+	FROM 
+		#LEDGERTMP TMP,
+		MULTIBANKID M
+	WHERE 
+		M.CLTCODE = TMP.CLTCODE
+		AND M.DEFAULTBANK = '1'
+	
+	SELECT
+		PARTYCODE = L.CLTCODE,
+		PARTYNAME = L.ACNAME,
+		L.BRANCHCODE,
+		L.BTOBPAYMENT,
+		TOTLEDBAL = SUM(L.LEDGERBALANCENSE) + SUM(L.LEDGERBALANCEBSE) + SUM(L.LEDGERBALANCEFNO),
+		NSELEDBAL = SUM(L.LEDGERBALANCENSE),
+		BSELEDBAL = SUM(L.LEDGERBALANCEBSE),
+		FNOLEDBAL = SUM(L.LEDGERBALANCEFNO),
+		L.BILLAMT,
+		L.PAYMODE,
+		L.BANKCODE,
+		L.REMARK,
+		L.SHORTAGE,
+		L.AMOUNTTOBEPAID,
+		L.NARRATION,
+		PARTYNAME = L.CHEQUENAME,
+		L.ACCAT,
+		L.FUTUREPAYOUT,
+		NETLEDBAL = SUM(NETLEDBAL),
+		FAMLEDBAL = SUM(FAMLEDBAL)
+	FROM 
+		#LEDGERTMP L WITH(NOLOCK)
+	GROUP BY 
+		L.CLTCODE,
+		L.ACNAME,
+		L.CHEQUENAME,
+		L.BRANCHCODE,
+		L.ACCAT,
+		L.BTOBPAYMENT,
+		L.BILLAMT,
+		L.FUTUREPAYOUT,
+		L.SHORTAGE,
+		L.AMOUNTTOBEPAID,
+		L.NARRATION,
+		L.PAYMODE,
+		L.REMARK,
+		L.BANKCODE
+	ORDER BY 
+		L.BRANCHCODE,
+		L.CLTCODE
+
+/*  -----------------------------------EOF  ----------------------------------------------------------------*/
+
+GO

@@ -1,0 +1,92 @@
+-- Object: PROCEDURE dbo.Angel_chg_slab
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE procedure Angel_chg_slab(@sbcode as varchar(10),@tslab as varchar(10),@dslab as varchar(10))  
+as  
+  
+set nocount off  
+set transaction isolation level read uncommitted  
+  
+select c2.party_code into #file1 from client1 c1, client2 c2 where c1.cl_Code=c2.cl_code and c1.sub_Broker=@sbcode  
+  
+select Party_Code,Table_No,Scheme_Type,Scrip_Cd,Trade_Type,Brokscheme,From_Date,To_Date  
+into #file2 from clientbrok_scheme where party_code   
+in (select party_Code from #file1) and to_date >= getdate()  
+and table_no <> @tslab and scheme_type='TRD'  
+  
+insert into #file2    
+select Party_Code,Table_No,Scheme_Type,Scrip_Cd,Trade_Type,Brokscheme,From_Date,To_Date  
+from clientbrok_scheme where party_code   
+in (select party_Code from #file1) and to_date >= getdate()  
+and table_no <> @dslab and scheme_type='DEL'  
+  
+update #file2 set from_date = convert(varchar(11),getdate()),   
+table_no = (case when scheme_type='TRD' then @tslab else @dslab end)  
+  
+  
+select top 0* into #file3 from #file2  
+  
+insert into #file3  
+select party_code,@tslab,'TRD','ALL','NRM',brok_scheme, convert(varchar(11),getdate()),'Dec 31 2049 23:59:00'  
+from client2 where party_code in (select party_Code from #file1) and party_code not in (select party_Code from #file2)  
+and table_no <> @tslab  
+union  
+select party_code,@dslab,'DEL','ALL','NRM',brok_scheme, convert(varchar(11),getdate()),'Dec 31 2049 23:59:00'  
+from client2 where party_code in (select party_Code from #file1) and party_code not in (select party_Code from #file2)  
+and sub_tableno <> @dslab  
+  
+insert into #file3  
+select c2.party_code,table_no,'TRD','ALL','NRM',brok_scheme,activefrom,convert(varchar(11),getdate()-1)  
+from client2 c2,  
+(select party_code,activefrom from client5 c5, client2 c2 where c2.cl_code=c5.cl_Code   
+and c2.party_code in (select * from #file1)) c3   
+where c2.party_code in (select party_Code from #file1) and c2.party_code not in (select party_Code from #file2)  
+and c3.party_code=c2.party_code and table_no <> @tslab  
+  
+insert into #file3  
+select c2.party_code,sub_tableno,'DEL','ALL','NRM',brok_scheme,activefrom,convert(varchar(11),getdate()-1)  
+from client2 c2,  
+(select party_code,activefrom from client5 c5, client2 c2 where c2.cl_code=c5.cl_Code   
+and c2.party_code in (select * from #file1)) c3   
+where c2.party_code in (select party_Code from #file1) and c2.party_code not in (select party_Code from #file2)  
+and c3.party_code=c2.party_code and sub_tableno <> @dslab  
+  
+  
+  
+  
+update clientbrok_scheme set to_date = convert(varchar(11),getdate()-1)+' 23:59:00:00'  
+where party_code in (select party_Code from #file1) and to_date >= getdate()  
+and table_no <> @tslab and scheme_type='TRD'  
+  
+update clientbrok_scheme set to_date = convert(varchar(11),getdate()-1)+' 23:59:00:00'  
+where party_code in (select party_Code from #file1) and to_date >= getdate()  
+and table_no <> @dslab and scheme_type='DEL'  
+  
+  
+insert into #file2 select * from #file3  
+  
+insert into clientbrok_scheme select * from #file2  
+update client2 set table_no=@tslab, sub_tableno=@dslab where party_code in (Select party_code from #file1)  
+
+
+
+select * into #brok1 
+from client_brok_Details 
+where exchange='NSE' and cl_code in (Select party_Code from #file1)
+and inactive_From >= getdate()
+
+update #brok1 set active_Date = convert(varchar(11),getdate())+' 00:00:00',trd_brok=@tslab,del_brok=@dslab,
+Inst_trd_brok=@tslab,Inst_del_brok=@dslab,imp_status=0 
+where exchange='NSE' and cl_code in (Select party_Code from #file1)
+and inactive_From >= getdate()
+
+update client_brok_Details set inactive_From = convert(varchar(11),getdate()-1)+' 23:59:59'
+where exchange='NSE' and cl_code in (Select party_Code from #file1)
+and inactive_From >= getdate()
+
+insert into client_brok_Details select * from #brok1
+ 
+set nocount on
+
+GO

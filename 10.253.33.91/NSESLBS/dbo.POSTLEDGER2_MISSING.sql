@@ -1,0 +1,148 @@
+-- Object: PROCEDURE dbo.POSTLEDGER2_MISSING
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+--BEGIN TRAN
+--EXEC CD_POSTLEDGER2 'JUL 20 2005', 'JUL 20 2005'
+--ROLLBACK
+CREATE PROC POSTLEDGER2_MISSING
+
+AS
+	DECLARE
+		@@VNO AS VARCHAR(12),
+		@@VTYP AS SMALLINT,
+		@@BOOKTYPE AS VARCHAR(2),
+		@@LEDGER2CNT AS NUMERIC(5),
+		@@LEDGER2AMT AS MONEY,
+		@@CUR AS CURSOR
+
+	SET @@CUR = CURSOR FOR
+
+	SELECT DISTINCT 
+		VNO, 
+		VTYP, 
+		BOOKTYPE 
+	FROM 
+		LEDGER L 
+	WHERE 
+		NOT EXISTS (SELECT DISTINCT VNO, VTYPE, BOOKTYPE FROM LEDGER2 L2 WHERE L.VNO = L2.VNO AND L.VTYP = L2.VTYPE AND L.BOOKTYPE = L2.BOOKTYPE)
+		AND VTYP NOT IN (15, 21, 18)
+
+	OPEN @@CUR
+	FETCH NEXT FROM @@CUR INTO @@VNO, @@VTYP, @@BOOKTYPE
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+--			BEGIN TRAN
+			DELETE FROM TEMPLEDGER2 WHERE SESSIONID = '9999999999'
+			IF @@VTYP = 8 OR @@VTYP = 6 OR @@VTYP = 7
+				BEGIN
+					INSERT INTO TEMPLEDGER2        
+					SELECT 
+						'BRANCH', 
+						CASE WHEN A.BRANCHCODE <> 'ALL' THEN A.BRANCHCODE ELSE 'HO' END,        
+						L.VAMT, 
+						L.VTYP, 
+						L.VNO, 
+						L.LNO, 
+						L.DRCR, 
+						'0', 
+						L.BOOKTYPE, 
+						'9999999999',        
+						L.CLTCODE, 
+						'A', 
+						0        
+					FROM    
+						LEDGER L, ACMAST A    
+					WHERE    
+						L.CLTCODE = A.CLTCODE    
+						AND L.VNO = @@VNO 
+						AND L.VTYP = @@VTYP 
+						AND L.BOOKTYPE = @@BOOKTYPE    
+				END
+			ELSE
+				BEGIN
+					INSERT INTO TEMPLEDGER2    
+					SELECT 
+						'BRANCH', 
+						CASE WHEN A.BRANCHCODE <> 'ALL' THEN A.BRANCHCODE ELSE '' END,    
+						L.VAMT, 
+						L.VTYP, 
+						L.VNO, 
+						L.LNO, 
+						L.DRCR, 
+						'0', 
+						L.BOOKTYPE, 
+						'9999999999',    
+						L.CLTCODE, 
+						'A', 
+						0    
+					FROM    
+						LEDGER L, 
+						ACMAST A    
+					WHERE    
+						L.CLTCODE = A.CLTCODE    
+						AND L.VNO = @@VNO 
+						AND L.VTYP = @@VTYP 
+						AND L.BOOKTYPE = @@BOOKTYPE    
+
+					UPDATE 
+						TEMPLEDGER2 
+					SET 
+						BRANCH = (SELECT TOP 1 BRANCH FROM TEMPLEDGER2 WHERE SESSIONID = '9999999999' AND BRANCH <> '')    
+					WHERE 
+						BRANCH = ''    
+					UPDATE 
+						TEMPLEDGER2 
+					SET 
+						BRANCH = 'HO' 
+					WHERE 
+						BRANCH = ''    
+				END
+			EXEC INSERTTOLEDGER2 '9999999999', @@VNO, '1', '1', 'A', 'BROKER', 'BROKER'
+			SELECT 
+				@@LEDGER2CNT = COUNT(1) 
+			FROM 
+				LEDGER2 
+			WHERE 
+				VNO = @@VNO 
+				AND VTYPE = @@VTYP 
+				AND BOOKTYPE = @@BOOKTYPE
+			IF @@LEDGER2CNT = 0
+				BEGIN
+					--ROLLBACK
+					INSERT INTO LEDGER2MIS (VNO, VTYPE, BOOKTYPE, REASON) VALUES (@@VNO, @@VTYP, @@BOOKTYPE, 'DID NOT POSTED')
+				END
+			ELSE
+				BEGIN
+					SELECT
+						@@LEDGER2CNT = COUNT(1)
+					FROM
+						(
+						SELECT 
+							CNT = COUNT(1)
+						FROM
+							LEDGER2
+						WHERE
+							VNO = @@VNO
+							AND VTYPE = @@VTYP
+							AND BOOKTYPE = @@BOOKTYPE
+						GROUP BY
+							COSTCODE
+						HAVING
+							SUM(CASE WHEN DRCR = 'D' THEN CAMT ELSE -CAMT END) <> 0
+						) A
+					IF @@LEDGER2CNT <> 0
+						BEGIN
+							--ROLLBACK
+							INSERT INTO LEDGER2MIS (VNO, VTYPE, BOOKTYPE, REASON) VALUES (@@VNO, @@VTYP, @@BOOKTYPE, 'ERROR FOUND IN BRANCHWISE POSTING')
+						END
+					ELSE
+						BEGIN
+							PRINT 'POSTED'
+							--COMMIT TRAN
+						END
+				END
+			FETCH NEXT FROM @@CUR INTO @@VNO, @@VTYP, @@BOOKTYPE
+		END
+
+GO

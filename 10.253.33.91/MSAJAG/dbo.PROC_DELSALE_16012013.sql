@@ -1,0 +1,547 @@
+-- Object: PROCEDURE dbo.PROC_DELSALE_16012013
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+CREATE PROC [DBO].[PROC_DELSALE_16012013]                   
+(          
+ @PROCESS_DATE  VARCHAR(11),           
+ @NOOFDAYS   INT,          
+ @DEBITVALUE   NUMERIC(18, 4),          
+ @DEBITMARKUP  NUMERIC(18, 4),          
+ @CLRATEHAIRCUT  NUMERIC(18, 4),          
+ @CLTYPE    VARCHAR(200),      
+ @fromparty varchar(10) = '0',      
+ @toparty varchar(10) = 'ZZZZZZZZZZ'         
+)          
+AS                  
+DECLARE                   
+@LEDCUR CURSOR,                  
+@DELCUR CURSOR,                  
+@SETCUR CURSOR,                  
+@PARTY_CODE VARCHAR(10),                  
+@AMOUNT NUMERIC(18, 4),                  
+@SETT_NO VARCHAR(7),                  
+@SETT_TYPE VARCHAR(2),                  
+@SCRIP_CD VARCHAR(12),                  
+@SERIES VARCHAR(12),                  
+@QTY INT,                  
+@NEWQTY INT,                  
+@CL_RATE NUMERIC(18, 4),                  
+@START_DATE VARCHAR(11),          
+@CL_DATE    VARCHAR(11),          
+@SQL VARCHAR(200),        
+@SNO NUMERIC(18,0),        
+@HOLDTYPE VARCHAR(4),        
+@MDATE VARCHAR(11),        
+@SCRIP_CATEGORY INT                  
+          
+SELECT DISTINCT CL_TYPE INTO #CLTYPE FROM CLIENTTYPE           
+WHERE CL_TYPE NOT IN (SELECT SPLITTED_VALUE FROM PRADNYA.DBO.FUN_SPLITSTRING (@CLTYPE,','))          
+          
+DELETE FROM #CLTYPE           
+WHERE CL_TYPE IN (SELECT DATAVALUE FROM TBL_RMS_EXCEPTION WHERE DATATYPE = 'CLTYPE')          
+        
+CREATE TABLE #SETT                  
+(START_DATE VARCHAR(11))                  
+                  
+SELECT @SQL = 'INSERT INTO #SETT SELECT LEFT(MIN(START_DATE),11) AS START_DATE FROM ( '                  
+SELECT @SQL = @SQL + ' SELECT TOP ' + CONVERT(VARCHAR,@NOOFDAYS) + ' * FROM MSAJAG.DBO.SETT_MST '                  
+SELECT @SQL = @SQL + ' WHERE START_DATE <= ''' + LEFT(CONVERT(VARCHAR,@PROCESS_DATE),11) + ''''                  
+SELECT @SQL = @SQL + ' AND SETT_TYPE = ''N'''                  
+SELECT @SQL = @SQL + ' ORDER BY START_DATE DESC ) A'                  
+                  
+EXEC (@SQL)                  
+                  
+SELECT @START_DATE = @PROCESS_DATE            
+      
+SELECT @CL_DATE = LEFT(MAX(SYSDATE),11) FROM CLOSING          
+WHERE SYSDATE <= LEFT(GETDATE(),11) + ' 23:59:59'          
+          
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+INTO #LEDBAL                  
+FROM ACCOUNT.DBO.LEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.VDT BETWEEN SDTCUR AND LDTCUR                      
+AND L.CLTCODE = A.CLTCODE                      
+AND A.ACCAT = 4                       
+AND L.VDT < @START_DATE          
+AND L.VDT BETWEEN SDTCUR AND LDTCUR            
+AND @START_DATE BETWEEN SDTCUR AND LDTCUR                      
+AND A.CLTCODE BETWEEN @fromparty AND @toparty          
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))                      
+GROUP BY L.CLTCODE               
+--HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) > 0                  
+      
+INSERT INTO #LEDBAL                  
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+FROM ACCOUNT.DBO.LEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.CLTCODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1               
+AND ACCAT = 4                 
+AND VDT LIKE @START_DATE + '%'          
+AND DRCR = 'D'       
+AND A.CLTCODE BETWEEN @fromparty AND @toparty                 
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+AND VTYP <> '15'          
+GROUP BY L.CLTCODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) > 0            
+                  
+INSERT INTO #LEDBAL                  
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+FROM ACCOUNT.DBO.LEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.CLTCODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1               
+AND ACCAT = 4        
+AND VDT >= @START_DATE             
+AND VDT <= @PROCESS_DATE + ' 23:59:59'                 
+AND DRCR = 'C'       
+AND A.CLTCODE BETWEEN @fromparty AND @toparty                 
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+AND VTYP <> '15'          
+GROUP BY L.CLTCODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) < 0                  
+                  
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)               
+FROM ACCOUNT.DBO.MARGINLEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.VDT BETWEEN SDTCUR AND LDTCUR                      
+AND L.PARTY_CODE = A.CLTCODE                      
+AND A.ACCAT = 4                       
+AND L.VDT < @START_DATE            
+AND L.VDT BETWEEN SDTCUR AND LDTCUR            
+AND @START_DATE BETWEEN SDTCUR AND LDTCUR                      
+AND A.CLTCODE BETWEEN @fromparty AND @toparty           
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY L.PARTY_CODE                       
+--HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) > 0                  
+          
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)                  
+FROM ACCOUNT.DBO.MARGINLEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.PARTY_CODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1 AND ACCAT = 4                  
+AND VDT LIKE @START_DATE + '%'          
+AND DRCR = 'D'                  
+AND A.CLTCODE BETWEEN @fromparty AND @toparty          
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+GROUP BY L.PARTY_CODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) > 0          
+                  
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)                  
+FROM ACCOUNT.DBO.MARGINLEDGER L, ACCOUNT.DBO.ACMAST A, ACCOUNT.DBO.PARAMETER P                  
+WHERE L.PARTY_CODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1 AND ACCAT = 4                  
+AND VDT >= @START_DATE               
+AND VDT <= @PROCESS_DATE  + ' 23:59:59'                     
+AND DRCR = 'C'                  
+AND A.CLTCODE BETWEEN @fromparty AND @toparty          
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+GROUP BY L.PARTY_CODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) < 0                  
+      
+INSERT INTO #LEDBAL                  
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.LEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P                  
+WHERE L.VDT BETWEEN SDTCUR AND LDTCUR                      
+AND L.CLTCODE = A.CLTCODE                      
+AND A.ACCAT = 4                       
+AND L.VDT < @START_DATE          
+AND L.VDT BETWEEN SDTCUR AND LDTCUR            
+AND @START_DATE BETWEEN SDTCUR AND LDTCUR                      
+AND A.CLTCODE BETWEEN @fromparty AND @toparty          
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))                      
+GROUP BY L.CLTCODE               
+--HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) > 0                  
+      
+INSERT INTO #LEDBAL                  
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.LEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P                  
+WHERE L.CLTCODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1               
+AND ACCAT = 4                 
+AND VDT LIKE @START_DATE + '%'          
+AND DRCR = 'D'       
+AND A.CLTCODE BETWEEN @fromparty AND @toparty                 
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+AND VTYP <> '15'          
+GROUP BY L.CLTCODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) > 0            
+                  
+INSERT INTO #LEDBAL                  
+SELECT L.CLTCODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.LEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P                  
+WHERE L.CLTCODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1               
+AND ACCAT = 4                 
+AND VDT >= @START_DATE             
+AND VDT <= @PROCESS_DATE + ' 23:59:59'                 
+AND DRCR = 'C'                  
+AND A.CLTCODE BETWEEN @fromparty AND @toparty      
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+AND VTYP <> '15'          
+GROUP BY L.CLTCODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN VAMT ELSE -VAMT END) < 0                  
+      
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.MARGINLEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P               
+WHERE L.VDT BETWEEN SDTCUR AND LDTCUR                      
+AND L.PARTY_CODE = A.CLTCODE                      
+AND A.ACCAT = 4                       
+AND L.VDT < @START_DATE            
+AND L.VDT BETWEEN SDTCUR AND LDTCUR            
+AND @START_DATE BETWEEN SDTCUR AND LDTCUR                      
+AND A.CLTCODE BETWEEN @fromparty AND @toparty            
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY L.PARTY_CODE                       
+--HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) > 0                  
+          
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.MARGINLEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P                  
+WHERE L.PARTY_CODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1 AND ACCAT = 4                  
+AND VDT LIKE @START_DATE + '%'          
+AND DRCR = 'D'                  
+AND A.CLTCODE BETWEEN @fromparty AND @toparty         
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+GROUP BY L.PARTY_CODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) > 0          
+      
+INSERT INTO #LEDBAL                  
+SELECT L.PARTY_CODE, AMOUNT = SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END)                  
+FROM ANAND.ACCOUNT_AB.DBO.MARGINLEDGER L, ANAND.ACCOUNT_AB.DBO.ACMAST A, ANAND.ACCOUNT_AB.DBO.PARAMETER P                  
+WHERE L.PARTY_CODE = A.CLTCODE                  
+AND L.VDT BETWEEN P.SDTCUR AND LDTCUR                  
+AND CURYEAR = 1 AND ACCAT = 4                  
+AND VDT >= @START_DATE               
+AND VDT <= @PROCESS_DATE  + ' 23:59:59'                     
+AND DRCR = 'C'                  
+AND A.CLTCODE BETWEEN @fromparty AND @toparty        
+AND A.CLTCODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))          
+GROUP BY L.PARTY_CODE                  
+HAVING SUM(CASE WHEN DRCR = 'D' THEN AMOUNT ELSE -AMOUNT END) < 0                 
+          
+INSERT INTO #LEDBAL          
+SELECT PARTY_CODE, AMOUNT = SUM(PAMT)          
+FROM TBL_VALAN_DETAIL          
+WHERE SAUDA_DATE LIKE @START_DATE + '%'          
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+AND PARTY_CODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY PARTY_CODE         
+HAVING SUM(PAMT) > 0          
+          
+INSERT INTO #LEDBAL          
+SELECT PARTY_CODE, AMOUNT = -SUM(SAMT)          
+FROM TBL_VALAN_DETAIL          
+WHERE SAUDA_DATE >= @START_DATE           
+AND SAUDA_DATE <= @PROCESS_DATE + ' 23:59:59'          
+AND PARTY_CODE BETWEEN @fromparty AND @toparty             
+AND PARTY_CODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY PARTY_CODE          
+HAVING SUM(SAMT) > 0           
+          
+INSERT INTO #LEDBAL          
+SELECT PARTY_CODE, AMOUNT = SUM(PAMT)          
+FROM ANAND.BSEDB_AB.DBO.TBL_VALAN_DETAIL          
+WHERE SAUDA_DATE LIKE @START_DATE + '%'          
+AND PARTY_CODE BETWEEN @fromparty AND @toparty             
+AND PARTY_CODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+   WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY PARTY_CODE          
+HAVING SUM(PAMT) > 0          
+          
+INSERT INTO #LEDBAL          
+SELECT PARTY_CODE, AMOUNT = -SUM(SAMT)          
+FROM ANAND.BSEDB_AB.DBO.TBL_VALAN_DETAIL          
+WHERE SAUDA_DATE >= @START_DATE           
+AND SAUDA_DATE <= @PROCESS_DATE + ' 23:59:59'          
+AND PARTY_CODE BETWEEN @fromparty AND @toparty             
+AND PARTY_CODE IN (SELECT PARTY_CODE FROM CLIENT_DETAILS          
+      WHERE CL_TYPE IN (SELECT CL_TYPE FROM #CLTYPE))           
+GROUP BY PARTY_CODE          
+HAVING SUM(SAMT) > 0           
+      
+SELECT @MDATE = LEFT(MAX(MARGINDATE),11) FROM ANGELFO.NSEFO.DBO.TBL_CLIENTMARGIN        
+        
+INSERT INTO #LEDBAL         
+SELECT PARTY_CODE,         
+AMOUNT = -(CASE WHEN LEDGERAMOUNT >= (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    THEN LEDGERAMOUNT        
+       ELSE (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    END)        
+FROM ANGELFO.NSEFO.DBO.TBL_CLIENTMARGIN                
+WHERE MARGINDATE LIKE @MDATE + '%'        
+AND (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN) > 0         
+AND LEDGERAMOUNT > 0         
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+        
+SELECT @MDATE = LEFT(MAX(MARGINDATE),11) FROM ANGELFO.NSECURFO.DBO.TBL_CLIENTMARGIN        
+        
+INSERT INTO #LEDBAL         
+SELECT PARTY_CODE,         
+AMOUNT = -(CASE WHEN LEDGERAMOUNT >= (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    THEN LEDGERAMOUNT        
+       ELSE (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    END)        
+FROM ANGELFO.NSECURFO.DBO.TBL_CLIENTMARGIN                
+WHERE MARGINDATE LIKE @MDATE + '%'        
+AND (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN) > 0         
+AND LEDGERAMOUNT > 0         
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+        
+SELECT @MDATE = LEFT(MAX(MARGINDATE),11) FROM ANGELCOMMODITY.MCDXCDS.DBO.TBL_CLIENTMARGIN        
+        
+INSERT INTO #LEDBAL         
+SELECT PARTY_CODE,         
+AMOUNT = -(CASE WHEN LEDGERAMOUNT >= (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    THEN LEDGERAMOUNT        
+       ELSE (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN)         
+    END)        
+FROM ANGELCOMMODITY.MCDXCDS.DBO.TBL_CLIENTMARGIN                
+WHERE MARGINDATE LIKE @MDATE + '%'        
+AND (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN + PREMIUM_MARGIN) > 0         
+AND LEDGERAMOUNT > 0         
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+      
+SELECT @MDATE = LEFT(MAX(MARGINDATE),11) FROM ANGELCOMMODITY.BSEFO.DBO.TBL_CLIENTMARGIN        
+        
+INSERT INTO #LEDBAL         
+SELECT PARTY_CODE,         
+AMOUNT = -(CASE WHEN LEDGERAMOUNT >= (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN)         
+    THEN LEDGERAMOUNT        
+       ELSE (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN)         
+END)        
+FROM ANGELCOMMODITY.BSEFO.DBO.TBL_CLIENTMARGIN                
+WHERE MARGINDATE LIKE @MDATE + '%'        
+AND (LEDGERAMOUNT + CASH_COLL + NONCASH_COLL) - (INITIALMARGIN + MTMMARGIN + ADDMARGIN) > 0         
+AND LEDGERAMOUNT > 0         
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+          
+SELECT CLTCODE, AMOUNT = SUM(AMOUNT) +  SUM(AMOUNT)*@DEBITMARKUP/100           
+INTO #LEDBAL_FINAL          
+FROM #LEDBAL          
+GROUP BY CLTCODE          
+HAVING SUM(AMOUNT) > 0 AND SUM(AMOUNT) >= @DEBITVALUE           
+        
+CREATE CLUSTERED INDEX [CLTCODE] ON [DBO].[#LEDBAL_FINAL]        
+(        
+ [CLTCODE] ASC        
+)        
+          
+DELETE FROM #LEDBAL_FINAL           
+WHERE CLTCODE IN (SELECT DATAVALUE FROM TBL_RMS_EXCEPTION WHERE DATATYPE = 'PARTY')          
+        
+DELETE FROM #LEDBAL_FINAL           
+WHERE CLTCODE NOT IN (SELECT CLIENT FROM VW_CLIENT_CATEGORY        
+WHERE CATEGORY IN ('C', 'D'))        
+        
+DELETE FROM #LEDBAL_FINAL           
+WHERE CLTCODE NOT IN (SELECT CL_CODE FROM CLIENT_DETAILS        
+WHERE PAN_GIR_NO <> '')        
+        
+--DELETE FROM #LEDBAL_FINAL           
+--WHERE CLTCODE NOT IN (SELECT CL_CODE FROM CLIENT_BROK_DETAILS        
+--WHERE PAN_GIR_NO <> '')        
+        
+DELETE FROM #LEDBAL_FINAL           
+WHERE CLTCODE NOT IN (SELECT CL_CODE FROM CLIENT_BROK_DETAILS        
+WHERE INACTIVE_FROM >= LEFT(GETDATE(),11)        
+AND EXCHANGE+SEGMENT NOT IN ('NCXFUTURES', 'MCXFUTURES'))        
+        
+DELETE FROM TBL_RMS_SALE_LEDBAL        
+WHERE SAUDA_DATE = @PROCESS_DATE         
+AND NOOFDAYS = @NOOFDAYS         
+AND PARTY_CODE BETWEEN @fromparty AND @toparty       
+        
+INSERT INTO TBL_RMS_SALE_LEDBAL        
+SELECT @PROCESS_DATE, CLTCODE, AMOUNT, @NOOFDAYS, GETDATE()        
+FROM  #LEDBAL_FINAL        
+        
+IF @NOOFDAYS < 7        
+BEGIN        
+ RETURN        
+END        
+        
+SELECT D.SNO, D.SETT_NO, D.SETT_TYPE, D.PARTY_CODE, D.SCRIP_CD, SERIES = CONVERT(VARCHAR(12),D.SERIES), QTY,                   
+CL_RATE = CONVERT(NUMERIC(18,4),0), LEDAMT = CONVERT(NUMERIC(18,4),0),                  
+TOSELLQTY = 0, START_DATE = GETDATE(), EXCHANGE = 'NSE',        
+HOLDTYPE = CONVERT(VARCHAR(4), ''),        
+SCRIP_CATEGORY = 10,        
+CERTNO                 
+INTO #DEL FROM MSAJAG.DBO.DELTRANS D              
+WHERE 1 = 2         
+        
+INSERT INTO #DEL        
+EXEC ANGELDEMAT.MSAJAG.DBO.PROC_DELSALE_HOLD @START_DATE        
+          
+DELETE FROM #DEL WHERE PARTY_CODE NOT IN (SELECT CLTCODE                  
+     FROM #LEDBAL_FINAL)             
+        
+UPDATE #DEL SET SCRIP_CATEGORY = (CASE WHEN S.CATEGORY = 'BLUE CHIP' THEN 1         
+            WHEN S.CATEGORY = 'GOOD' THEN 2        
+            WHEN S.CATEGORY = 'AVERAGE' THEN 3        
+            WHEN S.CATEGORY = 'POOR' THEN 4        
+            ELSE 5 END)        
+FROM VW_SCRIP_CATEGORY S        
+WHERE CERTNO = ISIN         
+        
+UPDATE #DEL SET SCRIP_CD = M.SCRIP_CD, SERIES = M.SERIES        
+FROM MULTIISIN M        
+WHERE M.ISIN = CERTNO        
+AND VALID = 1        
+AND EXCHANGE = 'NSE'         
+        
+UPDATE #DEL SET SCRIP_CD = M.SCRIP_CD, SERIES = M.SERIES        
+FROM ANAND.BSEDB_AB.DBO.MULTIISIN M        
+WHERE M.ISIN = CERTNO        
+AND VALID = 1         
+AND EXCHANGE = 'BSE'        
+        
+UPDATE #DEL SET CL_RATE = C.CL_RATE FROM MSAJAG.DBO.CLOSING C           
+WHERE SYSDATE LIKE @CL_DATE + '%'                                   
+AND C.SCRIP_CD = #DEL.SCRIP_CD                                          
+AND #DEL.SERIES IN ('EQ','BE')                                          
+AND C.SERIES IN ('EQ','BE')                     
+AND #DEL.CL_RATE = 0 AND EXCHANGE = 'NSE'                                        
+                                          
+UPDATE #DEL SET CL_RATE = C.CL_RATE FROM MSAJAG.DBO.CLOSING C          
+WHERE SYSDATE LIKE @CL_DATE + '%'                                  
+AND C.SCRIP_CD = #DEL.SCRIP_CD                                          
+AND C.SERIES = #DEL.SERIES                                    
+AND #DEL.CL_RATE = 0 AND EXCHANGE = 'NSE'                             
+                
+UPDATE #DEL SET CL_RATE = C.CL_RATE FROM ANAND.BSEDB_AB.DBO.CLOSING C           
+WHERE SYSDATE LIKE @CL_DATE + '%'                                  
+AND C.SCRIP_CD = #DEL.SCRIP_CD                                          
+AND C.SERIES = #DEL.SERIES                                    
+AND #DEL.CL_RATE = 0 AND EXCHANGE = 'BSE'                
+                
+UPDATE #DEL SET SCRIP_CD = S2.SCRIP_CD, SERIES = #DEL.SCRIP_CD                
+FROM ANAND.BSEDB_AB.DBO.SCRIP2 S2                
+WHERE BSECODE = #DEL.SCRIP_CD                
+AND #DEL.EXCHANGE = 'BSE'                
+          
+UPDATE #DEL SET CL_RATE = CL_RATE - (CL_RATE * @CLRATEHAIRCUT)/ 100          
+          
+UPDATE #DEL SET CL_RATE = ((FLOOR(( CL_RATE * POWER(10,2)+ 5 + -2.5)/(5 + 0 )) * (5 + 0))/POWER(10,2))           
+WHERE CL_RATE > 0           
+          
+UPDATE #DEL SET LEDAMT = AMOUNT                  
+FROM #LEDBAL_FINAL                 
+WHERE #DEL.PARTY_CODE = CLTCODE                  
+          
+DELETE FROM #DEL           
+WHERE SCRIP_CD IN (SELECT DATAVALUE FROM TBL_RMS_EXCEPTION WHERE DATATYPE = 'SCRIP')          
+          
+DELETE FROM #DEL           
+WHERE SERIES IN (SELECT DATAVALUE FROM TBL_RMS_EXCEPTION WHERE DATATYPE = 'SCRIP')          
+        
+CREATE CLUSTERED INDEX [SNO] ON [DBO].[#DEL]        
+(        
+ [SNO] ASC        
+)        
+        
+CREATE NONCLUSTERED INDEX [PARTYCL] ON [DBO].[#DEL]        
+(        
+ [PARTY_CODE] ASC,        
+ [CL_RATE] ASC        
+)        
+                  
+SET @LEDCUR = CURSOR FOR                  
+SELECT CLTCODE, AMOUNT                  
+FROM #LEDBAL_FINAL            
+ORDER BY CLTCODE                  
+OPEN @LEDCUR                   
+FETCH NEXT FROM @LEDCUR INTO @PARTY_CODE, @AMOUNT        
+WHILE @@FETCH_STATUS = 0                   
+BEGIN                  
+ SET @DELCUR = CURSOR FOR                  
+ SELECT SNO, SETT_NO, SETT_TYPE, SCRIP_CD, SERIES, QTY, CL_RATE, START_DATE, HOLDTYPE, SCRIP_CATEGORY FROM #DEL                  
+ WHERE PARTY_CODE = @PARTY_CODE  AND CL_RATE > 0           
+ ORDER BY HOLDTYPE, START_DATE DESC, SCRIP_CATEGORY, CL_RATE, SCRIP_CD, SERIES                  
+ OPEN @DELCUR                  
+ FETCH NEXT FROM @DELCUR INTO @SNO, @SETT_NO, @SETT_TYPE, @SCRIP_CD, @SERIES, @QTY, @CL_RATE, @START_DATE, @HOLDTYPE, @SCRIP_CATEGORY                  
+ WHILE @@FETCH_STATUS = 0 AND @AMOUNT > 0                  
+ BEGIN                   
+  IF @AMOUNT >= @CL_RATE * @QTY                  
+  BEGIN                  
+   UPDATE #DEL SET TOSELLQTY = @QTY                   
+   WHERE SNO = @SNO                 
+                  
+   SET @AMOUNT = @AMOUNT - (@CL_RATE * @QTY)                  
+  END                  
+  ELSE                  
+  BEGIN                  
+   SET @NEWQTY = CEILING(@AMOUNT / @CL_RATE)                  
+        
+   IF @NEWQTY > @QTY         
+ SELECT @NEWQTY = @QTY        
+                   
+   UPDATE #DEL SET TOSELLQTY = @NEWQTY                  
+   WHERE SNO = @SNO        
+                  
+   SET @AMOUNT = @AMOUNT - (@CL_RATE * @NEWQTY)                  
+  END                  
+  FETCH NEXT FROM @DELCUR INTO @SNO, @SETT_NO, @SETT_TYPE, @SCRIP_CD, @SERIES, @QTY, @CL_RATE, @START_DATE, @HOLDTYPE, @SCRIP_CATEGORY        
+ END                  
+ CLOSE @DELCUR                  
+ DEALLOCATE @DELCUR                  
+ FETCH NEXT FROM @LEDCUR INTO @PARTY_CODE, @AMOUNT                  
+END                  
+CLOSE @LEDCUR                 
+DEALLOCATE @LEDCUR                  
+          
+DELETE FROM TBL_RMS_SALE          
+WHERE PROCESS_DATE LIKE @PROCESS_DATE + '%'            
+          
+INSERT INTO TBL_RMS_SALE          
+SELECT D.EXCHANGE,SETT_NO,SETT_TYPE,D.PARTY_CODE,LONG_NAME,BRANCH_CD,                  
+SCRIP_CD,SERIES,QTY,CL_RATE,LEDAMT,TOSELLQTY,                  
+START_DATE, HOLDAMT = QTY*CL_RATE, SELLAMT = TOSELLQTY*CL_RATE,           
+NOOFDAYS=@NOOFDAYS,DEBITVALUE=@DEBITVALUE,DEBITMARKUP=@DEBITMARKUP,CLRATEHAIRCUT=@CLRATEHAIRCUT,CLTYPEPARA=@CLTYPE,           
+PROCESS_DATE = CONVERT(DATETIME,@PROCESS_DATE), RUNDATE = GETDATE(), HOLDTYPE,        
+CERTNO, SCRIP_CATEGORY        
+FROM #DEL D, CLIENT1 C1, CLIENT2 C2                  
+WHERE C1.CL_CODE = C2.CL_CODE                  
+AND C2.PARTY_CODE = D.PARTY_CODE            
+AND TOSELLQTY > 0                 
+ORDER BY D.PARTY_CODE, START_DATE,                   
+CL_RATE, SCRIP_CD, SERIES               
+          
+INSERT INTO TBL_RMS_SALE_HISTORY           
+SELECT D.EXCHANGE,SETT_NO,SETT_TYPE,D.PARTY_CODE,LONG_NAME,BRANCH_CD,                  
+SCRIP_CD,SERIES,QTY,CL_RATE,LEDAMT,TOSELLQTY,                  
+START_DATE, HOLDAMT = QTY*CL_RATE, SELLAMT = TOSELLQTY*CL_RATE,           
+NOOFDAYS=@NOOFDAYS,DEBITVALUE=@DEBITVALUE,DEBITMARKUP=@DEBITMARKUP,CLRATEHAIRCUT=@CLRATEHAIRCUT,CLTYPEPARA=@CLTYPE,            
+PROCESS_DATE = CONVERT(DATETIME,@PROCESS_DATE), RUNDATE = GETDATE(), HOLDTYPE,        
+CERTNO, SCRIP_CATEGORY          
+FROM #DEL D, CLIENT1 C1, CLIENT2 C2                  
+WHERE C1.CL_CODE = C2.CL_CODE                  
+AND C2.PARTY_CODE = D.PARTY_CODE            
+--AND TOSELLQTY > 0                 
+ORDER BY D.PARTY_CODE, START_DATE,                   
+CL_RATE, SCRIP_CD, SERIES
+
+GO

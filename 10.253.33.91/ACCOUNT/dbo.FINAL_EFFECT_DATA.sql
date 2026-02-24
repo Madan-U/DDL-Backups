@@ -1,0 +1,19 @@
+-- Object: PROCEDURE dbo.FINAL_EFFECT_DATA
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+
+CREATE PROC FINAL_EFFECT_DATA
+(    @A INT
+
+)
+AS
+ 
+	DECLARE @TODATE VARCHAR (10) =CONVERT(VARCHAR(11),GETDATE()- @A ,120)
+
+	TRUNCATE TABLE NSE_DATE
+
+	INSERT INTO NSE_DATE
+	EXEC EFFCT_DATA @A
+
+GO

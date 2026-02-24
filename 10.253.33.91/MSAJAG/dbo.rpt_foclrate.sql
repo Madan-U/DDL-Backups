@@ -1,0 +1,39 @@
+-- Object: PROCEDURE dbo.rpt_foclrate
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 5/11/01 6:19:47 PM ******/
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 5/7/2001 9:02:47 PM ******/
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 5/5/2001 2:43:36 PM ******/
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 5/5/2001 1:24:10 PM ******/
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 4/30/01 5:50:09 PM ******/
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 10/26/00 6:04:41 PM ******/
+
+
+
+
+
+
+/****** Object:  Stored Procedure dbo.rpt_foclrate    Script Date: 12/27/00 8:59:09 PM ******/
+/*
+Used In      : NSE FO
+Report Name  : Margin Report
+File Name    : spreaddetail.asp
+Tables Used  : foclosing
+Function     : Returns closingrate of a particular expirydate
+Written By   : Amolika Patil 
+*/
+CREATE PROCEDURE rpt_foclrate
+@expdate varchar(12)
+AS
+select cl_rate
+from foclosing 
+where convert(varchar,expirydate,106) = @expdate
+
+GO

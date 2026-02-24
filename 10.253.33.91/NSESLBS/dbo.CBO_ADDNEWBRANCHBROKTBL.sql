@@ -1,0 +1,55 @@
+-- Object: PROCEDURE dbo.CBO_ADDNEWBRANCHBROKTBL
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+--EXEC CBO_ADDNEWBRANCHBROKTBL 4,'TEST','AAAAA','S','ASHOKS','12 DEC 2007','12','NSE','CAPITAL'
+--SELECT * FROM BRANCHBROKTABLE
+CREATE  PROCEDURE CBO_ADDNEWBRANCHBROKTBL
+	@TABLE_NO SMALLINT,
+	@TABLE_NAME VARCHAR(30),
+	@BRANCH_CODE VARCHAR(10),
+	@TABLE_TYPE CHAR(1),
+	@CREATED_BY VARCHAR(25),
+	@CREATED_ON DATETIME,
+	@REMARKS VARCHAR(50),
+	@EXCHANGE VARCHAR(3),
+	@SEGMENT VARCHAR(7),
+	@STATUSID VARCHAR(25) = 'BROKER',      
+	@STATUSNAME VARCHAR(25) = 'BROKER'  
+AS
+
+IF @TABLE_NO=@TABLE_NO  
+BEGIN  
+ IF EXISTS(SELECT TOP 1 * FROM BranchBrokTable WHERE Table_No = @TABLE_NO)      
+ BEGIN  
+ RAISERROR ('BranchBrokTable Table Already Exists in database.', 16, 1)  
+  RETURN 
+ END
+
+INSERT INTO BranchBrokTable      
+(      
+	Table_No,
+	Table_Name,
+	Branch_Code,
+	Table_Type,
+	Created_By,
+	Created_On,
+	Remarks,
+	Exchange,
+	Segment
+ )      
+ VALUES      
+ (      
+	@TABLE_NO,
+	@TABLE_NAME,
+	@BRANCH_CODE,
+	@TABLE_TYPE,
+	@CREATED_BY,
+	@CREATED_ON,
+	@REMARKS,
+	@EXCHANGE,
+	@SEGMENT    
+ )  
+END
+
+GO

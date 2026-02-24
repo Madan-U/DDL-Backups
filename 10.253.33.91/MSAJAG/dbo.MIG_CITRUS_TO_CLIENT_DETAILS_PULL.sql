@@ -1,0 +1,32 @@
+-- Object: PROCEDURE dbo.MIG_CITRUS_TO_CLIENT_DETAILS_PULL
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+      
+
+      
+
+CREATE PROC [dbo].[MIG_CITRUS_TO_CLIENT_DETAILS_PULL]      
+
+AS        
+
+DECLARE       
+
+ @FDATE VARCHAR(11),      
+
+ @TDATE VARCHAR(11)      
+
+      
+
+SET @FDATE = CONVERT(VARCHAR(11), GETDATE()-10)      
+
+SET @TDATE = CONVERT(VARCHAR(11), GETDATE())      
+
+      
+
+EXEC MSAJAG.DBO.MIG_CITRUS_TO_CLIENT_DETAILS_EQUITY @FDATE, @TDATE      
+
+EXEC MSAJAG.DBO.MIG_CITRUS_TO_CLIENT_DETAILS_COMMODITY @FDATE, @TDATE
+
+GO

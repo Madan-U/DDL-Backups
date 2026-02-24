@@ -1,0 +1,42 @@
+-- Object: PROCEDURE dbo.RepostLedger2
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+--REPOSTLEDGER2 88
+CREATE PROC REPOSTLEDGER2          
+@VTYP SMALLINT          
+          
+AS          
+DECLARE          
+ @@VNO AS VARCHAR(12),          
+ @@DATA AS CURSOR          
+          
+SET @@DATA = CURSOR FOR          
+SELECT DISTINCT top 1000 VNO FROM LEDGER(NOLOCK) WHERE VNO NOT IN(SELECT VNO FROM LEDGER2(NOLOCK) WHERE VTYPE = @VTYP)        
+AND VTYP = @VTYP        
+--AND VNO IN ( '201300003824','201300003825','201300003826','201200028177','201200028178','201200028179','201200028180','201200028181')  
+AND PDT LIKE 'MAR  8 2014%'
+        
+OPEN @@DATA          
+FETCH NEXT FROM @@DATA INTO @@VNO          
+SET NOCOUNT ON          
+WHILE @@FETCH_STATUS = 0          
+ BEGIN          
+  DELETE FROM TEMPLEDGER2 WHERE SESSIONID = '9999999999'          
+  INSERT INTO TEMPLEDGER2          
+  SELECT 'BRANCH', CASE WHEN A.BRANCHCODE <> 'ALL' THEN A.BRANCHCODE ELSE 'HO' END,          
+    L.VAMT, L.VTYP, L.VNO, L.LNO, L.DRCR, '0', L.BOOKTYPE, '9999999999',          
+    L.CLTCODE, 'A', 0          
+   FROM          
+    LEDGER L(nolock), ACMAST A(nolock)          
+   WHERE          
+    L.CLTCODE = A.CLTCODE          
+    AND L.VNO = @@VNO AND L.VTYP = @VTYP AND L.BOOKTYPE = '01'          
+        
+  EXEC INSERTTOLEDGER2 '9999999999', @@VNO, 1, 1, '', 'BROKER', 'BROKER'          
+        
+  PRINT 'UPDATED VOUCHER NO. ' + @@VNO          
+  FETCH NEXT FROM @@DATA INTO @@VNO          
+ END
+
+GO

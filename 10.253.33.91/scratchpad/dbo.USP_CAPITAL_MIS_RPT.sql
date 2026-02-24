@@ -1,0 +1,125 @@
+-- Object: PROCEDURE dbo.USP_CAPITAL_MIS_RPT
+-- Server: 10.253.33.91 | DB: scratchpad
+--------------------------------------------------
+
+
+---|| DESCRIPTION :- CLIENTWISE EOD AND PEAK REPORT ALLOCATION TEAM (BHAGYASHREE PRADHAN)
+---|| CREATED BY :- HRISHI Y
+---|| CREATED DATE :- 11-DEC-2024
+
+CREATE PROC [dbo].[USP_CAPITAL_MIS_RPT] (@TDATE DATETIME)
+
+AS
+--DECLARE @TDATE DATETIME='2024-12-09'
+
+DECLARE @SQL VARCHAR (MAX) ,@SQL2 VARCHAR (MAX), @SQLFINAL VARCHAR (MAX) , @PATH VARCHAR (MAX)
+--SET @PATH='J:\Backoffice\SL_AUTO\COMPLIANCE_REPORTS\DMS_REPORT\INPUT\INPUT.txt'
+
+IF OBJECT_ID(N'TEMPDB..#CAPITALREQUIREMENT_DETAIL_EOD') IS NOT NULL
+DROP TABLE #CAPITALREQUIREMENT_DETAIL_EOD
+
+SELECT --TOP 100
+MDATE,PARTY_CODE,MAX_MARGIN,EPIAMOUNT,MAX_VDT,MAX_EDT, 
+CASE WHEN [SUM OF HC MISMATCH] like '-%' THEN '0' ELSE [SUM OF HC MISMATCH] END AS [SUM OF HC MISMATCH],
+CASE WHEN [Sum of Excess Qty2] like '-%' THEN '0' ELSE [Sum of Excess Qty2] END AS [Sum of Excess Qty2],
+CASE WHEN [Max of Diff-VDT-EDT] like '-%' THEN '0' ELSE [Max of Diff-VDT-EDT] END AS [Max of Diff-VDT-EDT],
+CASE WHEN [Sum of RepledgeValue] like '-%' THEN '0' ELSE [Sum of RepledgeValue] END AS [Sum of RepledgeValue],
+CASE WHEN [Sum of StockINHand Value] like '-%' THEN '0' ELSE [Sum of StockINHand Value] END AS [Sum of StockINHand Value]
+,[Margin/2],[Cash Shortfall],[Non-cash shortfall],
+CASE WHEN [Cash Shortfall for 50:50] like '-%' THEN '0' ELSE [Cash Shortfall for 50:50] END AS [Cash Shortfall for 50:50],
+CASE WHEN [Sum of HC Mismatch-used] like '-%' THEN '0' ELSE [Sum of HC Mismatch-used] END AS [Sum of HC Mismatch-used],
+CASE WHEN [Sum of Excess Qty21] like '-%' THEN '0' ELSE [Sum of Excess Qty21] END AS [Sum of Excess Qty21],
+CASE WHEN [EPN] like '-%' THEN '0' ELSE [EPN] END AS [EPN],
+CASE WHEN [Sum of StockINHand Value1] like '-%' THEN '0' ELSE [Sum of StockINHand Value1] END AS [Sum of StockINHand Value1],
+CASE WHEN [Cash Shortfall for 50:501] like '-%' THEN '0' ELSE [Cash Shortfall for 50:501] END AS [Cash Shortfall for 50:501]
+,[Funds],[PLEDGEFULLVAL1],[REPLEDGEFULLVAL1],[TOTALVALUE_CC],[EXCESSTOTALVALUE_CC],[FUNDS / MAX_MARGIN %],[90 %],[DIFF %],[DIFF AMT]
+INTO #CAPITALREQUIREMENT_DETAIL_EOD
+FROM INHOUSE.DBO.CAPITALREQUIREMENT_DETAIL_EOD
+WHERE MDATE >=@TDATE AND MDATE <=@TDATE
+
+--SELECT * FROM #CAPITALREQUIREMENT_DETAIL_EOD
+
+IF OBJECT_ID(N'TEMPDB..#CAPITALREQUIREMENT_DETAIL_PEAK') IS NOT NULL
+DROP TABLE #CAPITALREQUIREMENT_DETAIL_PEAK
+
+SELECT --TOP 100 
+MDATE,PARTY_CODE,MAX_MARGIN,EPIAMOUNT,MAX_VDT,MAX_EDT, 
+CASE WHEN [SUM OF HC MISMATCH] like '-%' THEN '0' ELSE [SUM OF HC MISMATCH] END AS [SUM OF HC MISMATCH],
+CASE WHEN [Sum of Excess Qty2] like '-%' THEN '0' ELSE [Sum of Excess Qty2] END AS [Sum of Excess Qty2],
+CASE WHEN [Max of Diff-VDT-EDT] like '-%' THEN '0' ELSE [Max of Diff-VDT-EDT] END AS [Max of Diff-VDT-EDT],
+CASE WHEN [Sum of RepledgeValue] like '-%' THEN '0' ELSE [Sum of RepledgeValue] END AS [Sum of RepledgeValue],
+CASE WHEN [Sum of StockINHand Value] like '-%' THEN '0' ELSE [Sum of StockINHand Value] END AS [Sum of StockINHand Value]
+,[Margin/2],[Cash Shortfall],[Non-cash shortfall],
+CASE WHEN [Cash Shortfall for 50:50] like '-%' THEN '0' ELSE [Cash Shortfall for 50:50] END AS [Cash Shortfall for 50:50],
+CASE WHEN [Sum of HC Mismatch-used] like '-%' THEN '0' ELSE [Sum of HC Mismatch-used] END AS [Sum of HC Mismatch-used],
+CASE WHEN [Sum of Excess Qty21] like '-%' THEN '0' ELSE [Sum of Excess Qty21] END AS [Sum of Excess Qty21],
+CASE WHEN [EPN] like '-%' THEN '0' ELSE [EPN] END AS [EPN],
+CASE WHEN [Sum of StockINHand Value1] like '-%' THEN '0' ELSE [Sum of StockINHand Value1] END AS [Sum of StockINHand Value1],
+CASE WHEN [Cash Shortfall for 50:501] like '-%' THEN '0' ELSE [Cash Shortfall for 50:501] END AS [Cash Shortfall for 50:501]
+,[Funds],[PLEDGEFULLVAL1],[REPLEDGEFULLVAL1],[TOTALVALUE_CC],[EXCESSTOTALVALUE_CC],[FUNDS / MAX_MARGIN %],[90 %],[DIFF %],[DIFF AMT]
+INTO #CAPITALREQUIREMENT_DETAIL_PEAK
+FROM INHOUSE.DBO.CAPITALREQUIREMENT_DETAIL_PEAK
+WHERE MDATE >=@TDATE AND MDATE <=@TDATE
+
+--SELECT * FROM #CAPITALREQUIREMENT_DETAIL_PEAK
+
+---------------------- || MAIN DATA INSERT END || ----------------------
+
+TRUNCATE TABLE DUSTBIN.DBO.TBL_CAPITAL_MIS_EOD
+TRUNCATE TABLE DUSTBIN.DBO.TBL_CAPITAL_MIS_PEAK
+
+INSERT INTO DUSTBIN.DBO.TBL_CAPITAL_MIS_EOD
+SELECT CAST ([MDATE] AS VARCHAR(11)) AS [MDATE],CAST ([PARTY_CODE] AS VARCHAR) AS [PARTY_CODE],
+CAST ([MAX_MARGIN] AS VARCHAR) AS [MAX_MARGIN],CAST ([EPIAMOUNT] AS VARCHAR) AS [EPIAMOUNT],CAST ([MAX_VDT] AS VARCHAR) AS [MAX_VDT],CAST ([MAX_EDT] AS VARCHAR) AS [MAX_EDT],
+CAST ([SUM OF HC MISMATCH] AS VARCHAR) AS [SUM OF HC MISMATCH],CAST ([Sum of Excess Qty2] AS VARCHAR) AS [Sum of Excess Qty2],
+CAST ([Max of Diff-VDT-EDT] AS VARCHAR) AS [Max of Diff-VDT-EDT],CAST ([Sum of RepledgeValue] AS VARCHAR) AS [Sum of RepledgeValue],
+CAST ([Sum of StockINHand Value] AS VARCHAR) AS [Sum of StockINHand Value],CAST ([Margin/2] AS VARCHAR) AS [Margin/2],CAST ([Cash Shortfall] AS VARCHAR) AS [Cash Shortfall],
+CAST ([Non-cash shortfall] AS VARCHAR) AS [Non-cash shortfall],CAST ([Cash Shortfall for 50:50] AS VARCHAR) AS [Cash Shortfall for 50:50],
+CAST ([Sum of HC Mismatch-used] AS VARCHAR) AS [Sum of HC Mismatch-used],CAST ([Sum of Excess Qty21] AS VARCHAR) AS [Sum of Excess Qty21],CAST ([EPN] AS VARCHAR) AS [EPN],
+CAST ([Sum of StockINHand Value1] AS VARCHAR) AS [Sum of StockINHand Value1],CAST ([Cash Shortfall for 50:501] AS VARCHAR) AS [Cash Shortfall for 50:501],
+CAST ([Funds] AS VARCHAR) AS [Funds],CAST ([PLEDGEFULLVAL1] AS VARCHAR) AS [PLEDGEFULLVAL1],CAST ([REPLEDGEFULLVAL1] AS VARCHAR) AS [REPLEDGEFULLVAL1],
+CAST ([TOTALVALUE_CC] AS VARCHAR) AS [TOTALVALUE_CC],CAST ([EXCESSTOTALVALUE_CC] AS VARCHAR) AS [EXCESSTOTALVALUE_CC],CAST ([FUNDS / MAX_MARGIN %] AS VARCHAR) AS [FUNDS / MAX_MARGIN %],
+CAST ([90 %] AS VARCHAR) AS [90 %],CAST ([DIFF %] AS VARCHAR) AS [DIFF %],CAST ([DIFF AMT] AS VARCHAR) AS [DIFF AMT]
+FROM #CAPITALREQUIREMENT_DETAIL_EOD
+
+INSERT INTO DUSTBIN.DBO.TBL_CAPITAL_MIS_PEAK
+SELECT CAST ([MDATE] AS VARCHAR(11)) AS [MDATE],CAST ([PARTY_CODE] AS VARCHAR) AS [PARTY_CODE],CAST ([MAX_MARGIN] AS VARCHAR) AS [MAX_MARGIN],
+CAST ([EPIAMOUNT] AS VARCHAR) AS [EPIAMOUNT],CAST ([MAX_VDT] AS VARCHAR) AS [MAX_VDT],CAST ([MAX_EDT] AS VARCHAR) AS [MAX_EDT],
+CAST ([SUM OF HC MISMATCH] AS VARCHAR) AS [SUM OF HC MISMATCH],CAST ([SUM OF EXCESS QTY2] AS VARCHAR) AS [SUM OF EXCESS QTY2],CAST ([MAX OF DIFF-VDT-EDT] AS VARCHAR) AS [MAX OF DIFF-VDT-EDT],
+CAST ([SUM OF REPLEDGEVALUE] AS VARCHAR) AS [SUM OF REPLEDGEVALUE],CAST ([SUM OF STOCKINHAND VALUE] AS VARCHAR) AS [SUM OF STOCKINHAND VALUE],CAST ([MARGIN/2] AS VARCHAR) AS [MARGIN/2],
+CAST ([CASH SHORTFALL] AS VARCHAR) AS [CASH SHORTFALL],CAST ([NON-CASH SHORTFALL] AS VARCHAR) AS [NON-CASH SHORTFALL],CAST ([CASH SHORTFALL FOR 50:50] AS VARCHAR) AS [CASH SHORTFALL FOR 50:50],
+CAST ([SUM OF HC MISMATCH-USED] AS VARCHAR) AS [SUM OF HC MISMATCH-USED],CAST ([SUM OF EXCESS QTY21] AS VARCHAR) AS [SUM OF EXCESS QTY21],CAST ([EPN] AS VARCHAR) AS [EPN],
+CAST ([SUM OF STOCKINHAND VALUE1] AS VARCHAR) AS [SUM OF STOCKINHAND VALUE1],CAST ([CASH SHORTFALL FOR 50:501] AS VARCHAR) AS [CASH SHORTFALL FOR 50:501],CAST ([FUNDS] AS VARCHAR) AS [FUNDS],
+CAST ([PLEDGEFULLVAL1] AS VARCHAR) AS [PLEDGEFULLVAL1],CAST ([REPLEDGEFULLVAL1] AS VARCHAR) AS [REPLEDGEFULLVAL1],CAST ([TOTALVALUE_CC] AS VARCHAR) AS [TOTALVALUE_CC],
+CAST ([EXCESSTOTALVALUE_CC] AS VARCHAR) AS [EXCESSTOTALVALUE_CC],CAST ([FUNDS / MAX_MARGIN %] AS VARCHAR) AS [FUNDS / MAX_MARGIN %],CAST ([90 %] AS VARCHAR) AS [90 %],
+CAST ([DIFF %] AS VARCHAR) AS [DIFF %],CAST ([DIFF AMT] AS VARCHAR) AS [DIFF AMT]
+FROM #CAPITALREQUIREMENT_DETAIL_PEAK
+
+---------------------- || FILE GENERATION LOGIC || ----------------------
+
+--DECLARE @RPT_DATE VARCHAR(30)=REPLACE(CONVERT(VARCHAR(10),GETDATE(),3),'/','')          
+DECLARE @FILENAME VARCHAR(100) = 'J:\Backoffice\SL_AUTO\ANAND_G\CAPITAL_MIS_DATA\OUTPUT\' +'CAPITAL_MIS_EOD_DATA' + '.CSV'          
+DECLARE @ALL VARCHAR(MAX)                    
+                    
+SET @ALL = 'EXEC MASTER.DBO.XP_CMDSHELL ''BCP "SELECT ''''[MDATE]'''',''''[PARTY_CODE]'''',''''[MAX_MARGIN]'''',''''[EPIAMOUNT]'''',''''[MAX_VDT]'''',''''[MAX_EDT]'''',''''[SUM OF HC MISMATCH]'''',''''[Sum of Excess Qty2]'''',''''[Max of Diff-VDT-EDT]'''',''''[Sum of RepledgeValue]'''',''''[Sum of StockINHand Value]'''',''''[Margin/2]'''',''''[Cash Shortfall]'''',''''[Non-cash shortfall]'''',''''[Cash Shortfall for 50:50]'''',''''[Sum of HC Mismatch-used]'''',''''[Sum of Excess Qty21]'''',''''[EPN]'''',''''[Sum of StockINHand Value1]'''',''''[Cash Shortfall for 50:501]'''',''''[Funds]'''',''''[PLEDGEFULLVAL1]'''',''''[REPLEDGEFULLVAL1]'''',''''[TOTALVALUE_CC]'''',''''[EXCESSTOTALVALUE_CC]'''',''''[FUNDS / MAX_MARGIN %]'''',''''[90 %]'''',''''[DIFF %]'''',''''[DIFF AMT]'''''
+SET @ALL = @ALL+ ' UNION ALL SELECT * FROM DUSTBIN.DBO.TBL_CAPITAL_MIS_EOD'                  
+PRINT @ALL                    
+SET @ALL=@ALL+' " QUERYOUT ' +@FILENAME+ ' -c -t"," -c -t"," -r"\n" -T'', NO_OUTPUT'                    
+PRINT @ALL                    
+EXEC(@ALL)    
+
+DECLARE @FILENAME1 VARCHAR(100) = 'J:\Backoffice\SL_AUTO\ANAND_G\CAPITAL_MIS_DATA\OUTPUT\' +'CAPITAL_MIS_PEAK_DATA' + '.CSV'          
+DECLARE @ALL1 VARCHAR(MAX)                    
+                    
+SET @ALL1 = 'EXEC MASTER.DBO.XP_CMDSHELL ''BCP "SELECT ''''[MDATE]'''',''''[PARTY_CODE]'''',''''[MAX_MARGIN]'''',''''[EPIAMOUNT]'''',''''[MAX_VDT]'''',''''[MAX_EDT]'''',''''[SUM OF HC MISMATCH]'''',''''[Sum of Excess Qty2]'''',''''[Max of Diff-VDT-EDT]'''',''''[Sum of RepledgeValue]'''',''''[Sum of StockINHand Value]'''',''''[Margin/2]'''',''''[Cash Shortfall]'''',''''[Non-cash shortfall]'''',''''[Cash Shortfall for 50:50]'''',''''[Sum of HC Mismatch-used]'''',''''[Sum of Excess Qty21]'''',''''[EPN]'''',''''[Sum of StockINHand Value1]'''',''''[Cash Shortfall for 50:501]'''',''''[Funds]'''',''''[PLEDGEFULLVAL1]'''',''''[REPLEDGEFULLVAL1]'''',''''[TOTALVALUE_CC]'''',''''[EXCESSTOTALVALUE_CC]'''',''''[FUNDS / MAX_MARGIN %]'''',''''[90 %]'''',''''[DIFF %]'''',''''[DIFF AMT]'''''
+SET @ALL1 = @ALL1+ ' UNION ALL SELECT * FROM DUSTBIN.DBO.TBL_CAPITAL_MIS_PEAK'                  
+PRINT @ALL1                    
+SET @ALL1=@ALL1+' " QUERYOUT ' +@FILENAME1+ ' -c -t"," -c -t"," -r"\n" -T'', NO_OUTPUT'                    
+PRINT @ALL1                    
+EXEC(@ALL1)   
+
+---------------------- || FILE GENERATION LOGIC || ----------------------
+                
+SELECT 'CAPITAL MIS EOD AND PEAK DATA FILE EXPORTED TO \\10.253.33.91 \ Backoffice \ SL_AUTO \ ANAND_G \ CAPITAL_MIS_DATA \ OUTPUT' AS 'REMARK'
+
+GO

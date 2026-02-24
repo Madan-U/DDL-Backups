@@ -1,0 +1,1053 @@
+-- Object: PROCEDURE dbo.Proc_newbasicreport_Combine
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+
+
+
+
+
+/****** Object:  Stored Procedure Dbo.proc_newbasicreport    Script Date: 01/15/2005 1:12:51 Pm ******/
+
+/****** Object:  Stored Procedure Dbo.proc_newbasicreport    Script Date: 12/06/2004 10:42:58 Pm ******/
+
+/****** Object:  Stored Procedure Dbo.proc_newbasicreport    Script Date: 12/06/2004 8:29:47 Pm ******/
+
+
+
+CREATE  Procedure Proc_newbasicreport_Combine ( 
+@sett_no Varchar(10), 		 ---1  Settlement No(from)
+@tosett_no Varchar(10),		 ---2  Settlement No (to)
+@sett_type Varchar(3),		 ---3  Settlement Type 
+@sauda_date Varchar(11),	 ---4 Sauda_date (from)
+@todate Varchar(11),		 ---5 Sauda_date (to)
+@fromscrip Varchar(10),		 ---6 From Scrip_cd (from)
+@toscrip Varchar(10),		 ---7 To Scrip_cd (to)
+@from Varchar(20), 		 ---8  From Consol
+@to Varchar (20), 		 ---9  To Consol
+@consol Varchar(10),		 ---10  Consol Indicates That Whether Is "party_code","trader","sub Broker","branch"
+@detail Varchar(3),		 ---11  This Is Other Details In Query "b" = "bill","c" = "confirmation","p" = "position","br" = "brokerage","s" = "sauda Summary"
+@level  Smallint,                                  --- 12 Will Be Used To Select  Level Of Consolidation Default 0
+@groupf Varchar(500),		 ---13 (any Necessary Grouping) This Can Be Defined On The Fly By Developer
+@orderf Varchar(500),		 ---14 (any Necessary Order By) This Can De Defined On The Fly By Developer 
+@use1 Varchar(10),                    --- 15 To Be Used Later  For Other Purposes
+@statusid Varchar(15),
+@statusname Varchar(25),
+@exchange varchar(3))
+As
+Declare
+@@getstyle As Cursor,
+@@sett_no As Varchar(10),
+@@fromparty_code As Varchar(10),
+@@toparty_code  As Varchar(10),
+@@fromsett_type As Varchar(3),
+@@tosett_type As Varchar(3),
+@@myquery As Varchar(4000),
+@@myreport As Varchar(50),
+@@myorder As Varchar(1500),
+@@mygroup As Varchar(1500),
+@@part As Varchar(8000),
+@@part1 As Varchar(8000),
+@@part2 As Varchar(8000),
+@@part3 As Varchar(8000),
+@@part4 As Varchar(8000),
+@@part5 As Varchar(8000),
+@@part6 As Varchar(8000),
+@@wisereport As Varchar(10),
+@@dummy1 As Varchar(1000),
+@@dummy2 As Varchar(1000),
+@@fromfamily As Varchar(10),
+@@tofamily  As Varchar(10),
+@@frombranch_cd As Varchar(15),
+@@tobranch_cd  As Varchar(15),
+@@fromsub_broker As Varchar(15),
+@@tosub_broker  As Varchar(15),
+@@fromtrader As Varchar(15),
+@@totrader  As Varchar(15),
+@@fromregion Varchar(15),
+@@toregion Varchar(15),
+@@fromarea Varchar(15),
+@@toarea Varchar(15),
+@@dummy3 As Varchar(1000),
+@@fromtable As Varchar(1000),    --------------------   This String Will Enable Us To Code Conditions Like From Settlement
+@@selectflex As Varchar (2000),   ---------------------  This String Will Enable Us To Code Flexible Select Conditions 
+@@selectflex1 As Varchar (2000),   ---------------------  This String Will Enable Us To Code Flexible Select Conditions 
+@@selectbody As Varchar(8000),  ---------------------   This Is Regular Select Body
+@@selectbody1 As Varchar(8000),  ---------------------   This Is Regular Select Body
+@@wheretext As Varchar(8000),  ---------------------  This Will Be Used For Coding Where Condition  
+@@fromtable1 As Varchar(1000), ---------------------   This Is Another String That Can Be Used For  
+@@wherecond1 As Varchar(2000),
+@@strexchange varchar(3)
+
+/* To Reduce The Number Of Queries We Have Joined Maximum Number Of Parameters With Ranges*/
+/* Hence We Are Extracting Ranges If The Partmeter Passed Is %  Or ""   */
+/* If The Parameter Is Passed Then We Make That Same Parameter As From <-----> To  */
+
+
+/* Here I Will Define Rules For Various  */
+-----------------------------------------------------------------------------------------
+       
+If @sett_type = ''
+	Select @sett_type  =  '%'
+
+If ((@consol = "party_code" Or @consol = "broker")) And  ((@from <> "") And (@to = "" ) ) 
+Begin
+          Select @@fromparty_code = @from
+          Select @@toparty_code = @from 
+End
+
+If ((@consol = "party_code" Or @consol = "broker")) And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+          Select @@fromparty_code = @from
+          Select @@toparty_code = @to 
+End
+
+If (@consol = "family") And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+          Select @@fromfamily = @from
+          Select @@tofamily = @to 
+          Select @@fromparty_code = '0'
+	  Select @@toparty_code = 'ZZZZZZZZZZ' 
+End
+Else If (@consol = "family") And  ((@from = "") And (@to = "" ) ) 
+Begin          
+          Select @@fromparty_code = '0', @@toparty_code = 'ZZZZZZZZZZ', @@fromfamily = '0' , @@tofamily = 'ZZZZZZZZZZ'
+End
+
+If (@consol = "branch_cd") And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+          Select @@frombranch_cd = @from
+          Select @@tobranch_cd = @to 
+          Select @@fromparty_code = '0' , @@toparty_code = 'ZZZZZZZZZZ' 
+End
+Else If (@consol = "branch_cd") And  ((@from = "") And (@to = "" ) ) 
+Begin
+          Select @@fromparty_code = '0', @@toparty_code = 'ZZZZZZZZZZ', @@frombranch_cd = '0', @@tobranch_cd = 'ZZZZZZZZZZ'
+End
+
+If (@consol = "trader") And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+          Select @@fromtrader = @from
+          Select @@totrader = @to 
+          Select @@fromparty_code = '0' , @@toparty_code = 'ZZZZZZZZZZ' 
+End
+Else If (@consol = "trader")  And ( ( @from = "" ) And ( @to = "" ) )  
+Begin
+	Select @@fromparty_code = '0' , @@toparty_code = 'ZZZZZZZZZZ', @@fromtrader = '0', @@totrader = 'ZZZZZZZZZZ'
+End
+
+
+If (@consol = "sub_broker") And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+          Select @@fromsub_broker = @from
+          Select @@tosub_broker = @to 
+          Select @@fromparty_code = '0', @@toparty_code = 'ZZZZZZZZZZ' 
+End
+Else If (@consol = "sub_broker")  And ( ( @from = "" ) And ( @to = "" ) )  
+Begin
+	Select @@fromparty_code = '0', @@toparty_code = 'ZZZZZZZZZZ', @@fromsub_broker = '0', @@tosub_broker = 'ZZZZZZZZZZ'
+End
+
+If (@consol = "region")  And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+     Select @@fromparty_code = '0', @@toparty_code = 'ZZZZZZZZZZ' 
+     Select @@fromregion = @from 
+     Select @@toregion = @to 	
+End
+
+Else If (@consol = "region")  And  ((@from = "") And (@to = "" ) ) 
+Begin
+     Select @@toparty_code = 'ZZZZZZZZZZ', @@fromparty_code = '0'
+     Select @@fromregion = '0', @@toregion = 'ZZZZZZZZZZ' 
+End
+If (@consol = "area")  And  ((@from <> "") And (@to <> "" ) ) 
+Begin
+     Select @@toparty_code =  'ZZZZZZZZZZ', @@fromparty_code = '0' 
+     Select @@fromarea = @from 
+     Select @@toarea = @to 	
+End
+
+Else If (@consol = "area")  And  ((@from = "") And (@to = "" ) ) 
+Begin
+     Select @@toparty_code = 'ZZZZZZZZZZ', @@fromparty_code = '0' 
+     Select @@fromarea = '0', @@toarea = 'ZZZZZZZZZZ'
+End
+
+If ( (@consol = "party_code" Or @consol = "broker")) And ( ( @from = "" ) And ( @to = "" ) ) 
+Begin
+     Select @@toparty_code = 'ZZZZZZZZZZ', @@fromparty_code = '0' 
+End
+-----------------------------------------------------------------------------------------
+If @sett_type  <>  "%" 
+Begin
+     Select @@fromsett_type = @sett_type
+     Select @@tosett_type = @sett_type
+End
+
+
+If @sett_type  =  "%" 
+Begin
+      Select @@fromsett_type = 'A', @@tosett_type = 'X'
+End
+
+-----------------------------------------------------------------------------------------
+
+If  ( (@fromscrip = "") And  (@toscrip = "") )
+   Select @fromscrip = '0', @toscrip = 'ZZZZZZZZZZ' 
+
+If (@fromscrip = "")
+   Select @fromscrip = '0'
+
+If (@toscrip = "")
+   Select @toscrip = 'ZZZZZZZZZZ'
+
+-----------------------------------------------------------------------------------------
+If @tosett_no = "" 
+   Set @tosett_no = @sett_no
+
+Select @sauda_date = Ltrim(rtrim(@sauda_date))
+If Len(@sauda_date) = 10 
+Begin
+          Set @sauda_date = Stuff(@sauda_date, 4, 1,"  ")
+End
+
+Select @todate = Ltrim(rtrim(@todate))
+
+If Len(@todate) = 10 
+Begin
+          Set @todate = Stuff(@todate, 4, 1,"  ")
+End
+--------------------------------------------------- Find Saudadate From To From Settlement Range  -------------------------------------------------------------------------------------------------------
+If ( @todate  = "" ) 
+Begin
+        Select @todate = End_date From Sett_mst Where Sett_type Like @sett_type And Sett_no = @tosett_no 
+End
+
+If ( @sauda_date  = "" ) 
+Begin
+        Select @sauda_date = Start_date From Sett_mst Where Sett_type like @sett_type And Sett_no = @sett_no 
+End
+----------------------------------------------------find Settno From To From Sauda_date  Range -------------------------------------------------------------------------------------------------------
+If ( (@sett_no = "" ) And ( Len(@sauda_date) > 1)) 
+Begin
+         Select @sett_no = Min(sett_no) From Sett_mst Where Sett_type Between  @@fromsett_type And @@tosett_type  And Start_date >= @sauda_date + " 00:00"  And End_date <= @todate + " 23:59:59"   
+         If @todate = "" 
+        Set @tosett_no = @sett_no
+End
+
+If ( (@tosett_no = "" ) And ( Len(@todate) > 1)) 
+Begin
+        Select @tosett_no = Max(sett_no) From Sett_mst Where Sett_type Between  @@fromsett_type And @@tosett_type  And Start_date >= @sauda_date + " 00:00"  And End_date <= @todate + " 23:59:59"   
+End
+-----------------------------------------------------------------------------------------
+If @detail = "b" 
+   Set @@myreport = "bill"
+ 
+If @detail = "c" 
+   Set @@myreport = "confirmation"
+
+If @detail = "p" 
+   Set @@myreport = "position"
+
+If @detail = "br" 
+   Set @@myreport = "brokerage"
+
+If @detail = "s" 
+   Set @@myreport = "saudasummary"
+
+------------------------------------- We Will Select From  Various Order By Options -------------------------------------- 
+
+
+If @orderf = "0"       ------------------------------ To Be Used For Contract / Bill --Printing  ------------------------
+Begin
+          If @consol = "party_code"
+             Set @@myorder = " Order By S.party_code, S.sett_no, S.sett_type,  S.scrip_cd Asc, S.series, Tradetyp , Billno, Contractno, S.sauda_date Option (fast 10 )  "
+End
+	
+If @orderf = "1"  ------------------------ To Be Used For Gross Position Across Range ----------------------
+Begin
+	  If @consol = "region"
+             Set  @@myorder = " Order   By Region  Option (fast 1 ) "
+	  If @consol = "area"
+             Set  @@myorder = " Order   By Area  Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order   By Party_code  Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order  By Branch_cd  Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By Family Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By Trader Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order  By Sub_broker Option (fast 1 ) "
+End
+
+If @orderf = "1.1"  ------------------------ To Be Used For Gross Position Across Range ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Region  Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Area  Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Party_code  Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Branch_cd  Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Family Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Trader Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order By S.scrip_cd, S.series, Sub_broker Option (fast 1 ) "
+End
+
+If @orderf = "2"   ------------------------ To Be Used For Net Position Across Settlement  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order  By  S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order  By  S.sett_no,s.sett_type Option (fast 1 ) "
+           If @consol = "party_code"
+             Set  @@myorder = " Order  By  S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder  = " Order  By S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder  = " Order  By S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder  = " Order  By S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "sub_broker"
+     Set  @@myorder = " Order By S.sett_no,s.sett_type Option (fast 1 )"
+End
+
+
+If @orderf = "3"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order  By S.scrip_cd ,s.series Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order  By S.scrip_cd ,s.series Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order  By S.scrip_cd ,s.series Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder  = " Order  By S.scrip_cd ,s.series  Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder  = " Order  By S.scrip_cd ,s.series  Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder  = " Order  By S.scrip_cd ,s.series  Option (fast 1 ) "
+          If @consol = "sub_broker"
+     Set  @@myorder = " Order By S.scrip_cd ,s.series  Option (fast 1 )"
+End
+
+If @orderf = "3.1"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By Region , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By Area , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.party_code , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By Branch_cd  ,s.sett_no,s.sett_type ,s.scrip_cd , S.series Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By Family , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By Trader  , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order  By Sub_broker  , S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 )"
+End
+
+If @orderf = "3.11"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By Region,s.party_code  Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By Area,s.party_code  Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.party_code  Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By Branch_cd  , S.party_code  Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By Family , S.party_code  Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By Trader  , S.party_code  Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order  By Sub_broker  , S.party_code Option (fast 1 )"
+End
+
+If @orderf = "3.2"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By Region , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By Area , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.party_code , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By Branch_cd  ,s.sauda_date ,s.sett_no,s.sett_type ,s.scrip_cd , S.series Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order By Family , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order By Trader  , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order By Sub_broker  , S.sauda_date ,s.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 )"
+End
+
+If @orderf = "3.3"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By Region  ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By Area  ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.party_code  ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By Branch_cd  ,s.scrip_cd , S.series Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By Family , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By Trader  , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order  By Sub_broker  , S.scrip_cd, S.series Option (fast 1 )"
+End
+
+If @orderf = "3.4"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By S.sett_no,s.sett_type ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By S.sett_no,s.sett_type ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "party_code"
+             Set  @@myorder = " Order By S.sett_no,s.sett_type ,s.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order By S.sett_no,s.sett_type  ,s.scrip_cd , S.series Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order By S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By S.sett_no,s.sett_type , S.scrip_cd, S.series Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order  By S.sett_no,s.sett_type  , S.scrip_cd, S.series Option (fast 1 )"
+End
+
+If @orderf = "4"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,sauda_date,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By S.sauda_date , S.sett_no,s.sett_type  Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By S.sauda_date , S.sett_no,s.sett_type  Option (fast 1 ) "          If @consol = "party_code"
+             Set  @@myorder = " Order By S.sauda_date , S.sett_no,s.sett_type  Option (fast 1 ) "          If @consol = "branch_cd"
+             Set  @@myorder = " Order  By S.sauda_date  , S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By S.sauda_date  , S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By S.sauda_date  , S.sett_no,s.sett_type Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order By S.sauda_date  , S.sett_no,s.sett_type Option (fast 1 ) "
+End
+
+If @orderf = "4.1"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,sauda_date,tmark  ----------------------
+Begin
+          If @consol = "region"
+             Set  @@myorder = " Order By Region  , S.sett_no,s.sett_type , S.scrip_cd,s.series , S.sauda_date Option (fast 1 ) "
+          If @consol = "area"
+             Set  @@myorder = " Order By Area  , S.sett_no,s.sett_type , S.scrip_cd,s.series , S.sauda_date Option (fast 1 ) "
+           If @consol = "party_code"
+             Set  @@myorder = " Order By S.party_code  , S.sett_no,s.sett_type , S.scrip_cd,s.series , S.sauda_date Option (fast 1 ) "
+          If @consol = "branch_cd"
+             Set  @@myorder = " Order  By Branch_cd  ,s.sett_no,s.sett_type , S.scrip_cd,s.series,s.sauda_date Option (fast 1 ) "
+          If @consol = "family"
+             Set  @@myorder = " Order  By Family  ,s.sett_no,s.sett_type , S.scrip_cd,s.series , S.sauda_date Option (fast 1 ) "
+          If @consol = "trader"
+             Set  @@myorder = " Order  By Trader  , S.sett_no,s.sett_type , S.scrip_cd,s.series, S.sauda_date Option (fast 1 ) "
+          If @consol = "sub_broker"
+             Set  @@myorder = " Order By Sub_broker , S.sett_no,s.sett_type , S.scrip_cd,s.series ,s.sauda_date Option (fast 1 ) "
+End
+
+
+-------------------------------------  End Of Select  Order By Options  ----------------------------------------------------
+
+
+Set @@fromtable = " From NSEBSEValan S"
+
+
+------------------------------------- We Will Decide Various Group By Options -------------------------------------- 
+
+If @groupf = "0"    ----------------------  To Be Used For Contract Or Bills ----------------------
+Begin
+     If @consol = "party_code" 
+     Set  @@mygroup =  " Group By Party_code , Party_name, Branch_cd, Sub_broker, Trader, Family, Sett_no , Sett_type  , Scrip_cd  , Series , Scrip_name, Sauda_date  , Left(convert(varchar,sauda_date,109),11), Contractno , Billno , Tradetype , Start_date, End_date"
+     Set  @@selectflex =  " Select Party_code , Long_name=party_name, Branch_cd, Sub_broker, Trader, Family, Sett_no , Sett_type  , Scrip_cd  , Series , Scrip_name, Sauda_date = Left(convert(varchar,sauda_date,109),11), Contractno , Billno, Ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg),  Trade_date = S.sauda_date , Tradetyp = (case When Tradetype Like  '%bf' Then 1 Else Case When Tradetype Like  '%cf' Then 3 Else Case When Tradetype Like  '%r' Then 4 Else 2 End End End), Trdtype = Tradetype, Start_date, End_date "
+End
+
+If @groupf = "1"  ------------------------ To Be Used For Gross Position Across Range ----------------------
+Begin
+     If @consol = "region"
+     Begin
+          Set @@mygroup = " Group By Region, Membertype, Companyname"
+          Set @@selectflex =  " Select Region, Long_name=region,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel), Buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) , Buydeliverychrg = Sum(pbrokdel), Selldeliverychrg = Sum(sbrokdel), Clienttype = 1, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "area"
+     Begin
+          Set @@mygroup = " Group By Area, Membertype, Companyname"
+          Set @@selectflex =  " Select Area, Long_name=area,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel), Buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) , Buydeliverychrg = Sum(pbrokdel), Selldeliverychrg = Sum(sbrokdel), Clienttype = 1, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "party_code"
+     Begin
+          Set @@mygroup = " Group By S.party_code, Party_name,clienttype ,membertype, Companyname"
+          Set @@selectflex =  " Select Party_code, Long_name=party_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel), Buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) , Buydeliverychrg = Sum(pbrokdel), Selldeliverychrg = Sum(sbrokdel), Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "branch_cd"
+     Begin 
+          Set  @@mygroup = " Group By Branch_cd, Clienttype, Membertype, Companyname"
+          Set @@selectflex =  " Select Long_name=branch_cd,branch_cd,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End
+     If @consol = "family"
+     Begin 
+          Set  @@mygroup = " Group By Family, Family_name,clienttype , Membertype, Companyname"
+          Set @@selectflex =  " Select Family, Long_name=family_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "trader"
+     Begin 
+          Set  @@mygroup = " Group By Trader ,membertype,clienttype, Companyname "
+          Set @@selectflex =  " Select Trader,long_name=trader,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End       
+     If @consol = "sub_broker"
+     Begin 
+          Set  @@mygroup = " Group By Sub_broker ,membertype ,clienttype, Companyname "                    
+          Set @@selectflex =  " Select Sub_broker,long_name=sub_broker,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+If @groupf = "1.1"  ------------------------ To Be Used For Gross Position Across Range ----------------------
+Begin
+     If @consol = "region"
+     Begin
+          Set @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Region, membertype, Companyname, Clienttype"
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Region, Long_name = Region,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "area"
+     Begin
+          Set @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Area,membertype, Companyname, Clienttype"
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Area, Long_name = Area,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+
+     If @consol = "party_code"
+     Begin
+          Set @@mygroup = " Group By Scrip_cd, Series, Scrip_name, S.party_code, Party_name,clienttype ,membertype, Companyname"
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Party_code, Long_name=party_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "branch_cd"
+     Begin 
+          Set  @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Branch_cd, Clienttype, Membertype, Companyname"
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Long_name=branch_cd,branch_cd,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End
+     If @consol = "family"
+     Begin 
+          Set  @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Family, Family_name,clienttype , Membertype, Companyname"
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Family, Long_name=family_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "trader"
+     Begin 
+          Set  @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Trader ,membertype,clienttype, Companyname "
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Trader,long_name=trader,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End       
+     If @consol = "sub_broker"
+     Begin 
+          Set  @@mygroup = " Group By Scrip_cd, Series, Scrip_name, Sub_broker ,membertype ,clienttype, Companyname "                    
+          Set @@selectflex =  " Select Scrip_cd, Series, Scrip_name, Sub_broker,long_name=sub_broker,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+If @groupf = "2"   ------------------------ To Be Used For Net Position Across Settlement  ----------------------
+Begin
+     If @consol = "region"
+     Begin 
+          Set @@mygroup = " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex = " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "area"
+     Begin 
+          Set @@mygroup = " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex = " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+
+     If @consol = "party_code"
+     Begin 
+          Set @@mygroup = " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex = " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "branch_cd"
+     Begin 
+          Set @@mygroup = " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex = " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "family"
+     Begin 
+          Set @@mygroup =  " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex =  " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End                   
+     If @consol = "trader"
+     Begin 
+          Set @@mygroup =  " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex =  " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "sub_broker"
+     Begin 
+          Set @@mygroup =  " Group By Sett_no, Sett_type,start_date,end_date,membertype, Companyname "
+          Set @@selectflex =  " Select Sett_no, Sett_type,start_date,end_date,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+
+If @groupf = "3"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin
+     If @consol = "region"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "area"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "party_code"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd, Series, Scrip_name, Ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "branch_cd"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "family"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End                   
+     If @consol = "trader"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select  Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "sub_broker"
+     Begin 
+          Set @@mygroup = " Group By Scrip_cd,series,scrip_name,membertype, Companyname "
+          Set @@selectflex = " Select Scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+If @groupf = "2.11"
+Begin
+     If @consol = "region"
+     Begin
+          Set  @@mygroup = " Group By Region,branch_cd,membertype, Companyname "
+          Set  @@selectflex =  " Select  Region,branch_cd,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) "  
+     End
+
+     If @consol = "area"
+     Begin
+          Set  @@mygroup = " Group By Area,branch_cd,membertype, Companyname "
+          Set  @@selectflex =  " Select  Area,branch_cd,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) "  
+     End
+End
+If @groupf = "3.1"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin
+     If @consol = "region"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,region,branch_cd,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,region,branch_cd,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "area"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,area,branch_cd,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,area,branch_cd,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "branch_cd"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,branch_cd,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,branch_cd,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "family"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,family,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,family,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "trader"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,trader,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trader,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "sub_broker"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sub_broker,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,sub_broker,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+if @groupf = "3.11"   ------------------------ To Be Used For Net Position Across Settlement  ----------------------
+Begin
+     If @consol = "region"
+     Begin
+          Set  @@mygroup = " Group By Region,branch_cd,party_code, Party_name,clienttype,membertype, Companyname "
+          Set  @@selectflex =  " Select  Region,branch_cd,party_code, Party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) "  
+     End
+     If @consol = "area"
+     Begin
+          Set  @@mygroup = " Group By Area,branch_cd,party_code, Party_name,clienttype,membertype, Companyname "
+          Set  @@selectflex =  " Select  Area,branch_cd,party_code, Party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) "  
+     End
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Party_code,party_name,clienttype,membertype, Companyname, "
+          Set  @@selectflex =  " Select Party_code, Party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "branch_cd"
+     Begin
+          Set  @@mygroup = " Group By Branch_cd,party_code,party_name,clienttype,membertype, Companyname  "
+          Set  @@selectflex =  " Select Branch_cd,party_code,party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "family"
+     Begin
+          Set  @@mygroup = " Group By Family,party_code,party_name,clienttype,membertype, Companyname "
+          Set  @@selectflex =  " Select Family,party_code,party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "trader"
+     Begin
+          Set  @@mygroup = " Group By Trader,party_code,party_name,clienttype,membertype, Companyname "
+          Set  @@selectflex =  " Select Trader,party_code,party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "sub_broker"
+     Begin
+          Set  @@mygroup = " Group By Sub_broker,party_code,party_name,clienttype,membertype, Companyname  "
+          Set  @@selectflex =  " Select Sub_broker,party_code,party_name,clienttype,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+
+
+If @groupf = "3.2"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "branch_cd"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),branch_cd,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),branch_cd,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "family"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),family,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),family,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "trader"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),trader,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),trader,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "sub_broker"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),sauda_date,left(convert(varchar,sauda_date,109),11),sub_broker,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),sub_broker,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "Region"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),Region,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),Region,party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "Area"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),Area,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),Area,party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+End
+
+If @groupf = "3.3"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin     If @consol = "region"
+     Begin
+          Set  @@mygroup = " Group By Region,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Region,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "area"
+     Begin
+          Set  @@mygroup = " Group By Area,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Area,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "branch_cd"
+     Begin
+          Set  @@mygroup = " Group By Branch_cd,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Branch_cd,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "family"
+     Begin
+          Set  @@mygroup = " Group By Family,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Family,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "trader"
+     Begin
+          Set  @@mygroup = " Group By Trader,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Trader,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "sub_broker"
+     Begin
+          Set  @@mygroup = " Group By Sub_broker,party_code,party_name,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sub_broker,party_code,party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+
+If @groupf = "3.4"   ------------------------ To Be Used For Net Position Across Settlement,scrip,series  ----------------------
+Begin
+    If @consol = "region"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+
+    If @consol = "area"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End 
+     If @consol = "branch_cd"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "family"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "trader"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+     If @consol = "sub_broker"
+     Begin
+          Set  @@mygroup = " Group By Sett_no, Sett_type,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  " Select Sett_no, Sett_type,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd)  ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt=sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End
+End
+
+If @groupf = "4"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+     If @consol = "region"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "area"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "branch_cd"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "family"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "trader"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "sub_broker"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),membertype, Companyname "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) ,  Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),    Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ), Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End  
+End
+
+
+
+If @groupf = "4.1"  ------------------------ To Be Used For Net Position Across Settlement,scrip,series,tmark  ----------------------
+Begin
+     If @consol = "region"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),region,branch_cd,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),region,branch_cd,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "area"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),area,branch_cd,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),area,branch_cd,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+
+     If @consol = "party_code"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),party_code,party_name,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "          Set  @@selectflex =  " Select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),party_code, Party_name,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "branch_cd"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),branch_cd,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),branch_cd,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "family"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),family,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),family,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "trader"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),trader,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),trader,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname,pnl = Sum(samttrd-pamttrd) " 
+     End  
+     If @consol = "sub_broker"
+     Begin 
+          Set  @@mygroup = " Group By Sett_no, Sett_type,sauda_date,left(convert(varchar,sauda_date,109),11),sub_broker,clienttype,membertype, Companyname,scrip_cd,series,scrip_name "
+          Set  @@selectflex =  "select Sett_no, Sett_type,trade_date = S.sauda_date,sauda_date = Left(convert(varchar,sauda_date,109),11),sub_broker,scrip_cd,series,scrip_name,ptradedqty = Sum(pqtytrd + Pqtydel) ,ptradedamt = Sum(pamttrd + Pamtdel) ,stradedqty = Sum(sqtytrd + Sqtydel), Stradedamt = Sum(samttrd + Samtdel),buybrokerage = Sum(pbroktrd) , Selbrokerage= Sum(sbroktrd) ,buydeliverychrg = Sum(pbrokdel) ,selldeliverychrg = Sum(sbrokdel) , Clienttype, Billpamt = Sum(pamt) , Billsamt = Sum(samt) , Pmarketrate = ( Sum(prate) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Smarketrate = ( Sum(srate) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),   Pnetrate = ( Sum(pamttrd + Pamtdel) / Case When Sum(pqtytrd + Pqtydel) > 0 Then Sum(pqtytrd + Pqtydel) Else 1 End) , Snetrate = ( Sum(samttrd+samtdel) / (case When Sum(sqtytrd + Sqtydel) > 0 Then Sum(sqtytrd + Sqtydel) Else 1 End ) ),  Trdamt= Sum(trdamt) ,delamt=sum(delamt), Serinex=sum(serinex),service_tax= Sum(service_tax) ,exservice_tax= Sum(exservice_tax),turn_tax=sum(turn_tax),sebi_tax=sum(sebi_tax),ins_chrg=sum(ins_chrg),broker_chrg=sum(broker_chrg),other_chrg=sum(other_chrg), Membertype, Companyname ,pnl = Sum(samttrd-pamttrd)" 
+     End  
+End
+
+
+-------------------------------------  End Of Decide Group By Options  ----------------------------------------------------
+if @exchange = 'ALL'
+Set @@wheretext =  " Where Exchange in ('NSE','BSE') and S.sauda_date   Between '" + @sauda_date  + " 00:00:00'  And '"   + @todate  + " 00:00:00' And S.scrip_cd Between '"  + @fromscrip + "' And  '"+  @toscrip +"' /*and S.sett_no Between '" + @sett_no + "' And '" + @tosett_no +"' */ And "  
+if @exchange = 'NSE' 
+Set @@wheretext =  " Where Exchange = 'NSE' and S.sauda_date   Between '" + @sauda_date  + " 00:00:00'  And '"   + @todate  + " 00:00:00' And S.scrip_cd Between '"  + @fromscrip + "' And  '"+  @toscrip +"' /*and S.sett_no Between '" + @sett_no + "' And '" + @tosett_no +"' */ And "  
+if @exchange = 'BSE' 
+Set @@wheretext =  " Where Exchange = 'BSE' and S.sauda_date   Between '" + @sauda_date  + " 00:00:00'  And '"   + @todate  + " 00:00:00' And S.scrip_cd Between '"  + @fromscrip + "' And  '"+  @toscrip +"' /*and S.sett_no Between '" + @sett_no + "' And '" + @tosett_no +"' */ And "  
+
+If Upper(@use1) <> 'all'  
+   If Len(@use1) > 0 
+	Set @@wheretext = @@wheretext +  " S.clienttype = '" + @use1 + "' And "
+
+---------------------------  Now We Will Decide About Join  We Will Always Provide From Party And Toparty -------------------------------------------
+
+Set @@wheretext =  @@wheretext + "  S.party_code Between '" + @@fromparty_code  + "' And '" + @@toparty_code   +"'  "  
+
+If @consol = "family" 
+Set @@wheretext =  @@wheretext +   "  And Family Between '" + @@fromfamily  + "' And '" + @@tofamily   +"'  " 
+
+If @consol = "trader"
+Set @@wheretext =  @@wheretext + " And  Trader Between '" + @@fromtrader  + "' And '" + @@totrader   +"' " 
+
+If @consol = "branch_cd" 
+Set @@wheretext =  @@wheretext + " And Branch_cd Between '" + @@frombranch_cd  + "' And '" + @@tobranch_cd   +"' " 
+
+If @consol = "sub_broker" 
+Set @@wheretext =  @@wheretext + " And Sub_broker Between '" + @@fromsub_broker  + "' And '" + @@tosub_broker   +"' " 
+
+If @consol = "region" 
+Set @@wheretext =  @@wheretext + " And Region Between '" + @@fromregion  + "' And '" + @@toregion  +"' " 
+
+If @consol = "area" 
+Set @@wheretext =  @@wheretext + " And  Area Between '" + @@fromarea  + "' And '" + @@toarea  +"' " 
+
+
+------------------------- Added For Access Control As Per User Login Status ---------------------------------------------------------------------------------------------
+If @statusid = "family" 
+	Begin
+		Set @@wheretext =  @@wheretext +   "  And Family Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+	End
+
+If @statusid = "trader"
+Begin
+	Set @@wheretext =  @@wheretext + " And  Trader Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+End
+
+If @statusid = "branch" 
+Begin
+	Set @@wheretext =  @@wheretext + " And Branch_cd Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+End
+
+If @statusid = "subbroker" 
+Begin
+	Set @@wheretext =  @@wheretext + " And Sub_broker Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+End
+
+If @statusid = "client" 
+Begin
+	Set @@wheretext =  @@wheretext + " And Party_code Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+End
+If @statusid = "region" 
+	Begin
+		Set @@wheretext =  @@wheretext +   "  And Region Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+	End
+If @statusid = "area" 
+	Begin
+		Set @@wheretext =  @@wheretext +   "  And Area Between '" + @statusname  + "' And '" + @statusname   +"'  " 
+	End
+
+
+---------------------------   Decided About Join  -------------------------------------------
+Set @@wheretext = @@wheretext + " And  S.sett_type Between '" + @@fromsett_type + "'  And '" +  @@tosett_type  + "'"  
+
+If @detail = "br"
+   Set @@wheretext = @@wheretext + " And  Tradetype Not In ( 'scf','icf','ir' )  "  
+
+If @detail = "s"
+Begin
+   If @groupf <> "0"
+   Begin
+	   Set @@wheretext = @@wheretext + " And  Tradetype Not In ( 'ir' )  "  
+   End
+End
+
+If @detail = "po"
+   Set @@wheretext = @@wheretext + " And  Tradetype Not In ( 'sbf','scf','ir' )"  
+
+If @detail = "tu"
+   Set @@wheretext = @@wheretext + " And  Tradetype Not In ( 'sbf','scf','ibf','icf','ir' )"  
+
+/*null Chk For Where*/
+If @@wheretext Is Null Or Len(ltrim(rtrim(@@wheretext))) = 0
+Begin
+	Set @@wheretext = " Where 1=0"
+End
+
+
+--Print '-----------------------'
+Print @@selectflex 
+--Print '-----------------------'
+Print @@selectbody 
+--Print '-----------------------'
+Print @@fromtable 
+--Print '-----------------------'
+Print @@wheretext 
+--Print '-----------------------'
+Print @@mygroup
+--Print '-----------------------'
+
+
+
+If @detail = "br"
+Exec (@@selectflex + @@selectbody+ @@fromtable + @@wheretext + @@mygroup +  @@myorder  )  
+Print (@@selectflex + @@selectbody+ @@fromtable + @@wheretext + @@mygroup +  @@myorder  )  
+If @detail = "s"
+Exec (@@selectflex + @@selectbody+ @@fromtable + @@wheretext + @@mygroup + @@myorder)
+Print (@@selectflex + @@selectbody+ @@fromtable + @@wheretext + @@mygroup + @@myorder)
+
+GO

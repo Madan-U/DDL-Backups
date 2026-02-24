@@ -1,0 +1,18 @@
+-- Object: PROCEDURE dbo.RPT_CURRENTOPENTRY
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+CREATE PROCEDURE RPT_CURRENTOPENTRY
+                @sdtcur DATETIME,
+                @ldtcur DATETIME
+AS
+
+  SET TRANSACTION ISOLATION  LEVEL  READ  UNCOMMITTED
+  
+  SELECT ISNULL(LEFT(CONVERT(VARCHAR,SDTCUR,109),11),'')
+  FROM   PARAMETER WITH(NOLOCK)
+  WHERE  @sdtcur >= SDTCUR
+         AND @ldtcur + ' 23:59:59' <= LDTCUR
+
+GO

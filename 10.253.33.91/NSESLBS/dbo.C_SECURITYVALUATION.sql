@@ -1,0 +1,136 @@
+-- Object: PROCEDURE dbo.C_SECURITYVALUATION
+-- Server: 10.253.33.91 | DB: NSESLBS
+--------------------------------------------------
+
+CREATE PROC [dbo].[C_SECURITYVALUATION] (@EXCHANGE VARCHAR(3), @SEGMENT VARCHAR(7), @SHAREDB VARCHAR(20), @VALDATE VARCHAR(11))
+AS    
+
+DELETE FROM C_Valuation WHERE Sysdate Like @VALDATE + '%'    
+and Exchange = @EXCHANGE    
+and Segment = @SEGMENT     
+
+Update C_securitiesmst Set Series = M.Series
+From MultiIsIn M, 
+(SELECT ISIN FROM (
+SELECT SCRIP_CD, SERIES, ISIN
+FROM C_securitiesmst
+WHERE SERIES In ('EQ', 'BE')
+GROUP BY SCRIP_CD, SERIES, ISIN )
+A
+GROUP BY SCRIP_CD, ISIN
+HAVING COUNT(1) > 1 ) M1
+Where C_securitiesmst.IsIn = M.IsIn
+And C_securitiesmst.Scrip_Cd = M.Scrip_Cd
+And C_securitiesmst.Series in ('EQ', 'BE')
+And M.Series In ('EQ', 'BE')
+And Valid = 1 
+And C_securitiesmst.Series <> M.Series
+AND M.ISIN = M1.ISIN
+
+SELECT PARTY_CODE, SCRIP_CD, SERIES,     
+CRQTY = SUM(CASE WHEN DRCR = 'C' THEN QTY ELSE -QTY END),    
+ISIN,     
+CL_RATE = CONVERT(NUMERIC(18,4),0),    
+FLAG = 0  ,Newscrip=scrip_cd,newseries=series   
+INTO #SECMST FROM C_securitiesmst    
+Where Party_code <> 'BROKER' and EffDate <= Left(GetDate(),11)  + ' 23:59:59'    
+and Exchange = @EXCHANGE    
+and Segment = @SEGMENT Group by party_code, Scrip_Cd,Series, ISIN    
+HAVING SUM(CASE WHEN DRCR = 'C' THEN QTY ELSE -QTY END) <> 0     
+    
+INSERT INTO #SECMST     
+SELECT PARTY_CODE, SCRIP_CD, SERIES,     
+CRQTY = SUM(QTY), CERTNO,    
+CL_RATE = CONVERT(NUMERIC(18,4),0),    
+FLAG = 0  ,Newscrip=scrip_cd,newseries=series  
+FROM MSAJAG.DBO.DELTRANS D, MSAJAG.DBO.DELIVERYDP DP    
+WHERE BDPTYPE = DP.DPTYPE    
+AND BDPID = DP.DPID    
+AND BCLTDPID = DP.DPCLTNO    
+AND PARTY_CODE <> 'BROKER'    
+AND PARTY_CODE <> 'PARTY'    
+AND TRTYPE in (904, 905, 909)    
+AND DRCR = 'D'     
+AND DELIVERED = '0'    
+AND FILLER2 = 1    
+AND SHARETYPE = 'DEMAT'    
+AND EXCHANGE = @EXCHANGE    
+AND SEGMENT = @SEGMENT    
+AND ACCOUNTTYPE = 'MAR'    
+GROUP BY PARTY_CODE, SCRIP_CD, SERIES, CERTNO    
+    
+INSERT INTO #SECMST     
+SELECT PARTY_CODE, SCRIP_CD, SERIES,     
+CRQTY = SUM(QTY), CERTNO,    
+CL_RATE = CONVERT(NUMERIC(18,4),0),    
+FLAG = 0  ,Newscrip=scrip_cd,newseries=series  
+FROM BSEDB.DBO.DELTRANS D, BSEDB.DBO.DELIVERYDP DP    
+WHERE BDPTYPE = DP.DPTYPE    
+AND BDPID = DP.DPID    
+AND BCLTDPID = DP.DPCLTNO    
+AND PARTY_CODE <> 'BROKER'    
+AND PARTY_CODE <> 'PARTY'    
+AND TRTYPE in (904, 905, 909)    
+AND DRCR = 'D'     
+AND DELIVERED = '0'    
+AND FILLER2 = 1    
+AND SHARETYPE = 'DEMAT'    
+AND EXCHANGE = @EXCHANGE    
+AND SEGMENT = @SEGMENT    
+AND ACCOUNTTYPE = 'MAR'    
+GROUP BY PARTY_CODE, SCRIP_CD, SERIES, CERTNO    
+
+Update #SECMST Set Newscrip=M.scrip_cd,Newseries=M.series
+from Multiisin M
+where M.isin=#SECMST.isin
+and valid=1
+    
+UPDATE #SECMST SET CL_RATE = C.CL_RATE, FLAG = 1    
+FROM MSAJAG.DBO.CLOSING C    
+WHERE SYSDATE LIKE @VALDATE + '%'    
+AND C.SCRIP_CD = #SECMST.newSCRIP    
+AND C.SERIES = #SECMST.newSERIES
+    
+UPDATE #SECMST SET CL_RATE = C.CL_RATE    
+FROM MSAJAG.DBO.CLOSING C    
+WHERE C.SCRIP_CD = #SECMST.newSCRIP    
+AND C.SERIES = #SECMST.newSERIES    
+AND SYSDATE = (SELECT MAX(SYSDATE) FROM MSAJAG.DBO.CLOSING C1     
+WHERE SYSDATE < @VALDATE    
+AND C.SCRIP_CD = C1.SCRIP_CD    
+AND C.SERIES = C1.SERIES)  
+and flag=0
+
+Update #SECMST Set Newscrip=m.scrip_cd,newseries=m.series
+from Bsedb.dbo.Multiisin m
+where M.isin=#SECMST.isin
+and valid=1 
+and flag=0
+
+UPDATE #SECMST SET CL_RATE = C.CL_RATE, FLAG = 1    
+FROM BSEDB.DBO.CLOSING C    
+WHERE SYSDATE LIKE @VALDATE + '%'    
+AND C.SCRIP_CD = #SECMST.newSCRIP    
+--AND C.SERIES = #SECMST.SERIES
+and flag=0     
+    
+UPDATE #SECMST SET CL_RATE = C.CL_RATE  
+FROM BSEDB.DBO.CLOSING C    
+WHERE C.SCRIP_CD = #SECMST.newSCRIP    
+--AND C.SERIES = #SECMST.SERIES    
+AND SYSDATE = (SELECT MAX(SYSDATE) FROM BSEDB.DBO.CLOSING C1     
+WHERE SYSDATE < @VALDATE    
+AND C.SCRIP_CD = C1.SCRIP_CD)    
+--AND C.SERIES = C1.SERIES)    
+and flag=0
+    
+INSERT INTO C_Valuation (Exchange,Segment,Market,Sharedb,Scrip_Cd,Series,Cl_Rate,Sysdate)    
+SELECT DISTINCT @EXCHANGE, @SEGMENT, 'NORMAL', @SHAREDB, SCRIP_CD, SERIES, CL_RATE, @VALDATE    
+FROM #SECMST    
+WHERE FLAG = 1     
+    
+SELECT DISTINCT SCRIP_CD, SERIES, CL_RATE FROM #SECMST    
+WHERE FLAG = 0     
+ORDER BY SCRIP_CD, SERIES
+
+GO

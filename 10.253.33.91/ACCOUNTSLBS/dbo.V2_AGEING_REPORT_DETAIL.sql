@@ -1,0 +1,54 @@
+-- Object: PROCEDURE dbo.V2_AGEING_REPORT_DETAIL
+-- Server: 10.253.33.91 | DB: ACCOUNTSLBS
+--------------------------------------------------
+
+
+
+
+CREATE PROCEDURE V2_AGEING_REPORT_DETAIL 
+(  
+    @PARTY VARCHAR(10), 
+    @AGEINGON VARCHAR(3), 
+	@STATUSID VARCHAR(20), 
+	@STATUSNAME VARCHAR(20)
+)  
+  
+AS  
+
+    SELECT PARTY_CODE, LONG_NAME INTO #CLIENT FROM MSAJAG.DBO.CLIENT_DETAILS C WHERE 1 = 2
+    
+    INSERT INTO #CLIENT 
+    EXEC V2_ACCOUNT_LISTING  
+    	    'CLIENT', 
+    		@PARTY, 
+    		@PARTY, 
+    		@STATUSID, 
+    		@STATUSNAME 
+
+    SELECT 
+    	CLTCODE = C.PARTY_CODE, 
+        EXCHANGE, 
+        SEGMENT, 
+    	BALANCE = SUM(BALANCE), 
+        BUCKET_1 = SUM(BUCKET_1), 
+        BUCKET_2 = SUM(BUCKET_2), 
+        BUCKET_3 = SUM(BUCKET_3), 
+        BUCKET_4 = SUM(BUCKET_4), 
+        BUCKET_5 = SUM(BUCKET_5), 
+    	C.LONG_NAME 
+    FROM 
+        V2_AGEINGFINAL V, 
+    	#CLIENT C, 
+        V2_MULTIACCOUNTS A 
+    WHERE 
+        CLTCODE = @PARTY 
+        AND BALDATETYPE = (CASE WHEN @AGEINGON = 'VDT' THEN 1 ELSE 2 END)
+        AND V.SEGMENTCODE = A.SEGMENTCODE  
+        AND V.CLTCODE = C.PARTY_CODE     	
+    GROUP BY 
+        C.PARTY_CODE, 
+        EXCHANGE, 
+        SEGMENT, 
+        C.LONG_NAME
+
+GO

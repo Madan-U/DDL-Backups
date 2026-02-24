@@ -1,0 +1,75 @@
+-- Object: PROCEDURE dbo.USP_DEFAULTID_DATA_RPT
+-- Server: 10.253.33.91 | DB: Dustbin
+--------------------------------------------------
+
+              
+---- // USE DUSTBIN   --- // 196.1.115.196                              
+---- // DESCRIPTION :- MTF PLEDGE DATA REQUESTED BY SWAPNIL TADGE AND CREATED BY HRISHI        
+                              
+CREATE PROC [dbo].[USP_DEFAULTID_DATA_RPT]  
+AS  
+DECLARE @SQL VARCHAR (MAX) ,@SQL2 VARCHAR (MAX), @SQLFINAL VARCHAR (MAX) , @PATH VARCHAR (MAX)                               
+SET @PATH='J:\Backoffice\SL_AUTO\SWAPNIL_T\DEFAULT_ID_DATA\INPUT\INPUT.txt'                                
+  
+IF OBJECT_ID(N'tempdb..#CODE') IS NOT NULL    
+DROP TABLE #CODE  
+  
+CREATE TABLE #CODE (CODE VARCHAR(100))  
+  
+SET @SQL='BULK INSERT #CODE FROM ' + ''''+ @PATH +''''              
+SET @SQL2=' WITH              
+    (                                
+           FIRSTROW = 1,                                
+           FIELDTERMINATOR = '','',  --CSV FIELD DELIMITER                                
+           ROWTERMINATOR = ''\n'',   --USE TO SHIFT THE CONTROL TO NEXT ROW                                
+           TABLOCK                                
+    )'                                
+  
+SET @SQLFINAL= @SQL + @SQL2                                
+PRINT @SQLFINAL                                
+EXEC (@SQLFINAL)                              
+              
+--SELECT TOP 10 * FROM #CODE
+--SELECT TOP 10 * FROM #DATA  
+  
+IF OBJECT_ID(N'tempdb..#SSIS_DEFAULT') IS NOT NULL  
+DROP TABLE #SSIS_DEFAULT  
+  
+CREATE TABLE #SSIS_DEFAULT (EXCHANGE VARCHAR (10),CL_CODE VARCHAR (10),PARTY_CODE VARCHAR (10),Instru INT,BankID VARCHAR (8),Cltdpid VARCHAR (20),Depository VARCHAR (7),DefDp INT)  
+  
+INSERT INTO #SSIS_DEFAULT  
+SELECT 'NSE'AS EXCHANGE,* FROM [ANGELDEMAT].MSAJAG.DBO.CLIENT4 WHERE DefDp='1'AND Depository IN ('CDSL','NSDL')    
+AND Cl_code IN (SELECT * FROM #CODE WHERE code IS NOT NULL )    
+UNION ALL    
+SELECT 'BSE'AS EXCHANGE,* FROM [ANGELDEMAT].BSEDB.DBO.CLIENT4 WHERE DefDp='1'AND Depository IN ('CDSL','NSDL')    
+AND Cl_code IN (SELECT * FROM #CODE WHERE code IS NOT NULL)  
+  
+IF OBJECT_ID(N'DUSTBIN..TBL_DEFAULTID_DATA') IS NOT NULL                          
+DROP TABLE TBL_DEFAULTID_DATA  
+  
+SELECT DISTINCT A.EXCHANGE,A.CL_CODE,A.PARTY_CODE,CONVERT(VARCHAR,A.INSTRU) AS INSTRU,A.BANKID,A.CLTDPID,A.DEPOSITORY,CONVERT(VARCHAR,A.DEFDP) AS DEFDP  
+,CLIENT_CODE,FIRST_HOLD_NAME,STATUS AS DP_STATUS,CONVERT(VARCHAR (11),ACTIVE_DATE) AS DP_ACTIVE_DATE,POA_VER  
+INTO DUSTBIN.DBO.TBL_DEFAULTID_DATA  
+FROM #SSIS_DEFAULT A  LEFT OUTER JOIN  [AGMUBODPL3].DMAT.CITRUS_USR.TBL_CLIENT_MASTER B ON A.CLTDPID=B.CLIENT_CODE     
+  
+--SELECT TOP 10 * FROM DUSTBIN.DBO.TBL_DEFAULTID_DATA  
+                
+--DECLARE @RPT_DATE VARCHAR(30)=REPLACE(CONVERT(VARCHAR(10),GETDATE(),3),'/','')  
+DECLARE @FILENAME VARCHAR(100) = 'J:\Backoffice\SL_AUTO\SWAPNIL_T\DEFAULT_ID_DATA\OUTPUT\' +'DEFAULT_ID_DATA' + '.CSV'  
+DECLARE @ALL VARCHAR(MAX)    
+    
+SET @ALL = 'EXEC MASTER.DBO.XP_CMDSHELL ''BCP "SELECT ''''EXCHANGE'''',''''CL_CODE'''',''''PARTY_CODE'''',''''Instru'''',''''BankID'''',''''Cltdpid'''',''''Depository'''',''''DefDp'''',''''CLIENT_CODE'''',''''FIRST_HOLD_NAME'''',''''DP_STATUS'''',''''DP_ACTIVE_dATE'''',''''POA_VER'''''    
+    
+SET @ALL = @ALL+ ' UNION ALL SELECT * FROM DUSTBIN.DBO.TBL_DEFAULTID_DATA'               
+PRINT @ALL                
+SET @ALL=@ALL+' " QUERYOUT ' +@FILENAME+ ' -c -t"," -c -t"," -r"\n" -T'', NO_OUTPUT'    
+PRINT @ALL                
+EXEC(@ALL)    
+  
+DROP TABLE #CODE  
+DROP TABLE #SSIS_DEFAULT  
+DROP TABLE DUSTBIN.DBO.TBL_DEFAULTID_DATA  
+                              
+SELECT 'DEFAULT ID DATA FILE EXPORTED TO ' + @FILENAME AS 'REMARK'
+
+GO

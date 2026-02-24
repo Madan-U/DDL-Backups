@@ -1,0 +1,12 @@
+-- Object: PROCEDURE dbo.CLS_GET_SETTING
+-- Server: 10.253.33.91 | DB: PRADNYA
+--------------------------------------------------
+
+
+CREATE PROC [dbo].[CLS_GET_SETTING] 
+@RPTCODE VARCHAR(25) = ''
+AS
+SELECT * FROM CLS_PDF_SETTING WHERE FLDREPORTCODE LIKE @RPTCODE + '%'
+SELECT * FROM CLS_PDFCSS
+
+GO

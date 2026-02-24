@@ -1,0 +1,1204 @@
+-- Object: PROCEDURE dbo.NseValanGenerate_01102014
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+  
+CREATE PROC [DBO].[NSEVALANGENERATE] (@SETT_NO VARCHAR(7),@SETT_TYPE VARCHAR(2),@FLAGFORINCLUSIVEBROKERAGE INT) AS            
+DECLARE             
+@START_DATE DATETIME,            
+@END_DATE DATETIME,            
+@SEC_PAYIN DATETIME,            
+@SEC_PAYOUT DATETIME,            
+@BILLNO INT,            
+@STAMPFLAG INT,            
+            
+@ACNAME VARCHAR(50),            
+@ACCODE VARCHAR(10),            
+@OPPCODE VARCHAR(10),            
+@REVCODE VARCHAR(10),            
+@DUMMYOPPCODE VARCHAR(10),            
+@DUMMYREVCODE VARCHAR(10),            
+@CLRHSGPARTY VARCHAR(10),            
+@BRKRELPARTY VARCHAR(10),            
+@SERTAXPARTY VARCHAR(10),            
+@CESSTAXPARTY VARCHAR(10),  
+@EDUCESSTAXPARTY VARCHAR(10),  
+@DELCHRGPARTY VARCHAR(10),            
+@RNDOFFPARTY VARCHAR(10),            
+@MRGPARTY VARCHAR(10),            
+@SERTAXPAYPARTY VARCHAR(10),            
+@CESSTAXPAYPARTY VARCHAR(10),            
+@EDUCESSTAXPAYPARTY VARCHAR(10),            
+@SEBITAXPARTY VARCHAR(10),            
+@TURNTAXPARTY VARCHAR(10),            
+@INSCHRGPARTY VARCHAR(10),            
+@BRKNOTEPARTY VARCHAR(10),            
+@OTHCHRGPARTY VARCHAR(10),            
+@AUCCHRGPARTY VARCHAR(10),            
+@PENAMT NUMERIC(18,6),            
+@BRKREVERSEDPARTY VARCHAR(10),            
+@REMPARTY VARCHAR(10),            
+            
+@DUMMYBRANCH_CD VARCHAR(10),            
+@BRANCH_CD VARCHAR(10),            
+@SELL_BUY INT,            
+@EXCHANGE NUMERIC(18,6),            
+@BROKERAGE NUMERIC(18,6),            
+@DELBROKERAGE NUMERIC(18,6),            
+@SERVICE_TAX NUMERIC(18,6),            
+@CESS_TAX NUMERIC(18,6),            
+@EDUCESS_TAX        NUMERIC(18,6),  
+@EXSERVICE_TAX NUMERIC(18,6),            
+@EXCESS_TAX NUMERIC(18,6),   
+@EXEDUCESS_TAX      NUMERIC(18,6),          
+@TURN_TAX NUMERIC(18,6),            
+@SEBI_TAX NUMERIC(18,6),            
+@INS_CHRG NUMERIC(18,6),            
+@BROKER_CHRG NUMERIC(18,6),            
+@OTHER_CHRG NUMERIC(18,6),            
+@BRKREVERSED  NUMERIC(18,6),            
+            
+@TEXCHANGE NUMERIC(18,6),            
+@TBROKERAGE NUMERIC(18,6),            
+@TDELBROKERAGE NUMERIC(18,6),            
+@TSERVICE_TAX NUMERIC(18,6),            
+@TCESS_TAX NUMERIC(18,6),        
+@TEDUCESS_TAX       NUMERIC(18,6),       
+@TEXSERVICE_TAX NUMERIC(18,6),            
+@TEXCESS_TAX NUMERIC(18,6),    
+@TEXEDUCESS_TAX     NUMERIC(18,6),          
+@TTURN_TAX NUMERIC(18,6),            
+@TSEBI_TAX NUMERIC(18,6),            
+@TINS_CHRG NUMERIC(18,6),            
+@TBROKER_CHRG NUMERIC(18,6),            
+@TOTHER_CHRG NUMERIC(18,6),            
+@TBRKREVERSED  NUMERIC(18,6),            
+            
+@DIFFAMT NUMERIC(18,6),            
+@TRDAMT  NUMERIC(18,6),            
+@DELAMT  NUMERIC(18,6),            
+@OPPAMT  NUMERIC(18,6),            
+@REVAMT  NUMERIC(18,6),            
+@ACCAMT  NUMERIC(18,6),            
+@CALSERAMT  NUMERIC(18,6),            
+@REMAMT  NUMERIC(18,6),            
+@NETREMAMT  NUMERIC(18,6),            
+            
+@NETEXCHANGE NUMERIC(18,6),            
+@NETBROKERAGE NUMERIC(18,6),            
+@NETDELBROKERAGE NUMERIC(18,6),            
+@NETSERVICE_TAX NUMERIC(18,6),            
+@NETCESS_TAX NUMERIC(18,6),   
+@NETEDUCESS_TAX     NUMERIC(18,6),           
+@NETEXSERVICE_TAX NUMERIC(18,6),            
+@NETEXCESS_TAX NUMERIC(18,6),       
+@NETEXEDUCESS_TAX   NUMERIC(18,6),       
+@NETTURN_TAX NUMERIC(18,6),            
+@NETSEBI_TAX NUMERIC(18,6),            
+@NETINS_CHRG NUMERIC(18,6),            
+@NETBROKER_CHRG NUMERIC(18,6),            
+@NETOTHER_CHRG NUMERIC(18,6),            
+@NETPENAMT NUMERIC(18,6),            
+@NETDIFFAMT NUMERIC(18,6),            
+@GROSSDIFFAMT NUMERIC(18,6),            
+@NETTRDAMT  NUMERIC(18,6),            
+@NETDELAMT  NUMERIC(18,6),            
+@NETBRKREVERSED  NUMERIC(18,6),            
+            
+@TRDSTDUTY NUMERIC(18,6),            
+@DELSTDUTY NUMERIC(18,6),            
+@STDUTY NUMERIC(18,6),            
+@TRDTTDUTY NUMERIC(18,6),            
+@DELTTDUTY NUMERIC(18,6),            
+@TTDUTY NUMERIC(18,6),            
+@TRANS_CAT VARCHAR(3),            
+@SERVICE_CHRG NUMERIC(18,6),            
+@CESS_CHRG NUMERIC(18,6),            
+@EDUCESS_CHRG       NUMERIC(18,6),  
+          
+@SETMSTCUR CURSOR,            
+@VALANACCCUR CURSOR,            
+@VALANAMTCUR CURSOR,            
+@AUCCUR CURSOR            
+            
+SET NOCOUNT ON            
+            
+SELECT @NETBRKREVERSED = 0            
+SELECT @NETEXCHANGE = 0             
+SELECT @NETBROKERAGE = 0             
+SELECT @NETDELBROKERAGE = 0             
+SELECT @NETSERVICE_TAX = 0             
+SELECT @NETCESS_TAX = 0   
+SELECT @NETEDUCESS_TAX = 0            
+SELECT @NETEXSERVICE_TAX = 0             
+SELECT @NETEXCESS_TAX = 0       
+SELECT @NETEXEDUCESS_TAX = 0         
+SELECT @NETTURN_TAX = 0             
+SELECT @NETSEBI_TAX = 0             
+SELECT @NETINS_CHRG = 0             
+SELECT @NETBROKER_CHRG = 0             
+SELECT @NETOTHER_CHRG = 0             
+SELECT @GROSSDIFFAMT = 0            
+      
+UPDATE SETTLEMENT        
+SET  SERVICE_TAX = 0,        
+NSERTAX = 0        
+FROM CLIENT1 C1,        
+     CLIENT2 C2        
+WHERE SETTLEMENT.SETT_NO = @SETT_NO        
+     AND SETTLEMENT.SETT_TYPE = @SETT_TYPE        
+     AND C1.CL_CODE = C2.CL_CODE        
+     AND C2.PARTY_CODE = SETTLEMENT.PARTY_CODE        
+     AND L_STATE = 'JAMMU AND KASHMIR'        
+     AND SERVICE_CHRG = 0        
+      
+EXEC NSECMVALAN @SETT_NO,@SETT_TYPE,'%','%','%','%','VALAN'            
+            
+--INSERT INTO BBGLOG VALUES('DID NSECMVALAN',GETDATE())            
+            
+EXEC NSEACCVALAN @SETT_NO,@SETT_TYPE            
+--EXEC REMMISSOR_SHARING @SETT_NO,@SETT_TYPE            
+--INSERT INTO BBGLOG VALUES('DID NSEACCVALAN',GETDATE())                  
+DELETE FROM ACCBILL WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+DELETE FROM IACCBILL WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+/* GET THE START_DATE AND END_DATE OF THE SETTLEMENT */            
+            
+--INSERT INTO BBGLOG VALUES('DELETED PREVIUOS DATA',GETDATE())            
+            
+SET @SETMSTCUR = CURSOR FOR            
+ SELECT BROKER_NOTE,TURNOVER_TAX,TRANS_CAT FROM TAXES            
+OPEN @SETMSTCUR             
+FETCH NEXT FROM @SETMSTCUR INTO @STDUTY,@TTDUTY,@TRANS_CAT            
+WHILE @@FETCH_STATUS = 0             
+BEGIN            
+ IF @TRANS_CAT = 'TRD'             
+ BEGIN            
+  SELECT @TRDSTDUTY = @STDUTY            
+  SELECT @TRDTTDUTY = @TTDUTY            
+ END             
+ ELSE IF @TRANS_CAT = 'DEL'             
+ BEGIN            
+  SELECT @DELSTDUTY = @STDUTY            
+  SELECT @DELTTDUTY = @TTDUTY            
+ END            
+ FETCH NEXT FROM @SETMSTCUR INTO @STDUTY,@TTDUTY,@TRANS_CAT            
+END            
+CLOSE @SETMSTCUR            
+DEALLOCATE @SETMSTCUR            
+            
+SELECT @SERVICE_TAX = 0             
+SELECT @CESS_CHRG = 0          
+SELECT @EDUCESS_CHRG = 0        
+             
+SELECT @START_DATE = START_DATE FROM SETT_MST WHERE SETT_TYPE = @SETT_TYPE AND SETT_NO = @SETT_NO            
+            
+SELECT @START_DATE = LEFT(CONVERT(VARCHAR,@START_DATE,109),11) + ' 1:00:01'            
+            
+SET @SETMSTCUR = CURSOR FOR            
+SELECT SERVICE_TAX, CESS_TAX,EDUCESSTAX FROM GLOBALS  WHERE @START_DATE > YEAR_START_DT AND @START_DATE <  YEAR_END_DT                  
+OPEN @SETMSTCUR             
+FETCH NEXT FROM @SETMSTCUR INTO @SERVICE_CHRG, @CESS_CHRG,@EDUCESS_CHRG            
+CLOSE @SETMSTCUR            
+DEALLOCATE @SETMSTCUR            
+            
+--SELECT @START_DATE            
+--SELECT @SERVICE_CHRG            
+SET @SETMSTCUR = CURSOR FOR            
+ SELECT START_DATE,END_DATE,SEC_PAYIN,SEC_PAYOUT FROM SETT_MST             
+ WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+OPEN @SETMSTCUR             
+FETCH NEXT FROM @SETMSTCUR INTO @START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT            
+CLOSE @SETMSTCUR            
+DEALLOCATE @SETMSTCUR            
+            
+/* FINISH THE SETTLEMENT DATE SELECTION */            
+            
+/* START OF PARTY BILL AMOUNT */            
+            
+INSERT INTO ACCBILL              
+SELECT PARTY_CODE,'0',            
+SELL_BUY = (CASE WHEN SUM(PAMT) >= SUM(SAMT)             
+   THEN 1            
+          ELSE 2            
+     END),            
+SETT_NO,SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+AMOUNT = ROUND(ABS(SUM(PAMT) - SUM(SAMT)),2),            
+BRANCH_CD,'BILL POSTED'            
+FROM NSEBILLVALAN WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+AND TRDTYPE = 'N'            
+GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD,PARTY_CODE            
+HAVING ABS(SUM(PAMT) - SUM(SAMT)) > 0            
+/* END OF PARTY BILL AMOUNT */            
+            
+--INSERT INTO BBGLOG VALUES('DID INSERT DATA IN ACCBILL',GETDATE())            
+            
+SET @VALANACCCUR = CURSOR FOR            
+ SELECT ACNAME,ACCODE FROM VALANACCOUNT V WHERE EFFDATE = (SELECT MAX(EFFDATE) FROM VALANACCOUNT A            
+ WHERE A.EFFDATE <= @END_DATE AND V.ACNAME = A.ACNAME) ORDER BY ACNAME            
+OPEN @VALANACCCUR            
+FETCH NEXT FROM @VALANACCCUR INTO @ACNAME,@ACCODE            
+WHILE @@FETCH_STATUS = 0             
+BEGIN            
+ IF @ACNAME = 'CLEARING HOUSE'              
+  SELECT @CLRHSGPARTY = @ACCODE            
+ IF @ACNAME = 'BROKERAGE REALISED'              
+  SELECT @BRKRELPARTY = @ACCODE            
+ IF @ACNAME = 'SERVICE TAX'              
+  SELECT @SERTAXPARTY = @ACCODE            
+ IF @ACNAME = 'CESS TAX'              
+  SELECT @CESSTAXPARTY = @ACCODE         
+ IF @ACNAME = 'EDU CESS TAX'        
+  SELECT @EDUCESSTAXPARTY = @ACCODE        
+ IF @ACNAME = 'DELIVERY CHARGES'              
+  SELECT @DELCHRGPARTY = @ACCODE            
+ IF @ACNAME = 'ROUNDING OFF'              
+  SELECT @RNDOFFPARTY = @ACCODE            
+ IF @ACNAME = 'MARGIN'              
+  SELECT @MRGPARTY = @ACCODE            
+ IF @ACNAME = 'SERVICE TAX PAYABLE'              
+  SELECT @SERTAXPAYPARTY = @ACCODE            
+ IF @ACNAME = 'CESS TAX PAYABLE'              
+  SELECT @CESSTAXPAYPARTY = @ACCODE    
+      IF @ACNAME = 'EDU CESS TAX PAYABLE'        
+        SELECT @EDUCESSTAXPAYPARTY = @ACCODE              
+ IF @ACNAME = 'SEBI TURNOVER TAX'              
+  SELECT @SEBITAXPARTY = @ACCODE            
+ IF @ACNAME = 'TURNOVER TAX'              
+  SELECT @TURNTAXPARTY = @ACCODE            
+ IF @ACNAME = 'INSURANCE CHARGES'              
+  SELECT @INSCHRGPARTY = @ACCODE            
+ IF @ACNAME = 'BROKER NOTE STAMP CHARGES'              
+  SELECT @BRKNOTEPARTY = @ACCODE            
+ IF @ACNAME = 'OTHER CHARGES'              
+  SELECT @OTHCHRGPARTY = @ACCODE            
+ IF @ACNAME = 'BROKERAGE REVERSED'            
+  SELECT @BRKREVERSEDPARTY = @ACCODE            
+ IF @ACNAME = 'AUCTION CHARGES'            
+  SELECT @AUCCHRGPARTY = @ACCODE            
+ --IF @ACNAME = 'REMISSOR SHARING'              
+ -- SELECT @REMPARTY = @ACCODE            
+            
+ FETCH NEXT FROM @VALANACCCUR INTO @ACNAME,@ACCODE            
+END            
+            
+CLOSE @VALANACCCUR            
+DEALLOCATE @VALANACCCUR            
+            
+/* EXCHANGE AND LEVIS BRANCH WISE OBLIGATION AMOUNT */            
+            
+--INSERT INTO BBGLOG VALUES('DID INSERT DATA IN ACCBILL OUT OF  IF STATEMENT',GETDATE())            
+            
+SET @VALANAMTCUR = CURSOR FOR             
+ SELECT BRANCH_CD,            
+ SELL_BUY = (CASE WHEN SUM(PRATE) >= SUM(SRATE)             
+    THEN 2            
+    ELSE 1            
+      END),            
+ EXCHANGE =SUM(PRATE) - SUM(SRATE),            
+ BROKERAGE=SUM(BROKERAGE),DELBROKERAGE=SUM(DELBROKERAGE),            
+ SERVICE_TAX=SUM(SERVICE_TAX),EXSERVICE_TAX=SUM(EXSERVICE_TAX),            
+        TURN_TAX=SUM(TURN_TAX),SEBI_TAX=SUM(SEBI_TAX),            
+ INS_CHRG=SUM(INS_CHRG),BROKER_CHRG=SUM(BROKER_CHRG),            
+        OTHER_CHRG=SUM(OTHER_CHRG),TRDAMT=SUM(TRDAMT),            
+        DELAMT=SUM(DELAMT),STAMPFLAG=(CASE WHEN STAMPFLAG=1 THEN 1 ELSE 0 END)            
+ FROM NSEBILLVALAN WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND TRDTYPE = 'N'            
+ GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD,STAMPFLAG            
+ ORDER BY SETT_NO,SETT_TYPE,BRANCH_CD            
+            
+OPEN @VALANAMTCUR             
+            
+FETCH NEXT FROM @VALANAMTCUR INTO @BRANCH_CD,@SELL_BUY,@EXCHANGE,@BROKERAGE,@DELBROKERAGE,@SERVICE_TAX,            
+                @EXSERVICE_TAX,@TURN_TAX,@SEBI_TAX,@INS_CHRG,@BROKER_CHRG,@OTHER_CHRG,@TRDAMT,@DELAMT,@STAMPFLAG            
+            
+            
+WHILE @@FETCH_STATUS = 0             
+BEGIN              
+ SELECT @DUMMYBRANCH_CD = LTRIM(@BRANCH_CD)            
+ SELECT @TEXCHANGE = 0            
+ SELECT @TBRKREVERSED = 0            
+ SELECT @TTURN_TAX = 0            
+ SELECT @TSEBI_TAX = 0            
+ SELECT @TINS_CHRG = 0            
+ SELECT @TBROKER_CHRG = 0            
+ SELECT @TOTHER_CHRG = 0            
+ SELECT @TBROKERAGE = 0            
+ SELECT @TDELBROKERAGE = 0            
+ SELECT @TSERVICE_TAX = 0            
+ SELECT @TCESS_TAX = 0  
+ SELECT @TEDUCESS_TAX = 0            
+ SELECT @TEXSERVICE_TAX = 0            
+ SELECT @TEXCESS_TAX = 0              
+ SELECT @TEXEDUCESS_TAX = 0   
+           
+ WHILE @DUMMYBRANCH_CD = LTRIM(@BRANCH_CD) AND @@FETCH_STATUS = 0             
+ BEGIN            
+        --INSERT INTO BBGLOG VALUES("IN BRANCH CHECK " + @DUMMYBRANCH_CD + "  " + CONVERT(VARCHAR,@ERROR),GETDATE())            
+ IF @SELL_BUY = 1              
+ BEGIN            
+  SELECT @NETEXCHANGE = @NETEXCHANGE + @EXCHANGE            
+  SELECT @TEXCHANGE = @TEXCHANGE + @EXCHANGE            
+ END            
+ ELSE            
+ BEGIN            SELECT @NETEXCHANGE = @NETEXCHANGE + @EXCHANGE               
+  SELECT @TEXCHANGE = @TEXCHANGE + @EXCHANGE            
+ END            
+             
+ SELECT @NETTRDAMT = @NETTRDAMT + @TRDAMT             
+ SELECT @NETDELAMT = @NETDELAMT + @DELAMT            
+ IF @FLAGFORINCLUSIVEBROKERAGE = 1             
+ BEGIN              
+  SELECT @TURN_TAX =  (@TRDAMT * @TRDTTDUTY) / 100 + (@DELAMT * @DELTTDUTY) / 100             
+  SELECT @SEBI_TAX = 0            
+  SELECT @INS_CHRG = 0             
+  IF @STAMPFLAG = 1             
+   SELECT @BROKER_CHRG =  (@TRDAMT * @TRDSTDUTY) / 100 + (@DELAMT * @DELSTDUTY) / 100             
+  ELSE            
+   SELECT @BROKER_CHRG =  0            
+            
+  IF @STAMPFLAG = 1               
+   SELECT @BROKERAGE = @BROKERAGE - (((@TRDAMT * @TRDTTDUTY) / 100))    -   (((@TRDAMT * @TRDSTDUTY) / 100))               
+  ELSE            
+   SELECT @BROKERAGE = @BROKERAGE - (((@TRDAMT * @TRDTTDUTY) / 100))                
+             
+  IF @STAMPFLAG = 1               
+   SELECT @DELBROKERAGE = @DELBROKERAGE - ((@DELAMT * @DELTTDUTY) / 100) - ((@DELAMT * @DELSTDUTY) / 100)              
+  ELSE            
+   SELECT @DELBROKERAGE = @DELBROKERAGE - ((@DELAMT * @DELTTDUTY) / 100)             
+              
+  IF @EXSERVICE_TAX > 0             
+   SELECT @EXSERVICE_TAX = 0 /*@NETSERVICE_TAX*/              
+ END            
+             
+ SELECT @TTURN_TAX = @TTURN_TAX + @TURN_TAX            
+ SELECT @TSEBI_TAX = @TSEBI_TAX + @SEBI_TAX            
+ SELECT @TINS_CHRG = @TINS_CHRG + @INS_CHRG            
+ SELECT @TBROKER_CHRG = @TBROKER_CHRG + @BROKER_CHRG             
+ SELECT @TOTHER_CHRG = @TOTHER_CHRG + @OTHER_CHRG            
+ SELECT @TBROKERAGE = @TBROKERAGE + @BROKERAGE            
+ SELECT @TDELBROKERAGE = @TDELBROKERAGE + @DELBROKERAGE            
+ SELECT @TSERVICE_TAX = @TSERVICE_TAX + @SERVICE_TAX            
+ SELECT @TEXSERVICE_TAX = @TEXSERVICE_TAX + @EXSERVICE_TAX             
+            
+ FETCH NEXT FROM @VALANAMTCUR INTO @BRANCH_CD,@SELL_BUY,@EXCHANGE,@BROKERAGE,@DELBROKERAGE,@SERVICE_TAX,            
+ @EXSERVICE_TAX,@TURN_TAX,@SEBI_TAX,@INS_CHRG,@BROKER_CHRG,@OTHER_CHRG,@TRDAMT,@DELAMT,@STAMPFLAG            
+END             
+            
+ IF @TEXCHANGE > 0             
+ BEGIN            
+  SELECT @SELL_BUY = 2                
+ END            
+ ELSE            
+ BEGIN            
+  SELECT @SELL_BUY = 1             
+  SELECT @TEXCHANGE = ABS(@TEXCHANGE )            
+ END            
+ SELECT @TBRKREVERSED = 0            
+            
+ IF @FLAGFORINCLUSIVEBROKERAGE = 1            
+ BEGIN            
+  IF @TBROKERAGE < 0             
+  BEGIN             
+   SELECT @TDELBROKERAGE = @TDELBROKERAGE - ABS(@TBROKERAGE) /* ADDED BY ANIMESH FOR -VE BROKERAGE */            
+/*   SELECT @TBRKREVERSED =  @TBRKREVERSED + ABS(@TBROKERAGE)*/ /* COMMENTERD BY ANIMESH FOR -VE BROKERAGE */            
+   SELECT @TBROKERAGE = 0             
+  END            
+  IF @TDELBROKERAGE < 0             
+  BEGIN            
+   SELECT @TBRKREVERSED = @TBRKREVERSED + ABS(@TDELBROKERAGE)            
+   SELECT @TDELBROKERAGE = 0             
+  END            
+  SELECT @TSERVICE_TAX = ( @TBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) ) + ( @TDELBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+  SELECT @TBROKERAGE = @TBROKERAGE - ( @TBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+  SELECT @TDELBROKERAGE = @TDELBROKERAGE - ( @TDELBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+ END             
+           
+      SELECT @TCESS_TAX = @TSERVICE_TAX - ROUND((@TSERVICE_TAX * 100) / (100 + (@CESS_CHRG + @EDUCESS_CHRG)),        
+                                                2)        
+              
+      SELECT @TEDUCESS_TAX = ROUND(@TCESS_TAX * @EDUCESS_CHRG / (@CESS_CHRG + @EDUCESS_CHRG),        
+                                   2)        
+              
+      SELECT @TCESS_TAX = @TCESS_TAX - @TEDUCESS_TAX        
+              
+      SELECT @TSERVICE_TAX = @TSERVICE_TAX - @TCESS_TAX - @TEDUCESS_TAX        
+                                                             
+      SELECT @TEXCESS_TAX = @TEXSERVICE_TAX - ROUND((@TEXSERVICE_TAX * 100) / (100 + (@CESS_CHRG + @EDUCESS_CHRG)),2)        
+              
+      SELECT @TEXEDUCESS_TAX = ROUND(@TEXCESS_TAX * @EDUCESS_CHRG / (@CESS_CHRG + @EDUCESS_CHRG),2)        
+              
+      SELECT @TEXCESS_TAX = @TEXCESS_TAX - @TEXEDUCESS_TAX        
+              
+      SELECT @TEXSERVICE_TAX = @TEXSERVICE_TAX - @TEXCESS_TAX - @TEXEDUCESS_TAX          
+          
+ INSERT INTO ACCBILL VALUES ( @CLRHSGPARTY,0,@SELL_BUY,@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TEXCHANGE,2),@DUMMYBRANCH_CD,'BILL POSTED')             
+                
+ INSERT INTO ACCBILL VALUES ( @BRKRELPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBROKERAGE,2),@DUMMYBRANCH_CD,'BILL POSTED')             
+            
+ INSERT INTO ACCBILL VALUES ( @DELCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,             
+         ROUND(@TDELBROKERAGE,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+              
+ INSERT INTO ACCBILL VALUES ( @SERTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TSERVICE_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+          
+ IF ROUND(@TCESS_TAX,2) <> 0           
+ INSERT INTO ACCBILL VALUES ( @CESSTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TCESS_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+  
+      IF ROUND(@TEDUCESS_TAX,2) <> 0        
+        INSERT INTO ACCBILL        
+        VALUES     (--@EDUCESSTAXPARTY, 
+                       '99967',       
+                    0,        
+                    '2',        
+                    @SETT_NO,        
+                    @SETT_TYPE,        
+                    @START_DATE,        
+                    @END_DATE,        
+                    @SEC_PAYIN,        
+                    @SEC_PAYOUT,        
+                    ROUND(@TEDUCESS_TAX,2),        
+                    @DUMMYBRANCH_CD,        
+                    'BILL POSTED')   
+                                
+ INSERT INTO ACCBILL VALUES ( @SERTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TEXSERVICE_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+           
+ IF ROUND(@TEXCESS_TAX,2) <> 0           
+ INSERT INTO ACCBILL VALUES ( @CESSTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TEXCESS_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+  
+      IF ROUND(@TEXEDUCESS_TAX,2) <> 0        
+        INSERT INTO ACCBILL        
+        VALUES     (@EDUCESSTAXPAYPARTY,        
+                    0,        
+                    '1',        
+                    @SETT_NO,        
+                    @SETT_TYPE,        
+                    @START_DATE,        
+                    @END_DATE,        
+                    @SEC_PAYIN,        
+                    @SEC_PAYOUT,        
+                    ROUND(@TEXEDUCESS_TAX,2),        
+                    @DUMMYBRANCH_CD,        
+                    'BILL POSTED')   
+                                 
+ INSERT INTO ACCBILL VALUES ( @TURNTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TTURN_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO ACCBILL VALUES ( @SEBITAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TSEBI_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO ACCBILL VALUES ( @INSCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TINS_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO ACCBILL VALUES ( @BRKNOTEPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBROKER_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+ IF @SETT_TYPE = 'A'             
+ INSERT INTO ACCBILL VALUES ( @AUCCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TOTHER_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+ ELSE            
+ INSERT INTO ACCBILL VALUES ( @OTHCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TOTHER_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+ IF @TBRKREVERSED > 0             
+ INSERT INTO ACCBILL VALUES ( @BRKREVERSEDPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBRKREVERSED,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+             
+ SELECT @NETBRKREVERSED = @NETBRKREVERSED + @TBRKREVERSED            
+ SELECT @NETTURN_TAX = @NETTURN_TAX + @TTURN_TAX            
+ SELECT @NETSEBI_TAX = @NETSEBI_TAX + @TSEBI_TAX            
+ SELECT @NETINS_CHRG = @NETINS_CHRG + @TINS_CHRG            
+ SELECT @NETBROKER_CHRG = @NETBROKER_CHRG + @TBROKER_CHRG             
+ SELECT @NETOTHER_CHRG = @NETOTHER_CHRG + @TOTHER_CHRG            
+ SELECT @NETBROKERAGE = @NETBROKERAGE + @TBROKERAGE            
+ SELECT @NETDELBROKERAGE = @NETDELBROKERAGE + @TDELBROKERAGE            
+ SELECT @NETSERVICE_TAX = @NETSERVICE_TAX + @TSERVICE_TAX            
+ SELECT @NETCESS_TAX = @NETCESS_TAX + @TCESS_TAX   
+ SELECT @NETEDUCESS_TAX = @NETEDUCESS_TAX + @TEDUCESS_TAX           
+ SELECT @NETEXSERVICE_TAX = @NETEXSERVICE_TAX + @TEXSERVICE_TAX             
+ SELECT @NETEXCESS_TAX = @NETEXCESS_TAX + @TEXCESS_TAX  
+ SELECT @NETEXEDUCESS_TAX = @NETEXEDUCESS_TAX + @TEXEDUCESS_TAX             
+        --INSERT INTO BBGLOG VALUES("OUT BRANCH CHECK " + @DUMMYBRANCH_CD + "    " + CONVERT(VARCHAR,@ERROR),GETDATE())            
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+            
+--INSERT INTO BBGLOG VALUES('OUT OF LOOP',GETDATE())            
+--INSERT INTO BBGLOG VALUES('DID INSERT DATA IN ACCBILL AS BILLPOSTED',GETDATE())            
+            
+SET @AUCCUR = CURSOR FOR            
+SELECT BRANCH_CD,PENAMT=SUM(TRADEQTY)*D.PENALTY/QTY FROM SETTLEMENT S, CLIENT2 C2, CLIENT1 C1, DELAUCSCRIP D WHERE S.SETT_TYPE = @SETT_TYPE AND S.SETT_NO = @SETT_NO            
+AND AUCTIONPART LIKE 'FS' AND S.SELL_BUY = 1 AND S.PARTY_CODE = C2.PARTY_CODE AND C1.CL_CODE = C2.CL_CODE             
+AND D.SETT_TYPE = (CASE WHEN S.SETT_TYPE = 'A' THEN 'N' ELSE 'W' END ) AND D.SETT_NO = S.SETT_NO AND D.SCRIP_CD = S.SCRIP_CD            
+AND QTY > 0             
+GROUP BY BRANCH_CD,D.PENALTY,QTY             
+ORDER BY BRANCH_CD            
+OPEN @AUCCUR             
+FETCH FROM @AUCCUR INTO @BRANCH_CD,@PENAMT            
+WHILE @@FETCH_STATUS = 0            
+BEGIN            
+ SELECT @DUMMYBRANCH_CD = @BRANCH_CD            
+ SELECT @NETPENAMT = 0             
+ WHILE @DUMMYBRANCH_CD = @BRANCH_CD AND @@FETCH_STATUS = 0            
+ BEGIN             
+  SELECT @NETPENAMT = @NETPENAMT + @PENAMT            
+  SELECT @NETOTHER_CHRG = @NETOTHER_CHRG - @PENAMT            
+  FETCH NEXT FROM @AUCCUR INTO @BRANCH_CD,@PENAMT            
+ END            
+ UPDATE ACCBILL SET AMOUNT = AMOUNT - @NETPENAMT WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND PARTY_CODE = @OTHCHRGPARTY AND BRANCHCD = @DUMMYBRANCH_CD            
+END            
+CLOSE @AUCCUR            
+            
+/* REMISSOR SHARING CODE STARTS FROM HERE */            
+/*            
+INSERT INTO ACCBILL              
+SELECT REMCODE,0,SELL_BUY = 2,SETT_NO,SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+AMOUNT = ROUND(SUM(REMSHAREBROKERAGE),2),BRANCH_CD,'BILL POSTED'            
+FROM REMISSOR_TRANS WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD,REMCODE            
+            
+INSERT INTO ACCBILL              
+SELECT @REMPARTY,0,SELL_BUY = 1,SETT_NO,SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+AMOUNT = ROUND(SUM(REMSHAREBROKERAGE),2),BRANCH_CD,'BILL POSTED'            
+FROM REMISSOR_TRANS WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD            
+*/            
+/* REMISSOR SHARING CODE END HERE */            
+            
+SET @VALANAMTCUR = CURSOR FOR            
+ SELECT AMOUNT = ISNULL(SUM(AMOUNT),0),BRANCHCD,SELL_BUY FROM ACCBILL WHERE             
+ SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND BRANCHCD <> 'ZZZ'            
+ GROUP BY BRANCHCD,SELL_BUY             
+ ORDER BY BRANCHCD,SELL_BUY            
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@BRANCH_CD,@SELL_BUY            
+WHILE @@FETCH_STATUS = 0              
+BEGIN            
+ SELECT @DUMMYBRANCH_CD = @BRANCH_CD       SELECT @NETDIFFAMT = 0            
+ WHILE @DUMMYBRANCH_CD = @BRANCH_CD AND @@FETCH_STATUS = 0             
+ BEGIN            
+  IF @SELL_BUY = 1             
+  BEGIN            
+   SELECT @NETDIFFAMT = @NETDIFFAMT + @DIFFAMT            
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT + @DIFFAMT            
+  END             
+  ELSE            
+  BEGIN                                    
+   SELECT @NETDIFFAMT = @NETDIFFAMT - @DIFFAMT             
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT - @DIFFAMT                     
+  END            
+  FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@BRANCH_CD,@SELL_BUY            
+ END            
+ IF @NETDIFFAMT > 0             
+   INSERT INTO ACCBILL VALUES ( @RNDOFFPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+            ROUND(@NETDIFFAMT,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+ ELSE IF @NETDIFFAMT < 0             
+   INSERT INTO ACCBILL VALUES ( @RNDOFFPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+            ROUND(ABS(@NETDIFFAMT),2),@DUMMYBRANCH_CD,'BILL POSTED')              
+            
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+             
+IF @NETEXCHANGE >= 0             
+ SELECT @SELL_BUY = 2            
+ELSE            
+ SELECT @SELL_BUY = 1            
+            
+INSERT INTO ACCBILL VALUES ( @CLRHSGPARTY,0,@SELL_BUY,@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(ABS(@NETEXCHANGE),2),'ZZZ','BILL POSTED')            
+               
+INSERT INTO ACCBILL VALUES ( @BRKRELPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBROKERAGE,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO ACCBILL VALUES ( @DELCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETDELBROKERAGE,2),'ZZZ','BILL POSTED')            
+             
+INSERT INTO ACCBILL VALUES ( @SERTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETSERVICE_TAX,2),'ZZZ','BILL POSTED')            
+          
+IF ROUND(@NETCESS_TAX,2) <> 0           
+INSERT INTO ACCBILL VALUES ( @CESSTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETCESS_TAX,2),'ZZZ','BILL POSTED')            
+  
+  IF ROUND(@NETEDUCESS_TAX,2) <> 0        
+    INSERT INTO ACCBILL        
+    VALUES     (@EDUCESSTAXPARTY,        
+                0,        
+                '2',        
+                @SETT_NO,        
+                @SETT_TYPE,        
+                @START_DATE,        
+                @END_DATE,        
+                @SEC_PAYIN,        
+                @SEC_PAYOUT,        
+                ROUND(@NETEDUCESS_TAX,2),        
+                'ZZZ',        
+                'BILL POSTED')    
+                            
+INSERT INTO ACCBILL VALUES ( @SERTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETEXSERVICE_TAX,2),'ZZZ','BILL POSTED')            
+          
+IF ROUND(@NETEXCESS_TAX,2) <> 0           
+INSERT INTO ACCBILL VALUES ( @CESSTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETEXCESS_TAX,2),'ZZZ','BILL POSTED')            
+  
+  IF ROUND(@NETEXEDUCESS_TAX,2) <> 0        
+    INSERT INTO ACCBILL        
+    VALUES     (--@EDUCESSTAXPAYPARTY,        
+
+'99967',
+                0,        
+                '1',        
+                @SETT_NO,        
+                @SETT_TYPE,        
+                @START_DATE,        
+                @END_DATE,        
+                @SEC_PAYIN,        
+                @SEC_PAYOUT,        
+                ROUND(@NETEXEDUCESS_TAX,2),        
+                'ZZZ',        
+                'BILL POSTED')    
+                             
+INSERT INTO ACCBILL VALUES ( @TURNTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETTURN_TAX,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO ACCBILL VALUES ( @SEBITAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETSEBI_TAX,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO ACCBILL VALUES ( @INSCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETINS_CHRG,2),'ZZZ','BILL POSTED')            
+          
+INSERT INTO ACCBILL VALUES ( @BRKNOTEPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBROKER_CHRG,2),'ZZZ','BILL POSTED' )            
+            
+IF @SETT_TYPE = 'A'             
+INSERT INTO ACCBILL VALUES ( @AUCCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETOTHER_CHRG,2),'ZZZ','BILL POSTED' )            
+ELSE            
+INSERT INTO ACCBILL VALUES ( @OTHCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETOTHER_CHRG,2),'ZZZ','BILL POSTED' )            
+          
+IF @NETBRKREVERSED > 0               
+INSERT INTO ACCBILL VALUES ( @BRKREVERSEDPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBRKREVERSED,2),'ZZZ','BILL POSTED' )            
+/*            
+INSERT INTO ACCBILL              
+SELECT @REMPARTY,0,SELL_BUY = 1,SETT_NO,SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+AMOUNT = ROUND(SUM(REMSHAREBROKERAGE),2),'ZZZ','BILL POSTED'            
+FROM REMISSOR_TRANS WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+GROUP BY SETT_NO,SETT_TYPE            
+*/            
+--INSERT INTO BBGLOG VALUES('DID INSERT DATA IN ACCBILL BRANCHWISE ',GETDATE())            
+            
+SET @VALANAMTCUR = CURSOR FOR            
+ SELECT OPPCODE,REVCODE,ACCODE FROM VALANACCOUNT WHERE REVERSED = 1             
+ AND EFFDATE = (SELECT MIN(EFFDATE) FROM VALANACCOUNT            
+ WHERE EFFDATE >= @END_DATE ) ORDER BY OPPCODE,REVCODE           
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @OPPCODE,@REVCODE,@ACCODE             
+WHILE @@FETCH_STATUS =  0            
+BEGIN            
+ SELECT @DUMMYOPPCODE = @OPPCODE            
+ WHILE @DUMMYOPPCODE = @OPPCODE AND @@FETCH_STATUS =  0            
+ BEGIN            
+  SELECT @REVAMT = 0            
+  SELECT @DUMMYREVCODE = @REVCODE            
+  WHILE @DUMMYREVCODE = @REVCODE AND @DUMMYOPPCODE = @OPPCODE AND @@FETCH_STATUS =  0            
+  BEGIN            
+   SET @VALANACCCUR = CURSOR FOR            
+    SELECT AMOUNT,SELL_BUY FROM ACCBILL WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE            
+    AND PARTY_CODE = @ACCODE            
+   OPEN @VALANACCCUR             
+   FETCH NEXT FROM @VALANACCCUR INTO @ACCAMT,@SELL_BUY            
+   IF @@FETCH_STATUS =  0            
+   BEGIN            
+    IF @SELL_BUY = 1           
+ BEGIN            
+     SELECT @REVAMT = @REVAMT + @ACCAMT            
+     SELECT @OPPAMT = @OPPAMT + @ACCAMT            
+    END            
+    ELSE            
+    BEGIN            
+     SELECT @REVAMT = @REVAMT - @ACCAMT            
+     SELECT @OPPAMT = @OPPAMT - @ACCAMT            
+    END            
+   END            
+   CLOSE @VALANACCCUR            
+   DEALLOCATE @VALANACCCUR            
+   FETCH NEXT FROM @VALANAMTCUR INTO @OPPCODE,@REVCODE,@ACCODE             
+  END            
+  IF @REVAMT > 0             
+   INSERT INTO ACCBILL VALUES ( @DUMMYREVCODE,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+           ROUND(@REVAMT,2),'ZZZ','BILL POSTED')              
+  ELSE            
+   INSERT INTO ACCBILL VALUES ( @DUMMYREVCODE,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+           ROUND(ABS(@REVAMT),2),'ZZZ','BILL POSTED')              
+ END             
+ IF @OPPAMT > 0              
+  INSERT INTO ACCBILL VALUES ( @DUMMYOPPCODE,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+          ROUND(@OPPAMT,2),'ZZZ','BILL POSTED')               
+ ELSE            
+  INSERT INTO ACCBILL VALUES ( @DUMMYOPPCODE,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+          ROUND(ABS(@OPPAMT),2),'ZZZ','BILL POSTED')               
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+            
+            
+SELECT @GROSSDIFFAMT = 0            
+            
+            
+SET @VALANAMTCUR = CURSOR FOR            
+            
+SELECT AMOUNT = ISNULL(SUM(AMOUNT),0),SELL_BUY FROM ACCBILL A,ACCOUNT.DBO.ACMAST M             
+WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE             
+AND A.PARTY_CODE = M.CLTCODE AND (BRANCHCD = 'ZZZ' OR ACCAT = 4 /*OR PARTY_CODE IN (SELECT REMCODE FROM REMISSOR_MASTER)*/)            
+GROUP BY SELL_BUY            
+            
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@SELL_BUY            
+WHILE @@FETCH_STATUS = 0              
+BEGIN            
+ BEGIN            
+  IF @SELL_BUY = 1             
+  BEGIN              
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT + @DIFFAMT            
+  END             
+  ELSE            
+  BEGIN                                
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT - @DIFFAMT                     
+  END            
+  FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@SELL_BUY            
+ END            
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+IF @GROSSDIFFAMT > 0             
+ INSERT INTO ACCBILL VALUES ( @RNDOFFPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+          ROUND(@GROSSDIFFAMT,2),'ZZZ','BILL POSTED')            
+ELSE             
+ INSERT INTO ACCBILL VALUES ( @RNDOFFPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+           ROUND(ABS(@GROSSDIFFAMT),2),'ZZZ','BILL POSTED')            
+            
+            
+/* INSTITUTIONAL PROCESS */            
+            
+--INSERT INTO BBGLOG VALUES('DID NORMAL VALAN',GETDATE())            
+           INSERT INTO IACCBILL              
+SELECT PARTY_CODE,'0',SELL_BUY = 1,SETT_NO,SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+AMOUNT = ROUND(SUM(PAMT) + SUM(SAMT),2),BRANCH_CD,'BILL POSTED'             
+FROM NSEBILLVALAN WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND TRDTYPE = 'I'            
+GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD,PARTY_CODE            
+            
+--INSERT INTO BBGLOG VALUES('DID INSERT THE IACCBILL ',GETDATE())            
+            
+SELECT @NETBRKREVERSED = 0            
+SELECT @NETEXCHANGE = 0             
+SELECT @NETBROKERAGE = 0             
+SELECT @NETDELBROKERAGE = 0             
+SELECT @NETSERVICE_TAX = 0             
+SELECT @NETCESS_TAX = 0   
+SELECT @NETEDUCESS_TAX = 0            
+SELECT @NETEXSERVICE_TAX = 0             
+SELECT @NETEXCESS_TAX = 0             
+SELECT @NETEXEDUCESS_TAX = 0     
+SELECT @NETTURN_TAX = 0             
+SELECT @NETSEBI_TAX = 0              
+SELECT @NETINS_CHRG = 0             
+SELECT @NETBROKER_CHRG = 0             
+SELECT @NETOTHER_CHRG = 0             
+SELECT @GROSSDIFFAMT = 0            
+            
+            
+/* EXCHANGE AND LEVIS BRANCH WISE OBLIGATION AMOUNT */            
+SET @VALANAMTCUR = CURSOR FOR             
+ SELECT BRANCH_CD,            
+ SELL_BUY = (CASE WHEN SUM(PRATE) >= SUM(SRATE)             
+    THEN 2            
+    ELSE 1            
+      END),            
+ EXCHANGE = 0,            
+ BROKERAGE=SUM(BROKERAGE),DELBROKERAGE=SUM(DELBROKERAGE),            
+ SERVICE_TAX=SUM(SERVICE_TAX),EXSERVICE_TAX=SUM(EXSERVICE_TAX),TURN_TAX=SUM(TURN_TAX),SEBI_TAX=SUM(SEBI_TAX),            
+ INS_CHRG=SUM(INS_CHRG),BROKER_CHRG=SUM(BROKER_CHRG),OTHER_CHRG=SUM(OTHER_CHRG),TRDAMT=SUM(TRDAMT),DELAMT=SUM(DELAMT),STAMPFLAG=(CASE WHEN STAMPFLAG=1 THEN 1 ELSE 0 END)            
+ FROM NSEBILLVALAN WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND TRDTYPE = 'I'            
+ GROUP BY SETT_NO,SETT_TYPE,BRANCH_CD,STAMPFLAG            
+ ORDER BY SETT_NO,SETT_TYPE,BRANCH_CD            
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @BRANCH_CD,@SELL_BUY,@EXCHANGE,@BROKERAGE,@DELBROKERAGE,@SERVICE_TAX,            
+                @EXSERVICE_TAX,@TURN_TAX,@SEBI_TAX,@INS_CHRG,@BROKER_CHRG,@OTHER_CHRG,@TRDAMT,@DELAMT,@STAMPFLAG            
+WHILE @@FETCH_STATUS = 0             
+BEGIN              
+ SELECT @DUMMYBRANCH_CD = LTRIM(@BRANCH_CD)            
+            
+ SELECT @TEXCHANGE = 0            
+ SELECT @TBRKREVERSED = 0            
+ SELECT @TTURN_TAX = 0            
+ SELECT @TSEBI_TAX = 0            
+ SELECT @TINS_CHRG = 0            
+ SELECT @TBROKER_CHRG = 0            
+ SELECT @TOTHER_CHRG = 0            
+ SELECT @TBROKERAGE = 0            
+ SELECT @TDELBROKERAGE = 0            
+ SELECT @TSERVICE_TAX = 0            
+ SELECT @TCESS_TAX = 0  
+ SELECT @TEDUCESS_TAX = 0             
+ SELECT @TEXSERVICE_TAX = 0            
+ SELECT @TEXCESS_TAX = 0            
+ SELECT @TEXEDUCESS_TAX = 0  
+            
+ WHILE @DUMMYBRANCH_CD = LTRIM(@BRANCH_CD) AND @@FETCH_STATUS = 0             
+ BEGIN            
+ IF @SELL_BUY = 1              
+ BEGIN            
+  SELECT @NETEXCHANGE = @NETEXCHANGE + @EXCHANGE            
+  SELECT @TEXCHANGE = @TEXCHANGE + @EXCHANGE            
+ END            
+ ELSE            
+ BEGIN            
+  SELECT @NETEXCHANGE = @NETEXCHANGE + @EXCHANGE               
+  SELECT @TEXCHANGE = @TEXCHANGE + @EXCHANGE            
+ END            
+             
+ SELECT @NETTRDAMT = @NETTRDAMT + @TRDAMT             
+ SELECT @NETDELAMT = @NETDELAMT + @DELAMT            
+ IF @FLAGFORINCLUSIVEBROKERAGE = 1             
+ BEGIN              
+  SELECT @TURN_TAX =  (@TRDAMT * @TRDTTDUTY) / 100 + (@DELAMT * @DELTTDUTY) / 100             
+  SELECT @SEBI_TAX = 0            
+  SELECT @INS_CHRG = 0             
+  IF @STAMPFLAG = 1             
+   SELECT @BROKER_CHRG =  (@TRDAMT * @TRDSTDUTY) / 100 + (@DELAMT * @DELSTDUTY) / 100             
+  ELSE            
+   SELECT @BROKER_CHRG =  0            
+            
+  SELECT @OTHER_CHRG = 0             
+            
+  IF @STAMPFLAG = 1               
+   SELECT @BROKERAGE = @BROKERAGE - (((@TRDAMT * @TRDTTDUTY) / 100))    -   (((@TRDAMT * @TRDSTDUTY) / 100))               
+  ELSE            
+   SELECT @BROKERAGE = @BROKERAGE - (((@TRDAMT * @TRDTTDUTY) / 100))                
+             
+  IF @STAMPFLAG = 1               
+   SELECT @DELBROKERAGE = @DELBROKERAGE - ((@DELAMT * @DELTTDUTY) / 100) - ((@DELAMT * @DELSTDUTY) / 100)              
+  ELSE            
+   SELECT @DELBROKERAGE = @DELBROKERAGE - ((@DELAMT * @DELTTDUTY) / 100)             
+              
+  IF @EXSERVICE_TAX > 0             
+   SELECT @EXSERVICE_TAX = 0 /*@NETSERVICE_TAX*/              
+ END            
+            
+ SELECT @TTURN_TAX = @TTURN_TAX + @TURN_TAX            
+ SELECT @TSEBI_TAX = @TSEBI_TAX + @SEBI_TAX            
+ SELECT @TINS_CHRG = @TINS_CHRG + @INS_CHRG            
+ SELECT @TBROKER_CHRG = @TBROKER_CHRG + @BROKER_CHRG            
+ SELECT @TOTHER_CHRG = @TOTHER_CHRG + @OTHER_CHRG            
+ SELECT @TBROKERAGE = @TBROKERAGE + @BROKERAGE            
+ SELECT @TDELBROKERAGE = @TDELBROKERAGE + @DELBROKERAGE            
+ SELECT @TSERVICE_TAX = @TSERVICE_TAX + @SERVICE_TAX            
+ SELECT @TEXSERVICE_TAX = @TEXSERVICE_TAX + @EXSERVICE_TAX             
+             
+  FETCH NEXT FROM @VALANAMTCUR INTO @BRANCH_CD,@SELL_BUY,@EXCHANGE,@BROKERAGE,@DELBROKERAGE,@SERVICE_TAX,            
+        @EXSERVICE_TAX,@TURN_TAX,@SEBI_TAX,@INS_CHRG,@BROKER_CHRG,@OTHER_CHRG,@TRDAMT,@DELAMT,@STAMPFLAG            
+             
+ END             
+            
+ IF @TEXCHANGE > 0             
+ BEGIN            
+  SELECT @SELL_BUY = 2                
+ END            
+ ELSE            
+ BEGIN            
+  SELECT @SELL_BUY = 1             
+  SELECT @TEXCHANGE = ABS(@TEXCHANGE )            
+ END            
+ SELECT @TBRKREVERSED = 0            
+            
+ IF @FLAGFORINCLUSIVEBROKERAGE = 1            
+ BEGIN            
+  IF @TBROKERAGE < 0             
+  BEGIN             
+   SELECT @TDELBROKERAGE = @TDELBROKERAGE - ABS(@TBROKERAGE) /* ADDED BY ANIMESH FOR -VE BROKERAGE */            
+/*   SELECT @TBRKREVERSED =  @TBRKREVERSED + ABS(@TBROKERAGE)*/ /* COMMENTERD BY ANIMESH FOR -VE BROKER*/            
+            
+   SELECT @TBROKERAGE = 0             
+  END            
+  IF @TDELBROKERAGE < 0             
+  BEGIN            
+   SELECT @TBRKREVERSED = @TBRKREVERSED + ABS(@TDELBROKERAGE)            
+   SELECT @TDELBROKERAGE = 0             
+  END            
+  SELECT @TSERVICE_TAX = ( @TBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) ) + ( @TDELBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+  SELECT @TBROKERAGE = @TBROKERAGE - ( @TBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+  SELECT @TDELBROKERAGE = @TDELBROKERAGE - ( @TDELBROKERAGE * @SERVICE_CHRG / (100+@SERVICE_CHRG) )            
+ END             
+          
+      SELECT @TCESS_TAX = @TSERVICE_TAX - ROUND((@TSERVICE_TAX * 100) / (100 + (@CESS_CHRG + @EDUCESS_CHRG)),2)        
+              
+      SELECT @TEDUCESS_TAX = ROUND(@TCESS_TAX * @EDUCESS_CHRG / (@CESS_CHRG + @EDUCESS_CHRG),2)        
+              
+      SELECT @TCESS_TAX = @TCESS_TAX - @TEDUCESS_TAX        
+              
+      SELECT @TSERVICE_TAX = @TSERVICE_TAX - @TCESS_TAX - @TEDUCESS_TAX        
+                                                                  
+      SELECT @TEXCESS_TAX = @TEXSERVICE_TAX - ROUND((@TEXSERVICE_TAX * 100) / (100 + (@CESS_CHRG + @EDUCESS_CHRG)),2)        
+              
+      SELECT @TEXEDUCESS_TAX = ROUND(@TEXCESS_TAX * @EDUCESS_CHRG / (@CESS_CHRG + @EDUCESS_CHRG),2)        
+              
+      SELECT @TEXCESS_TAX = @TEXCESS_TAX - @TEXEDUCESS_TAX        
+              
+      SELECT @TEXSERVICE_TAX = @TEXSERVICE_TAX - @TEXCESS_TAX - @TEXEDUCESS_TAX         
+          
+ INSERT INTO IACCBILL VALUES ( @BRKRELPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBROKERAGE,2),@DUMMYBRANCH_CD,'BILL POSTED')             
+            
+ INSERT INTO IACCBILL VALUES ( @DELCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TDELBROKERAGE,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+              
+ INSERT INTO IACCBILL VALUES ( @SERTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TSERVICE_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+           
+ IF ROUND(@TCESS_TAX,2) <> 0          
+ INSERT INTO IACCBILL VALUES ( @CESSTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TCESS_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+  
+      IF ROUND(@TEDUCESS_TAX,2) <> 0        
+        INSERT INTO IACCBILL        
+        VALUES     (@EDUCESSTAXPARTY,        
+                    0,        
+                    '2',        
+                    @SETT_NO,        
+                    @SETT_TYPE,        
+                    @START_DATE,        
+                    @END_DATE,        
+                    @SEC_PAYIN,        
+      @SEC_PAYOUT,        
+                    ROUND(@TEDUCESS_TAX,2),        
+                    @DUMMYBRANCH_CD,        
+                    'BILL POSTED')  
+                               
+ INSERT INTO IACCBILL VALUES ( @SERTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TEXSERVICE_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+           
+ IF ROUND(@TEXCESS_TAX,2) <> 0          
+ INSERT INTO IACCBILL VALUES ( @CESSTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TEXCESS_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+  
+      IF ROUND(@TEXEDUCESS_TAX,2) <> 0        
+        INSERT INTO IACCBILL        
+        VALUES     (@EDUCESSTAXPAYPARTY,        
+                    0,        
+                    '1',        
+                    @SETT_NO,        
+                    @SETT_TYPE,        
+                    @START_DATE,        
+                    @END_DATE,        
+                    @SEC_PAYIN,        
+                    @SEC_PAYOUT,        
+                    ROUND(@TEXEDUCESS_TAX,2),        
+                    @DUMMYBRANCH_CD,        
+                    'BILL POSTED')   
+                                 
+ INSERT INTO IACCBILL VALUES ( @TURNTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TTURN_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO IACCBILL VALUES ( @SEBITAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TSEBI_TAX,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO IACCBILL VALUES ( @INSCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+      ROUND(@TINS_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO IACCBILL VALUES ( @BRKNOTEPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBROKER_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+            
+ INSERT INTO IACCBILL VALUES ( @OTHCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TOTHER_CHRG,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+          
+ IF @TBRKREVERSED > 0             
+ INSERT INTO IACCBILL VALUES ( @BRKREVERSEDPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+         ROUND(@TBRKREVERSED,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+             
+ SELECT @NETBRKREVERSED = @NETBRKREVERSED + @TBRKREVERSED            
+ SELECT @NETTURN_TAX = @NETTURN_TAX + @TTURN_TAX            
+ SELECT @NETSEBI_TAX = @NETSEBI_TAX + @TSEBI_TAX            
+ SELECT @NETINS_CHRG = @NETINS_CHRG + @TINS_CHRG            
+ SELECT @NETBROKER_CHRG = @NETBROKER_CHRG + @TBROKER_CHRG             
+ SELECT @NETOTHER_CHRG = @NETOTHER_CHRG + @TOTHER_CHRG            
+ SELECT @NETBROKERAGE = @NETBROKERAGE + @TBROKERAGE            
+ SELECT @NETDELBROKERAGE = @NETDELBROKERAGE + @TDELBROKERAGE            
+ SELECT @NETSERVICE_TAX = @NETSERVICE_TAX + @TSERVICE_TAX            
+ SELECT @NETCESS_TAX = @NETCESS_TAX + @TCESS_TAX  
+ SELECT @NETEDUCESS_TAX = @NETEDUCESS_TAX + @TEDUCESS_TAX            
+ SELECT @NETEXSERVICE_TAX = @NETEXSERVICE_TAX + @TEXSERVICE_TAX             
+ SELECT @NETEXCESS_TAX = @NETEXCESS_TAX + @TEXCESS_TAX  
+ SELECT @NETEXEDUCESS_TAX = @NETEXEDUCESS_TAX + @TEXEDUCESS_TAX              
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+IF @NETEXCHANGE >= 0             
+ SELECT @SELL_BUY = 2            
+ELSE            
+ SELECT @SELL_BUY = 1            
+            
+INSERT INTO IACCBILL VALUES ( @CLRHSGPARTY,0,@SELL_BUY,@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(ABS(@NETEXCHANGE),2),'ZZZ','BILL POSTED')            
+               
+INSERT INTO IACCBILL VALUES ( @BRKRELPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBROKERAGE,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO IACCBILL VALUES ( @DELCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETDELBROKERAGE,2),'ZZZ','BILL POSTED')            
+             
+INSERT INTO IACCBILL VALUES ( @SERTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETSERVICE_TAX,2),'ZZZ','BILL POSTED')            
+          
+IF ROUND(@NETCESS_TAX,2) <> 0          
+INSERT INTO IACCBILL VALUES ( @CESSTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETCESS_TAX,2),'ZZZ','BILL POSTED')            
+  
+  IF ROUND(@NETEDUCESS_TAX,2) <> 0        
+    INSERT INTO IACCBILL        
+    VALUES     (@EDUCESSTAXPARTY,        
+                0,        
+                '2',        
+                @SETT_NO,        
+     @SETT_TYPE,        
+                @START_DATE,        
+                @END_DATE,        
+                @SEC_PAYIN,        
+                @SEC_PAYOUT,        
+                ROUND(@NETEDUCESS_TAX,2),        
+                'ZZZ',        
+                'BILL POSTED')    
+                            
+INSERT INTO IACCBILL VALUES ( @SERTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+ ROUND(@NETEXSERVICE_TAX,2),'ZZZ','BILL POSTED')            
+          
+IF ROUND(@NETEXCESS_TAX,2) <> 0          
+INSERT INTO IACCBILL VALUES ( @CESSTAXPAYPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETEXCESS_TAX,2),'ZZZ','BILL POSTED')            
+  
+  IF ROUND(@NETEXEDUCESS_TAX,2) <> 0        
+    INSERT INTO IACCBILL        
+    VALUES     (@EDUCESSTAXPAYPARTY,        
+                0,        
+                '1',        
+                @SETT_NO,        
+                @SETT_TYPE,        
+                @START_DATE,        
+           @END_DATE,        
+                @SEC_PAYIN,        
+                @SEC_PAYOUT,        
+                ROUND(@NETEXEDUCESS_TAX,2),        
+                'ZZZ',        
+                'BILL POSTED')    
+                             
+INSERT INTO IACCBILL VALUES ( @TURNTAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETTURN_TAX,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO IACCBILL VALUES ( @SEBITAXPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETSEBI_TAX,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO IACCBILL VALUES ( @INSCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETINS_CHRG,2),'ZZZ','BILL POSTED')            
+            
+INSERT INTO IACCBILL VALUES ( @BRKNOTEPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBROKER_CHRG,2),'ZZZ','BILL POSTED' )            
+            
+INSERT INTO IACCBILL VALUES ( @OTHCHRGPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETOTHER_CHRG,2),'ZZZ','BILL POSTED' )            
+          
+IF @NETBRKREVERSED > 0               
+INSERT INTO IACCBILL VALUES ( @BRKREVERSEDPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+       ROUND(@NETBRKREVERSED,2),'ZZZ','BILL POSTED' )            
+            
+SET @VALANAMTCUR = CURSOR FOR            
+ SELECT AMOUNT = ISNULL(SUM(AMOUNT),0),BRANCHCD,SELL_BUY FROM IACCBILL WHERE           
+ SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND BRANCHCD <> 'ZZZ'            
+ GROUP BY BRANCHCD,SELL_BUY             
+ ORDER BY BRANCHCD,SELL_BUY            
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@BRANCH_CD,@SELL_BUY            
+WHILE @@FETCH_STATUS = 0              
+BEGIN            
+ SELECT @DUMMYBRANCH_CD = @BRANCH_CD            
+ SELECT @NETDIFFAMT = 0            
+ WHILE @DUMMYBRANCH_CD = @BRANCH_CD AND @@FETCH_STATUS = 0             
+ BEGIN            
+  IF @SELL_BUY = 1             
+  BEGIN            
+   SELECT @NETDIFFAMT = @NETDIFFAMT + @DIFFAMT            
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT + @DIFFAMT            
+  END             
+  ELSE            
+  BEGIN                                    
+   SELECT @NETDIFFAMT = @NETDIFFAMT - @DIFFAMT             
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT - @DIFFAMT                     
+  END            
+  FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@BRANCH_CD,@SELL_BUY            
+ END            
+ IF @NETDIFFAMT > 0             
+   INSERT INTO IACCBILL VALUES ( @RNDOFFPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+            ROUND(@NETDIFFAMT,2),@DUMMYBRANCH_CD,'BILL POSTED')            
+ ELSE IF @NETDIFFAMT < 0             
+   INSERT INTO IACCBILL VALUES ( @RNDOFFPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+            ROUND(ABS(@NETDIFFAMT),2),@DUMMYBRANCH_CD,'BILL POSTED')              
+            
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+SELECT @GROSSDIFFAMT = 0            
+            
+SET @VALANAMTCUR = CURSOR FOR            
+            
+SELECT AMOUNT = ISNULL(SUM(AMOUNT),0),SELL_BUY FROM IACCBILL A,ACCOUNT.DBO.ACMAST M             
+WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE             
+AND A.PARTY_CODE = M.CLTCODE AND (BRANCHCD = 'ZZZ' OR ACCAT = 4 )            
+GROUP BY SELL_BUY            
+            
+OPEN @VALANAMTCUR             
+FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@SELL_BUY            
+WHILE @@FETCH_STATUS = 0              
+BEGIN            
+ BEGIN            
+  IF @SELL_BUY = 1             
+  BEGIN              
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT + @DIFFAMT            
+  END             
+  ELSE            
+  BEGIN                                
+   SELECT @GROSSDIFFAMT = @GROSSDIFFAMT - @DIFFAMT                     
+  END            
+  FETCH NEXT FROM @VALANAMTCUR INTO @DIFFAMT,@SELL_BUY            
+ END            
+END            
+CLOSE @VALANAMTCUR            
+DEALLOCATE @VALANAMTCUR            
+            
+IF @GROSSDIFFAMT > 0             
+          
+ INSERT INTO IACCBILL VALUES ( @RNDOFFPARTY,0,'2',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+          ROUND(@GROSSDIFFAMT,2),'ZZZ','BILL POSTED')            
+ELSE             
+ INSERT INTO IACCBILL VALUES ( @RNDOFFPARTY,0,'1',@SETT_NO,@SETT_TYPE,@START_DATE,@END_DATE,@SEC_PAYIN,@SEC_PAYOUT,            
+           ROUND(ABS(@GROSSDIFFAMT),2),'ZZZ','BILL POSTED')            
+            
+IF @SETT_TYPE = 'A'             
+BEGIN            
+IF ( SELECT ISNULL(COUNT(*),0) FROM SETTLEMENT WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND AUCTIONPART LIKE 'F%' ) > 0             
+ UPDATE ACCBILL SET NARRATION = 'FINAL BILL' WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE             
+ELSE            
+ UPDATE ACCBILL SET NARRATION = 'PROVISIONAL BILL' WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE             
+END          
+          
+DELETE FROM ACCBILL WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND AMOUNT = 0           
+DELETE FROM IACCBILL WHERE SETT_NO = @SETT_NO AND SETT_TYPE = @SETT_TYPE AND AMOUNT = 0
+
+GO

@@ -1,0 +1,109 @@
+-- Object: PROCEDURE dbo.CLS_HOLDINGSTATEMENT_DETAIL
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE [dbo].[CLS_HOLDINGSTATEMENT_DETAIL] 
+(
+	@STATUSID   VARCHAR(25),
+	@STATUSNAME VARCHAR(25),
+	@FROMPARTY  VARCHAR(20),
+	@TOPARTY	VARCHAR(20),
+	@SCRIPCD	VARCHAR(20),
+	@SERIES		VARCHAR(3),
+	@BDPID		VARCHAR(20),
+	@BCLTDPID	VARCHAR(20),
+	@SETTNO VARCHAR(25),
+	@SETTTYPE VARCHAR(2) = ''
+	)
+--Exec CLS_HOLDINGSTATEMENT_DETAIL 'BROKER','BROKER','0A141','0A141','500389','BSE','12033200','1203320000062556','2007097','D'
+
+AS
+SET @BDPID = (
+		CASE 
+			WHEN @BDPID = ''
+				THEN '%'
+			ELSE @BDPID
+			END
+		)
+SET @BCLTDPID = (
+		CASE 
+			WHEN @BCLTDPID = ''
+				THEN '%'
+			ELSE @BCLTDPID
+			END
+		)
+SET @FROMPARTY = (
+		CASE 
+			WHEN @FROMPARTY = ''
+				THEN '0'
+			ELSE @FROMPARTY
+			END
+		)
+SET @TOPARTY = (
+		CASE 
+			WHEN @TOPARTY = ''
+				THEN 'ZZZZZZZZZZ'
+			ELSE @TOPARTY
+			END
+		)
+ 
+ BEGIN
+	 SELECT 
+		QTY=CAST(QTY AS decimal(18,0)),
+		SCRIP_CD, 
+		SERIES,    
+		SETT_NO, 
+		SETT_TYPE, 
+		TCODE, 
+		PARTY_CODE, 
+		TRANSNO = FOLIONO, 
+		DRCR, 
+		TRANSDATE=LEFT(TRANSDATE,11),
+		REASON,
+		CLTDPID,
+		DPID  
+	 FROM 
+		DELTRANS  
+	 WHERE 
+		 SCRIP_CD = @SCRIPCD
+		 AND SERIES= @SERIES
+		 AND SETT_NO = @SETTNO
+		 AND SETT_TYPE = @SETTTYPE
+		 AND DRCR = 'D' 
+		 AND PARTY_CODE =@FROMPARTY 
+		 AND BDPID = @BDPID 
+		 AND BCLTDPID = @BCLTDPID  
+		 AND FILLER2 = 1 AND DELIVERED <> 'D' AND TRTYPE <> 907  
+	 UNION ALL 
+	 SELECT 
+		QTY=CAST(QTY AS decimal(18,0)),
+		SCRIP_CD, 
+		SERIES,    
+		SETT_NO, 
+		SETT_TYPE, 
+		TCODE, 
+		PARTY_CODE, 
+		TRANSNO, 
+		DRCR, 
+		TRANSDATE= LEFT(TRDATE,11),
+		REASON='EXCESS',
+		CLTDPID=CLTACCNO,
+		DPID  
+	 FROM 
+		DEMATTRANS  
+	 WHERE 
+		 SCRIP_CD = @SCRIPCD
+		 AND SERIES= @SERIES
+		 AND SETT_NO = @SETTNO
+		 AND SETT_TYPE = @SETTTYPE  
+		 AND PARTY_CODE =@FROMPARTY 
+		 AND BDPID = @BDPID 
+		 AND BCLTACCNO = @BCLTDPID 
+		 AND TRTYPE <> 907  
+	 ORDER BY 
+	 SCRIP_CD, SERIES,SETT_NO, SETT_TYPE, PARTY_CODE, DRCR 
+ END
+
+GO

@@ -1,0 +1,14 @@
+-- Object: PROCEDURE dbo.CLS_GET_RPT_FOOTER
+-- Server: 10.253.33.91 | DB: MSAJAG
+--------------------------------------------------
+
+
+
+CREATE PROC [dbo].[CLS_GET_RPT_FOOTER]
+(
+	@RPTCODE VARCHAR(50)
+)
+AS
+SELECT * FROM MSAJAG..CLS_TBLFOOTER WHERE FLDREPORTCODE = @RPTCODE ORDER BY LINECOUNT
+
+GO

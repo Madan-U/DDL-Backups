@@ -1,0 +1,62 @@
+-- Object: PROCEDURE dbo.BANKRECO_MISMATCH
+-- Server: 10.253.33.91 | DB: ACCOUNT
+--------------------------------------------------
+
+/*select * from ledger1 where refno = 13
+select * from bankreco where cltcode = '02015' and  crossreferenceno = 13
+select * from bankreco WHERE crossreferenceno = 13*/
+
+
+--exec BANKRECO_MISMATCH '02015', 'sep  1 2005', 'sep 29 2005'  
+CREATE PROC BANKRECO_MISMATCH    
+--ALTER PROC BANKRECO_MISMATCH    
+@BANK_CODE VARCHAR(10),  
+@FDATE VARCHAR(11),  
+@TDATE VARCHAR(11)  
+AS    
+    
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED    
+    
+SELECT     
+      DESCRIPTION,    
+      BR.DRCR,    
+      CASE BR.DRCR WHEN 'D' THEN BR.AMOUNT ELSE -BR.AMOUNT END AS AMOUNT     
+      , SUM(CASE L1.DRCR WHEN 'D' THEN L1.RELAMT ELSE -L1.RELAMT END) AS 'LED. AMOUNT',    
+      REFERENCENO ,    
+      INSERTED  =(CASE WHEN STATUS = 'MATCHED' THEN 'APPROVED' ELSE 'PENDING' END ),     
+      VDT = CONVERT(VARCHAR,VALUEDATE,103) ,     
+      CROSSREFERENCENO,     
+      DIFF = ((CASE BR.DRCR WHEN 'D' THEN BR.AMOUNT ELSE -BR.AMOUNT END) - SUM(CASE L1.DRCR WHEN 'D' THEN L1.RELAMT ELSE -L1.RELAMT END))    
+FROM     
+      LEDGER L,     
+      (SELECT VNO,VTYP,BOOKTYPE FROM LEDGER WHERE CLTCODE = @BANK_CODE) L2,     
+      LEDGER1 L1,     
+      BANKRECO BR     
+WHERE     
+      L.VNO = L2.VNO     
+      AND L.VTYP = L2.VTYP     
+      AND L.BOOKTYPE = L2.BOOKTYPE     
+      AND L.VNO = L1.VNO     
+      AND L.VTYP = L1.VTYP     
+      AND L.BOOKTYPE = L1.BOOKTYPE     
+      AND L.LNO = L1.LNO     
+      AND L.CLTCODE <> @BANK_CODE     
+      AND L1.VTYP <> '5'      
+      AND BR.CROSSREFERENCENO = L1.REFNO     
+      AND VALUEDATE = RELDT     
+      AND VALUEDATE BETWEEN @FDATE AND @TDATE + ' 23:59:59'  
+      AND BR.CLTCODE = @BANK_CODE
+GROUP BY     
+      DESCRIPTION,    
+      BR.DRCR,    
+      AMOUNT,    
+      REFERENCENO,    
+      STATUS,    
+      VALUEDATE,     
+      CROSSREFERENCENO     
+HAVING     
+      ((CASE BR.DRCR WHEN 'D' THEN BR.AMOUNT ELSE -BR.AMOUNT END) - SUM(CASE L1.DRCR WHEN 'D' THEN L1.RELAMT ELSE -L1.RELAMT END)) <> 0    
+ORDER BY     
+      VALUEDATE
+
+GO
